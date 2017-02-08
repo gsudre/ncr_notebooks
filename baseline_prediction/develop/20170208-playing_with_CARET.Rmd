@@ -3,50 +3,225 @@ title: "CARET"
 output: html_notebook
 ---
 
-Let's try to run some ML stuff in R using CARET. Instructions from https://cran.r-project.org/web/packages/caret/vignettes/caret.pdf and also http://topepo.github.io/caret/measuring-performance.html
+Let's try to run some ML stuff in R using CARET. Instructions from http://topepo.github.io/caret/
+
+* parallelize
+* tune parameters
+* clean data
+* increase nfolds
 
 ```{r}
 library(caret)
-library(mlbench)
-data(Sonar)
+library(doParallel)
+# for replication purposes
 set.seed(107)
-inTrain <- createDataPartition(y = Sonar$Class,
-                               ## the outcome data are needed
-                               p = .75,
-                               ## The percentage of data in the
-                               ## training set
-                               list = FALSE)
-                               ## The format of the results
-str(inTrain)
-training <- Sonar[ inTrain,]
-testing  <- Sonar[-inTrain,]
-nrow(training)
-nrow(testing)
+# setting up parallelization
+registerDoParallel(4,cores=4)
+getDoParWorkers()
+
+gf = read.csv('~/data/baseline_prediction/gf_updated_01312017b.csv')
+group_var = 'inatt3_named' # HI3_named	HI4_named	HI5_named	inatt3_named
+all_data = read.csv('~/data/baseline_prediction/dti_tortoiseExported_meanTSA_02012017.csv')
+mrn_gf = unique(gf[, c('ID', group_var)])
+source('~/ncr_notebooks/baseline_prediction//src/aux_functions.R')
+data = get_baseline_scans(all_data)
+ldata = merge(mrn_gf, data, by.x='ID', by.y='MRN')
+
+inTrain = createDataPartition(y = ldata$inatt3_named,
+                              times= 3,
+                              p=.85)
+# need to do later with other folds... for now we just do the first one
+phen_vars = which(grepl("FA_", colnames(ldata)))
+
+rndForestAll = c()
+lrAll = c()
+lsvmAll = c()
+rsvmAll = c()
+xgbAll = c()
+gbmAll = c()
+ctrl_cv <- trainControl(method = "repeatedcv",
+                        number = 4,
+                        repeats = 2,
+                        classProbs = TRUE,
+                        summaryFunction = multiClassSummary)
+# for each train/test split
+for (i in 1:length(inTrain)) {
+  cat(sprintf('\nWorking on split %d of %d', i, length(inTrain)))
+  Xtrain = ldata[ inTrain[[i]], phen_vars]
+  ytrain = ldata[ inTrain[[i]],]$inatt3_named
+  Xtest  = ldata[-inTrain[[i]], phen_vars]
+  ytest = ldata[-inTrain[[i]],]$inatt3_named
+  
+  rndForestFit <- train(Xtrain, ytrain,
+                        method = "rf",
+                        trControl = ctrl_cv,
+                        metric = "Kappa",
+                        preProc = c("center", "scale"))
+  
+  lrFit <- train(Xtrain, ytrain,
+                 method = "LogitBoost",
+                 trControl = ctrl_cv,
+                 metric = "Mean_ROC",
+                 preProc = c("center", "scale"))
+
+  lsvmFit <- train(Xtrain, ytrain,
+                   method = "svmLinear",
+                   trControl = ctrl_cv,
+                   # metric = "Mean_ROC",
+                   preProc = c("center", "scale"))
+
+  rsvmFit <- train(Xtrain, ytrain,
+                   method = "svmRadial",
+                   trControl = ctrl_cv,
+                   # metric = "Mean_ROC",
+                   preProc = c("center", "scale"))
+
+  xgbFit <- train(Xtrain, ytrain,
+                  method = "xgbTree",
+                  trControl = ctrl_cv,
+                  # metric = "Mean_ROC",
+                  preProc = c("center", "scale"))
+
+  gbmFit <- train(Xtrain, ytrain,
+                  method = "gbm",
+                  verbose=F,
+                  trControl = ctrl_cv,
+                  # metric = "Mean_ROC",
+                  preProc = c("center", "scale"))
+  
+  rndForestRes = eval_model(rndForestFit, Xtest, ytest)
+  lrRes = eval_model(lrFit, Xtest, ytest)
+  lsvmRes = eval_model(lsvmFit, Xtest, ytest)
+  rsvmRes = eval_model(rsvmFit, Xtest, ytest)
+  xgbRes = eval_model(xgbFit, Xtest, ytest)
+  gbmRes = eval_model(gbmFit, Xtest, ytest)
+  
+  rndForestAll = rbind(rndForestAll, rndForestRes)
+  lrAll = rbind(lrAll, lrRes)
+  lsvmAll = rbind(lsvmAll, lsvmRes)
+  rsvmAll = rbind(rsvmAll, rsvmRes)
+  xgbAll = rbind(xgbAll, xgbRes)
+  gbmAll = rbind(gbmAll, gbmRes)
+}
+stopImplicitCluster()
+
 ```
+Let's plot different metrics on the test data:
+
+```{r}
+compile_metrics = function(res, col, hdr) {
+  b = vector()
+  for (d in res) {
+    b = cbind(b, d[,col])
+  }
+  colnames(b) = hdr
+  return(b)
+}
+mylist = list(rndForestAll, lrAll, lsvmAll, rsvmAll, xgbAll, gbmAll)
+hdr = c('RndForest', 'LogReg', 'LinearSVM', 'RBFSVM', 'XGBOOST', 'GradBoost')
+par(mfrow=c(2, 3))
+boxplot(compile_metrics(mylist, 1, hdr), ylab='logLoss', las=2)
+boxplot(compile_metrics(mylist, 2, hdr), ylab='AUC', las=2)
+boxplot(compile_metrics(mylist, 3, hdr), ylab='Accuracy', las=2)
+boxplot(compile_metrics(mylist, 4, hdr), ylab='Kappa', las=2)
+boxplot(compile_metrics(mylist, 5, hdr), ylab='Sensitivity', las=2)
+boxplot(compile_metrics(mylist, 6, hdr), ylab='Specificity', las=2)
+```
+
+
 
 ``` {r}
 set.seed(123)
-ctrl <- trainControl(method = "repeatedcv",
-                      repeats = 3,
-                     classProbs = TRUE,
-                      summaryFunction = twoClassSummary)
-plsFit <- train(Class ~ .,
-                 data = training,
-                 method = "pls",
-                 ## Center and scale the predictors for the training
-                 ## set and all future samples.
-                tuneLength = 15,
-                trControl = ctrl,
-                metric = "ROC",
+# I won't use OOB here because otherwise I can't compare it to other models, as it would have different number of samples!
+# ctrl_oob <- trainControl(method = "oob",
+#                          classProbs = TRUE,
+#                          summaryFunction = multiClassSummary)
+ctrl_cv <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           ## repeated ten times
+                           repeats = 2,
+                           classProbs = TRUE,
+                           summaryFunction = multiClassSummary)
+
+rndForestFit <- train(Xtrain, ytrain,
+                      method = "rf",
+                      trControl = ctrl_cv,
+                      metric = "Kappa",
+                      preProc = c("center", "scale"))
+
+lrFit <- train(Xtrain, ytrain,
+                  method = "LogitBoost",
+                  trControl = ctrl_cv,
+                  metric = "Mean_ROC",
                   preProc = c("center", "scale"))
-plsFit
+
+lsvmFit <- train(Xtrain, ytrain,
+                  method = "svmLinear",
+                  trControl = ctrl_cv,
+                  # metric = "Mean_ROC",
+                  preProc = c("center", "scale"))
+
+rsvmFit <- train(Xtrain, ytrain,
+                  method = "svmRadial",
+                  trControl = ctrl_cv,
+                  # metric = "Mean_ROC",
+                  preProc = c("center", "scale"))
+
+xgbFit <- train(Xtrain, ytrain,
+                  method = "xgbTree",
+                  trControl = ctrl_cv,
+                  # metric = "Mean_ROC",
+                  preProc = c("center", "scale"))
+
+gbmFit <- train(Xtrain, ytrain,
+                  method = "gbm",
+                 verbose=F,
+                  trControl = ctrl_cv,
+                  # metric = "Mean_ROC",
+                  preProc = c("center", "scale"))
+
+# # has L1 for classification
+# ldaFit <- train(Xtrain, ytrain,
+#                   method = "PenalizedLDA",
+#                   trControl = ctrl_cv,
+#                   # metric = "Mean_ROC",
+#                   preProc = c("center", "scale"))
+# 
+# # has L1 for classification
+# smdaFit <- train(Xtrain, ytrain,
+#                   method = "smda",
+#                   trControl = ctrl_cv,
+#                   # metric = "Mean_ROC",
+#                   preProc = c("center", "scale"))
 ```
-Now we try more things
+Let's compare our models based on how they perform in the test data:
 ```{r}
-plsClasses <- predict(plsFit, newdata = testing)
-str(plsClasses)
-plsProbs <- predict(plsFit, newdata = testing, type = "prob")
-confusionMatrix(data = plsClasses, testing$Class)
+eval_model = function(fit, data, labels) {
+  preds = predict(fit, newdata=data)
+  probs = predict(fit, newdata=data, type="prob")
+  ts = data.frame(obs=labels, pred=preds, probs)
+  res = multiClassSummary(ts, lev=levels(ts$obs))
+  return(res)
+}
+rndForestRes = eval_model(rndForestFit, Xtest, ytest)
+lrRes = eval_model(lrFit, Xtest, ytest)
+lsvmRes = eval_model(lsvmFit, Xtest, ytest)
+rsvmRes = eval_model(rsvmFit, Xtest, ytest)
+xgbRes = eval_model(xgbFit, Xtest, ytest)
+gbmRes = eval_model(gbmFit, Xtest, ytest)
+
+```
+Evaluating the models
+```{r}
+rndForestClasses <- predict(rndForestFit, newdata = Xtest)
+confusionMatrix(data = rndForestClasses, ytest)
+lrClasses <- predict(rndForestFit, newdata = Xtest)
+confusionMatrix(data = lrClasses, ytest)
+
+# library(pROC)
+# lrProbs <- predict(rndForestFit, newdata = Xtest, type="prob")
+# lrROC = roc(predictor=lrProbs$PS, response=ytest, levels=rev(levels(ytest)))
 ```
 We can try a different model:
 ```{r}
@@ -66,6 +241,8 @@ Results
 ```{r}
 rdaClasses <- predict(rdaFit, newdata = testing)
 confusionMatrix(rdaClasses, testing$Class)
+ts = data.frame(obs=ytest, pred=rndForestClasses, predict(rndForestFit, newdata = Xtest, type="prob"))
+
 ```
 Comparing resampling results:
 ```{r}
