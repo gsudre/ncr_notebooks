@@ -5,10 +5,11 @@ output: html_notebook
 
 Let's try to run some ML stuff in R using CARET. Instructions from http://topepo.github.io/caret/
 
-* parallelize
 * tune parameters
 * clean data
 * increase nfolds
+* save tuning parameters (maybe entire model?) to better inform grid searches
+* no need to save the data within the fits
 
 ```{r}
 library(caret)
@@ -32,6 +33,8 @@ inTrain = createDataPartition(y = ldata$inatt3_named,
                               p=.85)
 # need to do later with other folds... for now we just do the first one
 phen_vars = which(grepl("FA_", colnames(ldata)))
+metric = "Mean_ROC"
+default_preproc = c("center", "scale", "medianImpute")
 
 rndForestAll = c()
 lrAll = c()
@@ -43,7 +46,9 @@ ctrl_cv <- trainControl(method = "repeatedcv",
                         number = 4,
                         repeats = 2,
                         classProbs = TRUE,
-                        summaryFunction = multiClassSummary)
+                        summaryFunction = multiClassSummary,
+                        search='grid')
+
 # for each train/test split
 for (i in 1:length(inTrain)) {
   cat(sprintf('\nWorking on split %d of %d', i, length(inTrain)))
@@ -52,42 +57,51 @@ for (i in 1:length(inTrain)) {
   Xtest  = ldata[-inTrain[[i]], phen_vars]
   ytest = ldata[-inTrain[[i]],]$inatt3_named
   
+  rndForestGrid <- expand.grid(.mtry=c(1:sqrt(ncol(Xtrain))))
   rndForestFit <- train(Xtrain, ytrain,
                         method = "rf",
                         trControl = ctrl_cv,
-                        metric = "Kappa",
-                        preProc = c("center", "scale"))
-  
+                        tuneGrid=rndForestGrid,
+                        metric = metric,
+                        preProc = default_preproc)
+
+  lrGrid <- expand.grid(.nIter=seq(1,50,5))
   lrFit <- train(Xtrain, ytrain,
                  method = "LogitBoost",
                  trControl = ctrl_cv,
-                 metric = "Mean_ROC",
-                 preProc = c("center", "scale"))
+                 tuneGrid=lrGrid,
+                 metric = metric,
+                 preProc = default_preproc)
 
+  lsvmGrid <- expand.grid(.C=c(.01, .1, 1, 10, 100, 10^3, 10^4))
   lsvmFit <- train(Xtrain, ytrain,
                    method = "svmLinear",
                    trControl = ctrl_cv,
-                   # metric = "Mean_ROC",
-                   preProc = c("center", "scale"))
+                   tuneGrid=lsvmGrid,
+                   metric = metric,
+                   preProc = default_preproc)
 
+  rsvmGrid <- expand.grid(.C=seq(1e-2, 1e+4, length.out=7),
+                          .sigma=seq(1e-5, 1e+1, length.out=7))
   rsvmFit <- train(Xtrain, ytrain,
                    method = "svmRadial",
                    trControl = ctrl_cv,
-                   # metric = "Mean_ROC",
-                   preProc = c("center", "scale"))
+                   tuneGrid=rsvmGrid,
+                   metric = metric,
+                   preProc = default_preproc)
 
-  xgbFit <- train(Xtrain, ytrain,
-                  method = "xgbTree",
-                  trControl = ctrl_cv,
-                  # metric = "Mean_ROC",
-                  preProc = c("center", "scale"))
-
-  gbmFit <- train(Xtrain, ytrain,
-                  method = "gbm",
-                  verbose=F,
-                  trControl = ctrl_cv,
-                  # metric = "Mean_ROC",
-                  preProc = c("center", "scale"))
+  # xgbFit <- train(Xtrain, ytrain,
+  #                 method = "xgbTree",
+  #                 trControl = ctrl_cv,
+  #                 # metric = metric,
+  #                 preProc = default_preproc)
+  # 
+  # gbmFit <- train(Xtrain, ytrain,
+  #                 method = "gbm",
+  #                 verbose=F,
+  #                 trControl = ctrl_cv,
+  #                 # metric = metric,
+  #                 preProc = default_preproc)
   
   rndForestRes = eval_model(rndForestFit, Xtest, ytest)
   lrRes = eval_model(lrFit, Xtest, ytest)
