@@ -6,8 +6,7 @@ output: html_notebook
 Let's try to run some ML stuff in R using CARET. Instructions from http://topepo.github.io/caret/
 
 * clean data
-* save tuning parameters (maybe entire model?) to better inform grid searches
-* spit things out to output
+* need to do NV vs ADHD baseline first!
 * better split the labels (e.g. some type of regression?)
 
 ```{r}
@@ -30,12 +29,17 @@ ncv = 3
 nrepeatcv = 2
 nsplits = 2
 train_test_ratio = .85
+root_fname = '~/tmp/runs'
+# saving output
+sink(sprintf('%s.log', root_fname), append=TRUE, split=TRUE)
 ncores = detectCores(all.tests = FALSE, logical = TRUE)
 njobs = ncores - 3
-run_models = c('rndForest','lr','xgb') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
-gf = read.csv('~/data/baseline_prediction/gf_updated_01312017b.csv')
+run_models = c('rndForest','lr') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
+gf_fname = '~/data/baseline_prediction/gf_updated_01312017b.csv'
+data_fname = '~/data/baseline_prediction/dti_tortoiseExported_meanTSA_02012017.csv'
+gf = read.csv(gf_fname)
 group_var = 'inatt3_named' # HI3_named	HI4_named	HI5_named	inatt3_named
-all_data = read.csv('~/data/baseline_prediction/dti_tortoiseExported_meanTSA_02012017.csv')
+all_data = read.csv(data_fname)
 mrn_gf = unique(gf[, c('ID', group_var)])
 source('~/ncr_notebooks/baseline_prediction//src/aux_functions.R')
 data = get_baseline_scans(all_data)
@@ -47,11 +51,18 @@ inTrain = createDataPartition(y = ldata$inatt3_named,
 # need to do later with other folds... for now we just do the first one
 phen_vars = which(grepl("FA_", colnames(ldata)))
 metric = "Mean_ROC"
-default_preproc = c("center", "scale", "medianImpute")
+default_preproc = c("center", "scale")
 
 # setting up parallelization
 registerDoParallel(ncores,cores=ncores)
 getDoParWorkers()
+
+# spitting out informative stuff
+gf_fname
+data_fname
+group_var
+metric
+default_preproc
 
 rndForestAll = c()
 lrAll = c()
@@ -59,6 +70,10 @@ lsvmAll = c()
 rsvmAll = c()
 xgbAll = c()
 gbmAll = c()
+save_list = c()
+for (m in run_models) {
+  save_list = c(save_list, sprintf('%sFit', m))
+}
 ctrl_cv <- trainControl(method = "repeatedcv",
                         number = ncv,
                         repeats = nrepeatcv,
@@ -174,6 +189,10 @@ for (i in 1:length(inTrain)) {
     gbmAll = rbind(gbmAll, gbmRes)
     print(proc.time() - ptm)
   }
+  
+  # saving fit models
+  fname = sprintf('%s_split%02d.RData', root_fname, i)
+  save(list=save_list, file=fname)
 }
 stopImplicitCluster()
 
