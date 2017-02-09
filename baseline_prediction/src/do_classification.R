@@ -15,7 +15,7 @@ lsvmAll = c()
 rsvmAll = c()
 xgbAll = c()
 gbmAll = c()
-save_list = c()
+save_list = c('train_idx')
 for (m in run_models) {
   save_list = c(save_list, sprintf('%sFit', m))
 }
@@ -37,7 +37,7 @@ for (i in 1:length(inTrain)) {
                           trControl = ctrl_cv,
                           tuneGrid=rndForestGrid,
                           metric = metric,
-                          preProc = default_preproc)
+                          preProcess = default_preproc)
     rndForestRes = eval_model(rndForestFit, Xtest, ytest)
     rndForestAll = rbind(rndForestAll, rndForestRes)
     print(proc.time() - ptm)
@@ -130,6 +130,7 @@ for (i in 1:length(inTrain)) {
   
   # saving fit models
   fname = sprintf('%s_split%02d.RData', root_fname, i)
+  train_idx = inTrain[[i]]
   save(list=save_list, file=fname)
 }
 stopImplicitCluster()
