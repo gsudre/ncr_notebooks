@@ -14,6 +14,15 @@ get_baseline_scans = function(data, min_time_diff=0) {
     return (data)
 }
 
+# returns metrics for different models
+eval_model = function(fit, data, labels) {
+  preds = predict(fit, newdata=data)
+  probs = predict(fit, newdata=data, type="prob")
+  ts = data.frame(obs=labels, pred=preds, probs)
+  res = multiClassSummary(ts, lev=levels(ts$obs))
+  return(res)
+}
+
 
 # straight-up copy of tinGraphs, but it doesn't stupidly open new devices for each figure
 tinGraphs2 = function (res, DESIGN = NULL, x_axis = NULL, y_axis = NULL, inference.info = NULL, 

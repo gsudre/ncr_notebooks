@@ -31,7 +31,7 @@ nsplits = 2
 train_test_ratio = .85
 root_fname = '~/tmp/runs'
 # saving output
-sink(sprintf('%s.log', root_fname), append=TRUE, split=TRUE)
+sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
 ncores = detectCores(all.tests = FALSE, logical = TRUE)
 njobs = ncores - 3
 run_models = c('rndForest','lr') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
