@@ -106,3 +106,193 @@ ctrl_cv <- trainControl(method = "repeatedcv",
 source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
 ```
+
+Given the time they're taking to run, gbm and lsvm don't seem to be worth the effort, at least not with their current search grids. Maybe they do better if we PCA the features first?
+
+```{r}
+ncv = 5
+nrepeatcv = 2
+nsplits = 5
+train_test_ratio = .85
+root_fname = '~/tmp/dti_NVvsADHD_3props_pca'
+# saving output
+sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
+save(list=c('ldata', 'groups'), file=sprintf('%s.RData', root_fname))
+ncores = detectCores(all.tests = FALSE, logical = TRUE)
+njobs = ncores - 3
+run_models = c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
+
+inTrain = createDataPartition(y = groups,
+                              times= nsplits,
+                              p=train_test_ratio)
+metric = "ROC"
+default_preproc = c('pca')
+default_options = c()
+ctrl_cv <- trainControl(method = "repeatedcv",
+                        number = ncv,
+                        repeats = nrepeatcv,
+                        classProbs = TRUE,
+                        returnData = FALSE,
+                        summaryFunction = twoClassSummary,
+                        preProcOptions = default_options,
+                        search='grid')
+
+source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+```
+
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
+Correlation seems to have helped lsvm and gmb, but not to the point of making it worth it spending that time. Let's try the independent set of features, and their PCAs:
+
+```{r}
+phen_vars = c(which(grepl("^FA_", colnames(ldata))))
+ldata = ldata[, phen_vars]
+ncv = 5
+nrepeatcv = 2
+nsplits = 5
+train_test_ratio = .85
+root_fname = '~/tmp/dti_NVvsADHD_FAonly'
+# saving output
+sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
+save(list=c('ldata', 'groups'), file=sprintf('%s.RData', root_fname))
+ncores = detectCores(all.tests = FALSE, logical = TRUE)
+njobs = ncores - 3
+run_models = c('rndForest', 'lr', 'rsvm', 'xgb') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
+
+inTrain = createDataPartition(y = groups,
+                              times= nsplits,
+                              p=train_test_ratio)
+metric = "ROC"
+default_preproc = c('center', 'scale')
+default_options = c()
+ctrl_cv <- trainControl(method = "repeatedcv",
+                        number = ncv,
+                        repeats = nrepeatcv,
+                        classProbs = TRUE,
+                        returnData = FALSE,
+                        summaryFunction = twoClassSummary,
+                        preProcOptions = default_options,
+                        search='grid')
+
+source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+```
+
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+What if we PCA that?
+```{r}
+ncv = 5
+nrepeatcv = 2
+nsplits = 5
+train_test_ratio = .85
+root_fname = '~/tmp/dti_NVvsADHD_FAonly_pca'
+# saving output
+sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
+save(list=c('ldata', 'groups'), file=sprintf('%s.RData', root_fname))
+ncores = detectCores(all.tests = FALSE, logical = TRUE)
+njobs = ncores - 3
+run_models = c('rndForest', 'lr', 'rsvm', 'xgb') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
+
+inTrain = createDataPartition(y = groups,
+                              times= nsplits,
+                              p=train_test_ratio)
+metric = "ROC"
+default_preproc = c('pca')
+default_options = c()
+ctrl_cv <- trainControl(method = "repeatedcv",
+                        number = ncv,
+                        repeats = nrepeatcv,
+                        classProbs = TRUE,
+                        returnData = FALSE,
+                        summaryFunction = twoClassSummary,
+                        preProcOptions = default_options,
+                        search='grid')
+
+source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+```
+
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
+PCA seems to have helped overall... interesting. Let's try just AD and RD:
+
+```{r}
+phen_vars = c(which(grepl("^AD_", colnames(ldata))),
+              which(grepl("^RD_", colnames(ldata))))
+ldata = ldata[, phen_vars]
+
+ncv = 5
+nrepeatcv = 2
+nsplits = 5
+train_test_ratio = .85
+root_fname = '~/tmp/dti_NVvsADHD_ADRD'
+# saving output
+sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
+save(list=c('ldata', 'groups'), file=sprintf('%s.RData', root_fname))
+ncores = detectBatchCPUs()
+njobs = ncores - 3
+run_models = c('rndForest', 'lr', 'rsvm', 'xgb') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
+
+inTrain = createDataPartition(y = groups,
+                              times= nsplits,
+                              p=train_test_ratio)
+metric = "ROC"
+default_preproc = c('center', 'scale')
+default_options = c()
+ctrl_cv <- trainControl(method = "repeatedcv",
+                        number = ncv,
+                        repeats = nrepeatcv,
+                        classProbs = TRUE,
+                        returnData = FALSE,
+                        summaryFunction = twoClassSummary,
+                        preProcOptions = default_options,
+                        search='grid')
+
+source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+```
+
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
+And the PCA countepart:
+
+```{r}
+ncv = 5
+nrepeatcv = 2
+nsplits = 5
+train_test_ratio = .85
+root_fname = '~/tmp/dti_NVvsADHD_ADRD_pca'
+# saving output
+sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
+save(list=c('ldata', 'groups'), file=sprintf('%s.RData', root_fname))
+ncores = detectBatchCPUs()
+njobs = ncores - 3
+run_models = c('rndForest', 'lr', 'rsvm', 'xgb') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
+
+inTrain = createDataPartition(y = groups,
+                              times= nsplits,
+                              p=train_test_ratio)
+metric = "ROC"
+default_preproc = c('pca')
+default_options = c()
+ctrl_cv <- trainControl(method = "repeatedcv",
+                        number = ncv,
+                        repeats = nrepeatcv,
+                        classProbs = TRUE,
+                        returnData = FALSE,
+                        summaryFunction = twoClassSummary,
+                        preProcOptions = default_options,
+                        search='grid')
+
+source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+```
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
+PCA might have hurt this a bit, now.

@@ -2,7 +2,7 @@ library(caret)
 library(doParallel)
 
 # setting up parallelization
-registerDoParallel(ncores,cores=ncores)
+registerDoParallel(njobs,cores=njobs)
 getDoParWorkers()
 
 # spitting out informative stuff
@@ -83,6 +83,7 @@ for (i in 1:length(inTrain)) {
                             .sigma=seq(1e-5, 1e+1, length.out=7))
     rsvmFit <- train(Xtrain, ytrain,
                      method = "svmRadial",
+                     verbose=F,
                      trControl = ctrl_cv,
                      tuneGrid=rsvmGrid,
                      metric = metric,

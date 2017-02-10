@@ -48,6 +48,8 @@ nsplits = 5
 train_test_ratio = .85
 root_fname = '~/tmp/struct_NVvsADHD_all'
 # saving output
+library(doParallel)
+library(caret)
 sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
 ncores = detectCores(all.tests = FALSE, logical = TRUE)
 njobs = ncores - 3

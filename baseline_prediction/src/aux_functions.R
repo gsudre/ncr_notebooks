@@ -23,6 +23,16 @@ eval_model = function(fit, data, labels) {
   return(res)
 }
 
+detectBatchCPUs <- function() { 
+  ncores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK")) 
+  if (is.na(ncores)) { 
+    ncores <- as.integer(Sys.getenv("SLURM_JOB_CPUS_PER_NODE")) 
+  } 
+  if (is.na(ncores)) { 
+    return(8) # for laptop (use 4 for helix)
+  } 
+  return(ncores) 
+}
 
 # straight-up copy of tinGraphs, but it doesn't stupidly open new devices for each figure
 tinGraphs2 = function (res, DESIGN = NULL, x_axis = NULL, y_axis = NULL, inference.info = NULL, 
