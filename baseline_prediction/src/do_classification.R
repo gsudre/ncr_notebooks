@@ -1,3 +1,6 @@
+library(caret)
+library(doParallel)
+
 # setting up parallelization
 registerDoParallel(ncores,cores=ncores)
 getDoParWorkers()

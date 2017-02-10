@@ -8,8 +8,8 @@ Let's try to get baseline DX from DTI. First, some data cleaning:
 ```{r}
 library(caret)
 library(doParallel)
-# # for replication purposes
-# set.seed(107)
+# for replication purposes
+set.seed(107)
 source('~/ncr_notebooks/baseline_prediction//src/aux_functions.R')
 
 gf_fname = '~/data/baseline_prediction/dti_match_02092017.csv'
