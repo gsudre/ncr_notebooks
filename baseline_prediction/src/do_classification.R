@@ -2,8 +2,12 @@ library(caret)
 library(doParallel)
 
 # setting up parallelization
-registerDoParallel(njobs,cores=njobs)
-getDoParWorkers()
+# registerDoParallel(njobs,cores=njobs)
+# getDoParWorkers()
+
+library(doMC)
+print(njobs)
+registerDoMC(cores=njobs)
 
 # spitting out informative stuff
 gf_fname
@@ -105,6 +109,8 @@ for (i in 1:length(inTrain)) {
     xgbFit <- train(Xtrain, ytrain,
                     method = "xgbTree",
                     trControl = ctrl_cv,
+                    # we need this for the cluster, where the C++ backend already does multicore
+                    nthread = 1,
                     tuneGrid=xgbGrid,
                     metric = metric,
                     preProc = default_preproc)

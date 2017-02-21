@@ -1,5 +1,5 @@
 ---
-title: "CARET"
+title: "Analysis of structural data"
 output: html_notebook
 ---
 
@@ -42,18 +42,20 @@ ldata = ldata[, phen_vars]
 ```
 
 ```{r}
+# leaving this just for examples, but we actually run it in the cluster and collect it later
 ncv = 5
 nrepeatcv = 2
 nsplits = 5
 train_test_ratio = .85
 root_fname = '~/tmp/struct_NVvsADHD_all'
 # saving output
-library(doParallel)
 library(caret)
 sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-ncores = detectCores(all.tests = FALSE, logical = TRUE)
-njobs = ncores - 3
-run_models = c('rndForest', 'lr', 'rsvm', 'xgb') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
+# ncores = detectCores(all.tests = FALSE, logical = TRUE)
+ncpus <- detectBatchCPUs()
+njobs = ncpus - 2
+
+run_models = c('xgb') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
 
 inTrain = createDataPartition(y = groups,
                               times= nsplits,
@@ -73,9 +75,105 @@ ctrl_cv <- trainControl(method = "repeatedcv",
 source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
 
 ```
-Let's plot different metrics on the test data:
+Let's plot different metrics on the test data.
+
+#All data
 
 ```{r}
+root_dir = '~/data/baseline_prediction/results/'
+root_fname = 'struct_NVvsADHD_all'
+source('~/ncr_notebooks/baseline_prediction/src/collect_results.R')
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
 ```
+#All data, PCA
+
+```{r}
+root_dir = '~/data/baseline_prediction/results/'
+root_fname = 'struct_NVvsADHD_all_pca'
+source('~/ncr_notebooks/baseline_prediction/src/collect_results.R')
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+#Cortical thickness
+
+```{r}
+ldata = merge(maskid_gf, data, by.x='MASKID', by.y='lh.aparc.thickness', all.y = F)
+eval(parse(text=sprintf('groups = ldata$\"%s\"', group_var)))
+idx = groups=='NV' | groups=='ADHD'
+groups = factor(groups[idx])
+ldata = ldata[idx,]
+phen_vars = which(grepl("_thickness$", colnames(ldata)))
+# remove WM variables
+idx = phen_vars < 261 | phen_vars > 266 
+phen_vars = phen_vars[idx]
+ldata = ldata[, phen_vars]
+
+root_fname = 'struct_NVvsADHD_corticalThickness'
+source('~/ncr_notebooks/baseline_prediction/src/collect_results.R')
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
+#Cortical thickness, PCA
+
+```{r}
+root_fname = 'struct_NVvsADHD_corticalThickness_pca'
+source('~/ncr_notebooks/baseline_prediction/src/collect_results.R')
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
+#Cortical area
+
+```{r}
+ldata = merge(maskid_gf, data, by.x='MASKID', by.y='lh.aparc.thickness', all.y = F)
+eval(parse(text=sprintf('groups = ldata$\"%s\"', group_var)))
+idx = groups=='NV' | groups=='ADHD'
+groups = factor(groups[idx])
+ldata = ldata[idx,]
+phen_vars = which(grepl("_area$", colnames(ldata)))
+# remove WM variables
+idx = phen_vars < 261 | phen_vars > 266 
+phen_vars = phen_vars[idx]
+ldata = ldata[, phen_vars]
+
+root_fname = 'struct_NVvsADHD_corticalArea'
+source('~/ncr_notebooks/baseline_prediction/src/collect_results.R')
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
+#Cortical area, PCA
+
+```{r}
+root_fname = 'struct_NVvsADHD_corticalArea_pca'
+source('~/ncr_notebooks/baseline_prediction/src/collect_results.R')
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
+#Cortical Volume
+
+```{r}
+ldata = merge(maskid_gf, data, by.x='MASKID', by.y='lh.aparc.thickness', all.y = F)
+eval(parse(text=sprintf('groups = ldata$\"%s\"', group_var)))
+idx = groups=='NV' | groups=='ADHD'
+groups = factor(groups[idx])
+ldata = ldata[idx,]
+phen_vars = which(grepl("_volume$", colnames(ldata)))
+# remove WM variables
+idx = phen_vars < 261 | phen_vars > 266 
+phen_vars = phen_vars[idx]
+ldata = ldata[, phen_vars]
+
+root_fname = 'struct_NVvsADHD_corticalVolume'
+source('~/ncr_notebooks/baseline_prediction/src/collect_results.R')
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
+#Cortical Volume, PCA
+
+```{r}
+root_fname = 'struct_NVvsADHD_corticalVolume_pca'
+source('~/ncr_notebooks/baseline_prediction/src/collect_results.R')
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
+
+
 
