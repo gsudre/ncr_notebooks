@@ -26,9 +26,11 @@ files = list.files(path=root_dir, pattern=sprintf('%s_split*', root_fname))
 # for each results file
 for (f in files) {
   load(sprintf('%s/%s', root_dir, f))
-  Xtrain = ldata[train_idx, ]
+  Xtrain = as.data.frame(ldata[train_idx, ])
+  colnames(Xtrain) = colnames(ldata)
   ytrain = groups[train_idx]
-  Xtest  = ldata[-train_idx, ]
+  Xtest = as.data.frame(ldata[-train_idx, ])
+  colnames(Xtest) = colnames(ldata)
   ytest = groups[-train_idx]
   
   for (m in run_models) {

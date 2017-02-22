@@ -30,9 +30,13 @@ for (m in run_models) {
 # for each train/test split
 for (i in 1:length(inTrain)) {
   cat(sprintf('\nWorking on split %d of %d', i, length(inTrain)))
-  Xtrain = ldata[ inTrain[[i]], ]
+  # Xtrain = ldata[ inTrain[[i]], ]
+  Xtrain = as.data.frame(ldata[ inTrain[[i]], ])
+  colnames(Xtrain) = colnames(ldata) # do this in two steps because it wasn't working to define col.names in the constructor
   ytrain = groups[ inTrain[[i]]]
-  Xtest  = ldata[-inTrain[[i]], ]
+  # Xtest  = ldata[-inTrain[[i]], ]
+  Xtest = as.data.frame(ldata[ -inTrain[[i]], ])
+  colnames(Xtest) = colnames(ldata)  # do this in two steps because it wasn't working to define col.names in the constructor
   ytest = groups[-inTrain[[i]]]
   
   if ('rndForest' %in% run_models) {
