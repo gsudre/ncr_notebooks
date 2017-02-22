@@ -455,23 +455,28 @@ sink()
 
 ```{r}
 conn_na = colSums(is.na(ldata)) / nrow(ldata)
-phen_vars = c('N_of_omissions', 'PC_omissions', 'N_commissions', 'PC_commissions',
-              'hit_RT', 'hit_RT_SE', 'variability_of_SE', 'D.prime', 'beta', 'N_perservations',
-              'PC_perservations', 'hit_RT_block_change', 'hit_RT_SE_block_change',
-              'hit_RT_ISI_change', 'hit_RT_SE_ISI_change',
-              'omissions_t.scores_for_general_population',
-              'commissions_t.scores_for_general_population', 
-              'hit_RT_t.scores_for_general_population',
-              'hit_RT_SE_t.scores_for_general_population',
-              'variability_of_SE_t.scores_for_general_population',
-              'D.prime_t.scores_for_general_population',
-              'beta_t.scores_for_general_population',
-              'perserverations_t.scores_for_general_population',
-              'hit_RT_block_change_t.scores_for_general_population',
-              'hit_RT_SE_block_change_t.scores_for_general_population',
-              'hit_RT_ISI_change_t.scores_for_general_population',
-              'X_hit_RT_SE_ISI_change_t.scores_for_general_population',
-              'ADHD.confidence', 'focus', 'HI', 'sustained', 'vigilance')
+# phen_vars = c('N_of_omissions', 'PC_omissions', 'N_commissions', 'PC_commissions',
+#               'hit_RT', 'hit_RT_SE', 'variability_of_SE', 'D.prime', 'beta', 'N_perservations',
+#               'PC_perservations', 'hit_RT_block_change', 'hit_RT_SE_block_change',
+#               'hit_RT_ISI_change', 'hit_RT_SE_ISI_change',
+#               'omissions_t.scores_for_general_population',
+#               'commissions_t.scores_for_general_population', 
+#               'hit_RT_t.scores_for_general_population',
+#               'hit_RT_SE_t.scores_for_general_population',
+#               'variability_of_SE_t.scores_for_general_population',
+#               'D.prime_t.scores_for_general_population',
+#               'beta_t.scores_for_general_population',
+#               'perserverations_t.scores_for_general_population',
+#               'hit_RT_block_change_t.scores_for_general_population',
+#               'hit_RT_SE_block_change_t.scores_for_general_population',
+#               'hit_RT_ISI_change_t.scores_for_general_population',
+#               'X_hit_RT_SE_ISI_change_t.scores_for_general_population',
+#               'ADHD.confidence', 'focus', 'HI', 'sustained', 'vigilance')
+
+phen_vars = c('N_of_omissions', 'N_commissions', 
+              'hit_RT', 'hit_RT_SE', 'variability_of_SE', 'N_perservations',
+              'hit_RT_block_change', 'hit_RT_SE_block_change',
+              'hit_RT_ISI_change', 'hit_RT_SE_ISI_change')
 keep_me = c()
 for (v in phen_vars) {
   keep_me = c(keep_me, which(colnames(gf) == v))
