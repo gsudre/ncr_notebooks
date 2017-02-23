@@ -15,7 +15,7 @@ source('~/ncr_notebooks/baseline_prediction//src/aux_functions.R')
 gf_fname = '~/data/baseline_prediction/dti_match_02092017.csv'
 data_fname = '~/data/baseline_prediction/dti_match_02092017.csv'
 gf = read.csv(gf_fname)
-group_var = 'DX_A'
+group_var = 'DX2'
 all_data = read.csv(data_fname)
 mrn_gf = unique(gf[, c('ID', group_var)])
 
@@ -26,7 +26,7 @@ ldata = merge(mrn_gf, data, by.x='ID', by.y='ID')
 eval(parse(text=sprintf('groups = ldata$\"%s.y\"', group_var)))
 idx = groups=='NV' | groups=='ADHD'
 groups = factor(groups[idx])
-ldata = ldata[idx,]
+ldata_orig = ldata[idx,]
 
 phen_vars = c(which(grepl("MASKID", colnames(ldata))),
               which(grepl("^FA_", colnames(ldata))),
@@ -61,8 +61,8 @@ Cleaning up based on visual cutoffs:
 
 ``` {r}
 rm_me = ldata2$fa_avg < .4 | ldata2$ad_avg < 1.18 | ldata2$rd_avg > .7
-ldata = ldata2[!rm_me, ]
-groups = groups[!rm_me]
+ldata_orig = ldata2[!rm_me, ]
+groups_orig = groups[!rm_me]
 ```
 
 Now we keep only the variables we'll be using for predictions:
@@ -72,7 +72,8 @@ phen_vars = c(which(grepl("^FA_", colnames(ldata))),
               which(grepl("^AD_", colnames(ldata))),
               which(grepl("^RD_", colnames(ldata)))
               )
-ldata = ldata[, phen_vars]
+ldata = ldata_orig[, phen_vars]
+groups = groups_orig
 ```
 
 Start classifying and plotting the results:
@@ -84,8 +85,9 @@ train_test_ratio = .85
 root_fname = '~/tmp/dti_NVvsADHD_3props'
 # saving output
 sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-ncores = detectCores(all.tests = FALSE, logical = TRUE)
-njobs = ncores - 3
+ncpus <- detectBatchCPUs()
+njobs = ncpus - 1
+set.seed(107)
 run_models = c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
 
 inTrain = createDataPartition(y = groups,
@@ -105,12 +107,14 @@ ctrl_cv <- trainControl(method = "repeatedcv",
 
 source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+sink()
 ```
 
 Given the time they're taking to run, gbm and lsvm don't seem to be worth the effort, at least not with their current search grids. Maybe they do better if we PCA the features first?
 
 ```{r}
 ncv = 5
+set.seed(107)
 nrepeatcv = 2
 nsplits = 5
 train_test_ratio = .85
@@ -118,8 +122,8 @@ root_fname = '~/tmp/dti_NVvsADHD_3props_pca'
 # saving output
 sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
 save(list=c('ldata', 'groups'), file=sprintf('%s.RData', root_fname))
-ncores = detectCores(all.tests = FALSE, logical = TRUE)
-njobs = ncores - 3
+ncpus <- detectBatchCPUs()
+njobs = ncpus - 1
 run_models = c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
 
 inTrain = createDataPartition(y = groups,
@@ -138,18 +142,17 @@ ctrl_cv <- trainControl(method = "repeatedcv",
                         search='grid')
 
 source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
-```
-
-```{r}
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+sink()
 ```
 
 Correlation seems to have helped lsvm and gmb, but not to the point of making it worth it spending that time. Let's try the independent set of features, and their PCAs:
 
 ```{r}
-phen_vars = c(which(grepl("^FA_", colnames(ldata))))
-ldata = ldata[, phen_vars]
+phen_vars = c(which(grepl("^FA_", colnames(ldata_orig))))
+ldata = ldata_orig[, phen_vars]
 ncv = 5
+set.seed(107)
 nrepeatcv = 2
 nsplits = 5
 train_test_ratio = .85
@@ -157,8 +160,8 @@ root_fname = '~/tmp/dti_NVvsADHD_FAonly'
 # saving output
 sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
 save(list=c('ldata', 'groups'), file=sprintf('%s.RData', root_fname))
-ncores = detectCores(all.tests = FALSE, logical = TRUE)
-njobs = ncores - 3
+ncpus <- detectBatchCPUs()
+njobs = ncpus - 1
 run_models = c('rndForest', 'lr', 'rsvm', 'xgb') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
 
 inTrain = createDataPartition(y = groups,
@@ -177,23 +180,23 @@ ctrl_cv <- trainControl(method = "repeatedcv",
                         search='grid')
 
 source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+sink()
 ```
 
-```{r}
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-```
 What if we PCA that?
 ```{r}
 ncv = 5
 nrepeatcv = 2
 nsplits = 5
+set.seed(107)
 train_test_ratio = .85
 root_fname = '~/tmp/dti_NVvsADHD_FAonly_pca'
 # saving output
 sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
 save(list=c('ldata', 'groups'), file=sprintf('%s.RData', root_fname))
-ncores = detectCores(all.tests = FALSE, logical = TRUE)
-njobs = ncores - 3
+ncpus <- detectBatchCPUs()
+njobs = ncpus - 1
 run_models = c('rndForest', 'lr', 'rsvm', 'xgb') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
 
 inTrain = createDataPartition(y = groups,
@@ -212,19 +215,19 @@ ctrl_cv <- trainControl(method = "repeatedcv",
                         search='grid')
 
 source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+sink()
 ```
 
-```{r}
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-```
 
 PCA seems to have helped overall... interesting. Let's try just AD and RD:
 
 ```{r}
-phen_vars = c(which(grepl("^AD_", colnames(ldata))),
-              which(grepl("^RD_", colnames(ldata))))
-ldata = ldata[, phen_vars]
+phen_vars = c(which(grepl("^AD_", colnames(ldata_orig))),
+              which(grepl("^RD_", colnames(ldata_orig))))
+ldata = ldata_orig[, phen_vars]
 
+set.seed(107)
 ncv = 5
 nrepeatcv = 2
 nsplits = 5
@@ -233,8 +236,8 @@ root_fname = '~/tmp/dti_NVvsADHD_ADRD'
 # saving output
 sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
 save(list=c('ldata', 'groups'), file=sprintf('%s.RData', root_fname))
-ncores = detectBatchCPUs()
-njobs = ncores - 3
+ncpus <- detectBatchCPUs()
+njobs = ncpus - 1
 run_models = c('rndForest', 'lr', 'rsvm', 'xgb') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
 
 inTrain = createDataPartition(y = groups,
@@ -253,16 +256,16 @@ ctrl_cv <- trainControl(method = "repeatedcv",
                         search='grid')
 
 source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+sink()
 ```
 
-```{r}
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-```
 
 And the PCA countepart:
 
 ```{r}
 ncv = 5
+set.seed(107)
 nrepeatcv = 2
 nsplits = 5
 train_test_ratio = .85
@@ -270,8 +273,8 @@ root_fname = '~/tmp/dti_NVvsADHD_ADRD_pca'
 # saving output
 sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
 save(list=c('ldata', 'groups'), file=sprintf('%s.RData', root_fname))
-ncores = detectBatchCPUs()
-njobs = ncores - 3
+ncpus <- detectBatchCPUs()
+njobs = ncpus - 1
 run_models = c('rndForest', 'lr', 'rsvm', 'xgb') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
 
 inTrain = createDataPartition(y = groups,
@@ -290,9 +293,9 @@ ctrl_cv <- trainControl(method = "repeatedcv",
                         search='grid')
 
 source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
-```
-```{r}
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+sink()
 ```
+
 
 PCA might have hurt this a bit, now.
