@@ -1,6 +1,8 @@
 ---
 title: "Analysis of neuropsych data"
-output: html_notebook
+output:
+  html_notebook: default
+  html_document: default
 ---
 
 Now we do some classification using rsFMRI. First, some data cleaning:
@@ -8,6 +10,7 @@ Now we do some classification using rsFMRI. First, some data cleaning:
 ```{r}
 # for replication purposes
 set.seed(107)
+library(caret)
 source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
 
 # Philip pre-selected which structural scans to use
@@ -27,7 +30,6 @@ Now it's a matter of selecting the variables we want to test. Because there are 
 Philip says that VIQ and PIQ make up FSIQ. So, let's run them separately:
 
 ```{r}
-conn_na = colSums(is.na(ldata)) / nrow(ldata)
 phen_vars = c('VIQ', 'PIQ')
 keep_me = c()
 for (v in phen_vars) {
@@ -536,6 +538,94 @@ run_models = c('rndForest', 'lr') # c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 
 inTrain = createDataPartition(y = groups,
                               times= nsplits,
                               p=train_test_ratio)
+default_preproc = c("center", 'scale')
+default_options = c()
+ctrl_cv <- trainControl(method = "repeatedcv",
+                        number = ncv,
+                        repeats = nrepeatcv,
+                        classProbs = TRUE,
+                        returnData = FALSE,
+                        summaryFunction = twoClassSummary,
+                        preProcOptions = default_options,
+                        search='grid')
+
+source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+sink()
+```
+
+# Processing speed
+It's univariate as well:
+
+```{r}
+phen_vars = c('PS_all')
+keep_me = c()
+for (v in phen_vars) {
+  keep_me = c(keep_me, which(colnames(gf) == v))
+}
+ldata_orig = gf[, keep_me]
+ldata_orig = as.data.frame(ldata_orig)
+```
+
+Median imputed first:
+
+```{r}
+ldata = ldata_orig
+groups = groups_orig
+preProcValues <- preProcess(ldata, method = c("medianImpute"))
+ldata <- predict(preProcValues, ldata)
+root_fname = '~/tmp/PS_medianImpute_NVvsADHD'
+sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
+run_models = c('rndForest', 'lr')  # rsvm was taking a long-ass time, and xgb was crapping out
+inTrain = createDataPartition(y = groups,
+                              times= nsplits,
+                              p=train_test_ratio)
+ncv = 5
+nrepeatcv = 2
+nsplits = 5
+train_test_ratio = .85
+sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
+ncpus <- detectBatchCPUs()
+njobs = ncpus - 1
+metric = "ROC"
+default_preproc = c("center", 'scale')
+default_options = c()
+ctrl_cv <- trainControl(method = "repeatedcv",
+                        number = ncv,
+                        repeats = nrepeatcv,
+                        classProbs = TRUE,
+                        returnData = FALSE,
+                        summaryFunction = twoClassSummary,
+                        preProcOptions = default_options,
+                        search='grid')
+
+source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+sink()
+```
+
+Remove NAs:
+
+```{r}
+ldata = ldata_orig
+groups = groups_orig
+keep_me = rowSums(is.na(ldata)) == 0
+ldata = as.data.frame(ldata[keep_me, ])
+groups = groups[keep_me]
+root_fname = '~/tmp/PS_NAremoved_NVvsADHD'
+sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
+run_models = c('rndForest', 'lr')  # rsvm was taking a long-ass time, and xgb was crapping out
+inTrain = createDataPartition(y = groups,
+                              times= nsplits,
+                              p=train_test_ratio)
+ncv = 5
+nrepeatcv = 2
+nsplits = 5
+train_test_ratio = .85
+sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
+ncpus <- detectBatchCPUs()
+njobs = ncpus - 1
+metric = "ROC"
 default_preproc = c("center", 'scale')
 default_options = c()
 ctrl_cv <- trainControl(method = "repeatedcv",
