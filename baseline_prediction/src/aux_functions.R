@@ -34,6 +34,34 @@ detectBatchCPUs <- function() {
   return(ncores) 
 }
 
+runInCluster <- function(root_fname, ncv=5, nrepeatcv=2, nsplits=5, train_test_ratio=.85, cpuDiff=0, fixed_seed=T,
+                         run_models=c('rndForest', 'lr', 'rsvm', 'xgb'), metric = "ROC",
+                         default_preproc = c("center", 'scale'), default_options = c()) {
+  # loads ldata and groups
+  load(sprintf('%s.RData', root_fname))
+  sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
+  ncpus <- detectBatchCPUs()
+  njobs = ncpus - cpuDiff
+  if (fixed_seed) {
+    set.seed(107)
+  }
+  inTrain = createDataPartition(y = groups,
+                                times= nsplits,
+                                p=train_test_ratio)
+  ctrl_cv <- trainControl(method = "repeatedcv",
+                          number = ncv,
+                          repeats = nrepeatcv,
+                          classProbs = TRUE,
+                          returnData = FALSE,
+                          summaryFunction = twoClassSummary,
+                          preProcOptions = default_options,
+                          search='grid')
+  
+  source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+  sink()
+}
+
+
 # straight-up copy of tinGraphs, but it doesn't stupidly open new devices for each figure
 tinGraphs2 = function (res, DESIGN = NULL, x_axis = NULL, y_axis = NULL, inference.info = NULL, 
                color.by.boots = TRUE, boot.cols = c("plum4", "darkseagreen", 
