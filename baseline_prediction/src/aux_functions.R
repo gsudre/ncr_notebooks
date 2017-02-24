@@ -205,6 +205,46 @@ runInCluster <- function(root_fname, ncv=5, nrepeatcv=2, nsplits=5, train_test_r
   sink()
 }
 
+collect_results <- function(root_fname) {
+  # open first results file to figure out model names
+  var_names = load(sprintf('%s_split%02d.RData', root_fname, 1))
+  
+  # figure out model names and create appropriate collection files
+  run_models = c()
+  for (v in var_names) {
+    if (grepl('Fit$', v)) {
+      run_models = c(run_models, sub('Fit', '', v))
+    }
+  }
+  
+  rndForestAll = c()
+  lrAll = c()
+  lsvmAll = c()
+  rsvmAll = c()
+  xgbAll = c()
+  gbmAll = c()
+  save_list = c('train_idx')
+  for (m in run_models) {
+    save_list = c(save_list, sprintf('%sFit', m))
+  }
+  
+  files = list.files(path=dirname(root_fname), pattern=sprintf('%s_split*', root_fname))
+  # for each results file
+  for (f in files) {
+    load(sprintf('%s/%s', root_dir, f))
+    Xtrain = as.data.frame(ldata[train_idx, ])
+    colnames(Xtrain) = colnames(ldata)
+    ytrain = groups[train_idx]
+    Xtest = as.data.frame(ldata[-train_idx, ])
+    colnames(Xtest) = colnames(ldata)
+    ytest = groups[-train_idx]
+    
+    for (m in run_models) {
+      eval(parse(text=sprintf('%sRes = eval_model(%sFit, Xtest, ytest)', m, m)))
+      eval(parse(text=sprintf('%sAll = rbind(%sAll, %sRes)', m, m, m)))
+    }
+  }
+}
 
 # straight-up copy of tinGraphs, but it doesn't stupidly open new devices for each figure
 tinGraphs2 = function (res, DESIGN = NULL, x_axis = NULL, y_axis = NULL, inference.info = NULL, 
