@@ -206,6 +206,7 @@ runInCluster <- function(root_fname, ncv=5, nrepeatcv=2, nsplits=5, train_test_r
 }
 
 collect_results <- function(root_fname) {
+  load(sprintf('%s.RData', root_fname))
   # open first results file to figure out model names
   var_names = load(sprintf('%s_split%02d.RData', root_fname, 1))
   
@@ -228,7 +229,8 @@ collect_results <- function(root_fname) {
     save_list = c(save_list, sprintf('%sFit', m))
   }
   
-  files = list.files(path=dirname(root_fname), pattern=sprintf('%s_split*', root_fname))
+  root_dir = sprintf('%s/', dirname(root_fname))
+  files = list.files(path=root_dir, pattern=sprintf('%s_split*', basename(root_fname)))
   # for each results file
   for (f in files) {
     load(sprintf('%s/%s', root_dir, f))
@@ -244,6 +246,8 @@ collect_results <- function(root_fname) {
       eval(parse(text=sprintf('%sAll = rbind(%sAll, %sRes)', m, m, m)))
     }
   }
+  mylist = list(rndForestAll, lrAll, lsvmAll, rsvmAll, xgbAll, gbmAll)
+  return(list(mylist, run_models))
 }
 
 # straight-up copy of tinGraphs, but it doesn't stupidly open new devices for each figure

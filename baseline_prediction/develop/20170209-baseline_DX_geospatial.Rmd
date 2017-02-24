@@ -9,8 +9,6 @@ First, some data cleaning:
 
 ```{r}
 # for replication purposes
-set.seed(107)
-library(caret)
 source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
 
 # Philip pre-selected which structural scans to use
@@ -39,41 +37,15 @@ for (v in phen_vars) {
   keep_me = c(keep_me, which(colnames(data) == v))
 }
 ldata_orig = data[, keep_me]
-```
-
-First we try some imputation:
-```{r}
 ldata = ldata_orig
 groups = groups_orig
-ncv = 5
-nrepeatcv = 2
-nsplits = 5
-train_test_ratio = .85
-root_fname = '~/tmp/GeoPCA_NVvsADHD'
-sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-ncpus <- detectBatchCPUs()
-njobs = ncpus - 1
-set.seed(107)
-run_models = c('rndForest', 'lr', 'rsvm', 'xgb') # c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
-
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-metric = "ROC"
-default_preproc = c("center", 'scale')
-default_options = c()
-ctrl_cv <- trainControl(method = "repeatedcv",
-                        number = ncv,
-                        repeats = nrepeatcv,
-                        classProbs = TRUE,
-                        returnData = FALSE,
-                        summaryFunction = twoClassSummary,
-                        preProcOptions = default_options,
-                        search='grid')
-
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+root_fname = '~/data/baseline_prediction/results/GeoPCA_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-sink()
 ```
 
 But we should try the same analysis using the raw data:
@@ -87,39 +59,15 @@ for (v in phen_vars) {
   keep_me = c(keep_me, which(colnames(data) == v))
 }
 ldata_orig = data[, keep_me]
-```
-
-```{r}
 ldata = ldata_orig
 groups = groups_orig
-root_fname = '~/tmp/GeoRaw_NVvsADHD'
-ncv = 5
-nrepeatcv = 2
-nsplits = 5
-train_test_ratio = .85
-set.seed(107)
-sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-ncpus <- detectBatchCPUs()
-njobs = ncpus - 1
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-metric = "ROC"
-default_preproc = c("center", 'scale')
-default_options = c()
-ctrl_cv <- trainControl(method = "repeatedcv",
-                        number = ncv,
-                        repeats = nrepeatcv,
-                        classProbs = TRUE,
-                        returnData = FALSE,
-                        summaryFunction = twoClassSummary,
-                        preProcOptions = default_options,
-                        search='grid')
-run_models = c('rndForest', 'lr', 'rsvm', 'xgb') # c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+root_fname = '~/data/baseline_prediction/results/GeoRaw_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-
-sink()
 ```
 
 What if I do my own PCA in the raw values?
