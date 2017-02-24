@@ -10,7 +10,7 @@ compile_metrics = function(res, col, hdr) {
 par(mfrow=c(2, 3))
 boxplot(compile_metrics(mylist, 1, run_models), ylab='logLoss', las=2)
 boxplot(compile_metrics(mylist, 2, run_models), ylab='AUC', las=2)
-boxplot(compile_metrics(mylist, 3, run_models), ylab='Accuracy', las=2)
+boxplot(compile_metrics(mylist, 3, run_models), ylab='Accuracy', las=2, ylim=c(.4, 1))
 library(Hmisc)
 res = binconf(x=max(table(groups)), n=length(groups), alpha=.05)
 abline(h=res[1], col='red')

@@ -84,55 +84,27 @@ Like before, the elbow is at 3, but the eigenvalue threshold (1) is at 4. Let's 
 
 ```{r}
 ldata = ldata.pca$x[, 1:3]
-root_fname = '~/tmp/GeoRaw_PCAElbow_NVvsADHD'
-sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-run_models = c('rndForest', 'lr', 'rsvm', 'xgb') # c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-default_preproc = c("center", 'scale')
-default_options = c()
-set.seed(107)
-ctrl_cv <- trainControl(method = "repeatedcv",
-                        number = ncv,
-                        repeats = nrepeatcv,
-                        classProbs = TRUE,
-                        returnData = FALSE,
-                        summaryFunction = twoClassSummary,
-                        preProcOptions = default_options,
-                        search='grid')
-
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+root_fname = '~/data/baseline_prediction/results/GeoRaw_PCAElbow_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-sink()
 ```
 
 ```{r}
 ldata = ldata.pca$x[, 1:4]
-root_fname = '~/tmp/GeoRaw_PCAEV1_NVvsADHD'
-sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-run_models = c('rndForest', 'lr', 'rsvm', 'xgb') # c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-default_preproc = c("center", 'scale')
-default_options = c()
-set.seed(107)
-ctrl_cv <- trainControl(method = "repeatedcv",
-                        number = ncv,
-                        repeats = nrepeatcv,
-                        classProbs = TRUE,
-                        returnData = FALSE,
-                        summaryFunction = twoClassSummary,
-                        preProcOptions = default_options,
-                        search='grid')
-
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+root_fname = '~/data/baseline_prediction/results/GeoRaw_PCAEV1_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-sink()
 ```
 
-Using the raw values and the PCA was about the same. Let's try adding SES to each one and see if they improve. But the issue is NANs in SES, so we'll need to impute or remove subjects:
+Using the raw values ended up being a bit better than any PCAs. Let's try adding SES to see if they improve. But the issue is NANs in SES, so we'll need to impute or remove subjects:
 
 ```{r}
 phen_vars = c('Home_Price', 'Fam_Income', 'Pop_BPL', 'Fam_BPL',	'Pub_School', 'Crime_Rate',
@@ -146,191 +118,34 @@ ldata_orig = data[, keep_me]
 ```
 
 ```{r}
-set.seed(107)
 ldata = ldata_orig
 groups = groups_orig
-root_fname = '~/tmp/GeoRawSES_meanImputed_NVvsADHD'
-sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
 preProcValues <- preProcess(ldata, method = c("medianImpute"))
 ldata <- predict(preProcValues, ldata)
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+root_fname = '~/data/baseline_prediction/results//GeoRawSES_meanImputed_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-sink()
 ```
 
 Removing NAs:
 
 ```{r}
-set.seed(107)
 ldata = ldata_orig
 groups = groups_orig
 keep_me = rowSums(is.na(ldata)) == 0
 ldata = as.data.frame(ldata[keep_me, ])
 groups = groups[keep_me]
-root_fname = '~/tmp/GeoRawSES_NAremoved_NVvsADHD'
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+root_fname = '~/data/baseline_prediction/results/GeoRawSES_NAremoved_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-sink()
-```
-
-Now we do a PCA first, then add SES:
-
-```{r}
-phen_vars = c('Home_Price', 'Fam_Income', 'Pop_BPL', 'Fam_BPL	Pub_School', 'Crime_Rate',
-              'Green_Space', 'Park_Access', 'Air_Quality', 'Obesity_Rate', 'Food_Index',
-              'Exercise_Access', 'Excessive_Drinking')
-keep_me = c()
-for (v in phen_vars) {
-  keep_me = c(keep_me, which(colnames(data) == v))
-}
-ldata_orig = data[, keep_me]
-ldata.pca <- prcomp(ldata_orig, center=T, scale=T)
 ```
 
 
-```{r}
-set.seed(107)
-groups = groups_orig
-ldata = cbind(ldata.pca$x[, 1:4], data$SES)
-colnames(ldata)[5] = 'SES'
-preProcValues <- preProcess(ldata, method = c("medianImpute"))
-ldata <- predict(preProcValues, ldata)
-root_fname = '~/tmp/GeoRawPCAEV1SES_medianImputed_NVvsADHD'
-sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-run_models = c('rndForest', 'lr', 'rsvm', 'xgb') # c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-default_preproc = c("center", 'scale')
-default_options = c()
-ctrl_cv <- trainControl(method = "repeatedcv",
-                        number = ncv,
-                        repeats = nrepeatcv,
-                        classProbs = TRUE,
-                        returnData = FALSE,
-                        summaryFunction = twoClassSummary,
-                        preProcOptions = default_options,
-                        search='grid')
-
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-sink()
-```
-
-Same as above, but using the PCA elbow:
-
-```{r}
-set.seed(107)
-ldata = cbind(ldata.pca$x[, 1:3], data$SES)
-colnames(ldata)[4] = 'SES'
-preProcValues <- preProcess(ldata, method = c("medianImpute"))
-ldata <- predict(preProcValues, ldata)
-root_fname = '~/tmp/GeoRawPCAElbowSES_medianImputed_NVvsADHD'
-sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-run_models = c('rndForest', 'lr', 'rsvm', 'xgb') # c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-default_preproc = c("center", 'scale')
-default_options = c()
-ctrl_cv <- trainControl(method = "repeatedcv",
-                        number = ncv,
-                        repeats = nrepeatcv,
-                        classProbs = TRUE,
-                        returnData = FALSE,
-                        summaryFunction = twoClassSummary,
-                        preProcOptions = default_options,
-                        search='grid')
-
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-sink()
-```
-
-Now, we first remove NA subjects, then do the PCA:
-
-```{r}
-phen_vars = c('Home_Price', 'Fam_Income', 'Pop_BPL', 'Fam_BPL',	'Pub_School', 'Crime_Rate',
-              'Green_Space', 'Park_Access', 'Air_Quality', 'Obesity_Rate', 'Food_Index',
-              'Exercise_Access', 'Excessive_Drinking', 'SES')
-keep_me = c()
-for (v in phen_vars) {
-  keep_me = c(keep_me, which(colnames(data) == v))
-}
-ldata_orig = data[, keep_me]
-```
-
-```{r}
-ldata = ldata_orig
-groups = groups_orig
-keep_me = rowSums(is.na(ldata)) == 0
-ldata = as.data.frame(ldata[keep_me, ])
-groups = groups[keep_me]
-ldata.pca <- prcomp(ldata[1:13], center=T, scale=T)
-plot(ldata.pca, type = "l")
-print(ldata.pca$sdev^2)  # these are the eignevalues
-```
-
-```{r}
-set.seed(107)
-ldata = cbind(ldata.pca$x[, 1:3], ldata$SES)
-colnames(ldata)[4] = 'SES'
-root_fname = '~/tmp/GeoRawPCAElbowSES_NAremoved_NVvsADHD'
-sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-run_models = c('rndForest', 'lr', 'rsvm', 'xgb') # c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-default_preproc = c("center", 'scale')
-default_options = c()
-ctrl_cv <- trainControl(method = "repeatedcv",
-                        number = ncv,
-                        repeats = nrepeatcv,
-                        classProbs = TRUE,
-                        returnData = FALSE,
-                        summaryFunction = twoClassSummary,
-                        preProcOptions = default_options,
-                        search='grid')
-
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-sink()
-```
-
-```{r}
-set.seed(107)
-ldata = ldata_orig
-groups = groups_orig
-keep_me = rowSums(is.na(ldata)) == 0
-ldata = as.data.frame(ldata[keep_me, ])
-groups = groups[keep_me]
-ldata.pca <- prcomp(ldata[1:13], center=T, scale=T)
-ldata = cbind(ldata.pca$x[, 1:4], ldata$SES)
-colnames(ldata)[5] = 'SES'
-root_fname = '~/tmp/GeoRawPCAEV1SES_NAremoved_NVvsADHD'
-sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-run_models = c('rndForest', 'lr', 'rsvm', 'xgb') # c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-default_preproc = c("center", 'scale')
-default_options = c()
-ctrl_cv <- trainControl(method = "repeatedcv",
-                        number = ncv,
-                        repeats = nrepeatcv,
-                        classProbs = TRUE,
-                        returnData = FALSE,
-                        summaryFunction = twoClassSummary,
-                        preProcOptions = default_options,
-                        search='grid')
-
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-sink()
-```
