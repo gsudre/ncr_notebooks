@@ -192,41 +192,372 @@ Alright, so now it's a matter of of checking what works best.
 # Area
 
 ## sublobar
+```{r}
+ldata = area_data
+root_fname = '~/data/baseline_prediction/results/structSublobarArea_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
 
 ## sublobar - PCA
 
+```{r}
+ldata.pca <- prcomp(ldata, center=T, scale=T)
+plot(ldata.pca, type = "l")
+print(ldata.pca$sdev^2)  # these are the eignevalues
+```
+There's not much question that 1 or 2 PCs here are enough. I'll go with 2.
+
+```{r}
+ldata = ldata.pca$x[, 1:2]
+root_fname = '~/data/baseline_prediction/results/structSublobarArea_PCAElbow_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
 ## lobar
+```{r}
+ldata = areaLobar_data
+root_fname = '~/data/baseline_prediction/results/structLobarArea_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
 
 ## lobar - PCA
+```{r}
+ldata.pca <- prcomp(ldata, center=T, scale=T)
+plot(ldata.pca, type = "l")
+print(ldata.pca$sdev^2)  # these are the eignevalues
+```
+Same as before... just 2 will do it.
+
+```{r}
+ldata = ldata.pca$x[, 1:2]
+root_fname = '~/data/baseline_prediction/results/structLobarArea_PCAElbow_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
 
 ## theory
+```{r}
+ldata = areaTheory_data
+root_fname = '~/data/baseline_prediction/results/structTheoryArea_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
 
 ## theory - PCA
+```{r}
+ldata.pca <- prcomp(ldata, center=T, scale=T)
+plot(ldata.pca, type = "l")
+print(ldata.pca$sdev^2)  # these are the eignevalues
+```
+Again, using 2 just so we're not doing a univariate deal.
+```{r}
+ldata = ldata.pca$x[, 1:2]
+root_fname = '~/data/baseline_prediction/results/structTheoryArea_PCAElbow_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
 
 # Thickness
-
 ## sublobar
+```{r}
+ldata = thickness_data
+root_fname = '~/data/baseline_prediction/results/structSublobarThickness_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
 
 ## sublobar - PCA
 
+```{r}
+ldata.pca <- prcomp(ldata, center=T, scale=T)
+plot(ldata.pca, type = "l")
+print(ldata.pca$sdev^2)  # these are the eignevalues
+```
+Here we could go with 2 or 3. I'll go with 2 because it's the EV threshold.
+
+```{r}
+ldata = ldata.pca$x[, 1:2]
+root_fname = '~/data/baseline_prediction/results/structSublobarThickness_PCAElbow_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
 ## lobar
+```{r}
+ldata = thicknessLobar_data
+root_fname = '~/data/baseline_prediction/results/structLobarThickness_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
 
 ## lobar - PCA
+```{r}
+ldata.pca <- prcomp(ldata, center=T, scale=T)
+plot(ldata.pca, type = "l")
+print(ldata.pca$sdev^2)  # these are the eignevalues
+```
+Same as before... just 2 will do it.
+
+```{r}
+ldata = ldata.pca$x[, 1:2]
+root_fname = '~/data/baseline_prediction/results/structLobarThickness_PCAElbow_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
 
 ## theory
+```{r}
+ldata = thicknessTheory_data
+root_fname = '~/data/baseline_prediction/results/structTheoryThickness_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
 
 ## theory - PCA
+```{r}
+ldata.pca <- prcomp(ldata, center=T, scale=T)
+plot(ldata.pca, type = "l")
+print(ldata.pca$sdev^2)  # these are the eignevalues
+```
+Again, using 2 just so we're not doing a univariate deal.
+```{r}
+ldata = ldata.pca$x[, 1:2]
+root_fname = '~/data/baseline_prediction/results/structTheoryThickness_PCAElbow_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
 
 # Volume
 
 ## sublobar
+```{r}
+ldata = volume_data
+root_fname = '~/data/baseline_prediction/results/structSublobarVolume_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
 
 ## sublobar - PCA
 
+```{r}
+ldata.pca <- prcomp(ldata, center=T, scale=T)
+plot(ldata.pca, type = "l")
+print(ldata.pca$sdev^2)  # these are the eignevalues
+```
+Same situation as with thickness. I'll go with 2.
+
+```{r}
+ldata = ldata.pca$x[, 1:2]
+root_fname = '~/data/baseline_prediction/results/structSublobarVolume_PCAElbow_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
 ## lobar
+```{r}
+ldata = volumeLobar_data
+root_fname = '~/data/baseline_prediction/results/structLobarVolume_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# # ... waiting ...
+# res = collect_results(root_fname)
+# mylist = res[[1]]
+# run_models = res[[2]]
+# source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
 
 ## lobar - PCA
+```{r}
+ldata.pca <- prcomp(ldata, center=T, scale=T)
+plot(ldata.pca, type = "l")
+print(ldata.pca$sdev^2)  # these are the eignevalues
+```
+Same as before... just 2 will do it.
+
+```{r}
+ldata = ldata.pca$x[, 1:2]
+root_fname = '~/data/baseline_prediction/results/structLobarVolume_PCAElbow_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
 
 ## theory
+```{r}
+ldata = volumeTheory_data
+root_fname = '~/data/baseline_prediction/results/structTheoryVolume_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
 
 ## theory - PCA
+```{r}
+ldata.pca <- prcomp(ldata, center=T, scale=T)
+plot(ldata.pca, type = "l")
+print(ldata.pca$sdev^2)  # these are the eignevalues
+```
+Again, using 2 just so we're not doing a univariate deal.
+```{r}
+ldata = ldata.pca$x[, 1:2]
+root_fname = '~/data/baseline_prediction/results/structTheoryVolume_PCAElbow_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
+# aparc
+Let's see if there's anything interesting in the aparc segmentation:
+
+## sublobar
+```{r}
+ldata = aparc_data
+root_fname = '~/data/baseline_prediction/results/structSublobarAparc_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
+## sublobar, PCA
+```{r}
+ldata.pca <- prcomp(ldata, center=T, scale=T)
+plot(ldata.pca, type = "l")
+print(ldata.pca$sdev^2)  # these are the eignevalues
+```
+The usual shpill, 2 PCs will do it.
+```{r}
+ldata = ldata.pca$x[, 1:2]
+root_fname = '~/data/baseline_prediction/results/structSublobarAparc_PCAElbow_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+## lobar
+```{r}
+ldata = aparcLobar_data
+root_fname = '~/data/baseline_prediction/results/structLobarAparc_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+## lobar, PCA
+```{r}
+ldata.pca <- prcomp(ldata, center=T, scale=T)
+plot(ldata.pca, type = "l")
+print(ldata.pca$sdev^2)  # these are the eignevalues
+```
+```{r}
+ldata = ldata.pca$x[, 1:2]
+root_fname = '~/data/baseline_prediction/results/structLobarAparc_PCAElbow_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
+## theory
+```{r}
+ldata = aparcTheory_data
+root_fname = '~/data/baseline_prediction/results/structTheoryAparc_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+## theory, PCA
+```{r}
+ldata.pca <- prcomp(ldata, center=T, scale=T)
+plot(ldata.pca, type = "l")
+print(ldata.pca$sdev^2)  # these are the eignevalues
+```
+```{r}
+ldata = ldata.pca$x[, 1:2]
+root_fname = '~/data/baseline_prediction/results/structTheoryAparc_PCAElbow_NVvsADHD'
+save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+

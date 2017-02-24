@@ -6,10 +6,6 @@ output: html_notebook
 Let's try to get baseline DX from DTI. First, some data cleaning:
 
 ```{r}
-library(caret)
-library(doParallel)
-# for replication purposes
-set.seed(107)
 source('~/ncr_notebooks/baseline_prediction//src/aux_functions.R')
 
 gf_fname = '~/data/baseline_prediction/dti_match_02092017.csv'
@@ -76,226 +72,146 @@ ldata = ldata_orig[, phen_vars]
 groups = groups_orig
 ```
 
-Start classifying and plotting the results:
+Start classifying and plotting the results, first by using all variables:
 ```{r}
-ncv = 5
-nrepeatcv = 2
-nsplits = 5
-train_test_ratio = .85
-root_fname = '~/tmp/dti_NVvsADHD_3props'
-# saving output
-sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-ncpus <- detectBatchCPUs()
-njobs = ncpus - 1
-set.seed(107)
-run_models = c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
-
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-metric = "ROC"
-default_preproc = c("center", 'scale')
-default_options = c()
-ctrl_cv <- trainControl(method = "repeatedcv",
-                        number = ncv,
-                        repeats = nrepeatcv,
-                        classProbs = TRUE,
-                        returnData = FALSE,
-                        summaryFunction = twoClassSummary,
-                        preProcOptions = default_options,
-                        search='grid')
-
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+root_fname = '~/data/baseline_prediction/results/dti3prop_NVvsADHD'
+if (! file.exists(sprintf('%s.RData', root_fname))) {
+  save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+}
+# for the cluster, run_models=c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-sink()
 ```
 
 Given the time they're taking to run, gbm and lsvm don't seem to be worth the effort, at least not with their current search grids. Maybe they do better if we PCA the features first?
 
 ```{r}
-ncv = 5
-set.seed(107)
-nrepeatcv = 2
-nsplits = 5
-train_test_ratio = .85
-root_fname = '~/tmp/dti_NVvsADHD_3props_pca'
-# saving output
-sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-save(list=c('ldata', 'groups'), file=sprintf('%s.RData', root_fname))
-ncpus <- detectBatchCPUs()
-njobs = ncpus - 1
-run_models = c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
-
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-metric = "ROC"
-default_preproc = c('pca')
-default_options = c()
-ctrl_cv <- trainControl(method = "repeatedcv",
-                        number = ncv,
-                        repeats = nrepeatcv,
-                        classProbs = TRUE,
-                        returnData = FALSE,
-                        summaryFunction = twoClassSummary,
-                        preProcOptions = default_options,
-                        search='grid')
-
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+ldata.pca <- prcomp(ldata, center=T, scale=T)
+plot(ldata.pca, type = "l")
+print(ldata.pca$sdev^2)  # these are the eignevalues
+```
+The usual dichotomy, we go for 6 in EV1, and 2 in elbow.
+```{r}
+ldata = ldata.pca$x[, 1:6]
+root_fname = '~/data/baseline_prediction/results/dti3prop_PCAEV1_NVvsADHD'
+if (! file.exists(sprintf('%s.RData', root_fname))) {
+  save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+}
+# for the cluster, run_models=c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-sink()
 ```
 
-Correlation seems to have helped lsvm and gmb, but not to the point of making it worth it spending that time. Let's try the independent set of features, and their PCAs:
+```{r}
+ldata = ldata.pca$x[, 1:2]
+root_fname = '~/data/baseline_prediction/results/dti3prop_PCAElbow_NVvsADHD'
+if (! file.exists(sprintf('%s.RData', root_fname))) {
+  save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+}
+# for the cluster, run_models=c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
+
+LinearSVM and GBM are too slow and are not showing any improvement, so we drop them. Let's try the independent properties, and their PCAs:
 
 ```{r}
 phen_vars = c(which(grepl("^FA_", colnames(ldata_orig))))
 ldata = ldata_orig[, phen_vars]
-ncv = 5
-set.seed(107)
-nrepeatcv = 2
-nsplits = 5
-train_test_ratio = .85
-root_fname = '~/tmp/dti_NVvsADHD_FAonly'
-# saving output
-sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-save(list=c('ldata', 'groups'), file=sprintf('%s.RData', root_fname))
-ncpus <- detectBatchCPUs()
-njobs = ncpus - 1
-run_models = c('rndForest', 'lr', 'rsvm', 'xgb') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
-
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-metric = "ROC"
-default_preproc = c('center', 'scale')
-default_options = c()
-ctrl_cv <- trainControl(method = "repeatedcv",
-                        number = ncv,
-                        repeats = nrepeatcv,
-                        classProbs = TRUE,
-                        returnData = FALSE,
-                        summaryFunction = twoClassSummary,
-                        preProcOptions = default_options,
-                        search='grid')
-
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+root_fname = '~/data/baseline_prediction/results/dtiFA_NVvsADHD'
+if (! file.exists(sprintf('%s.RData', root_fname))) {
+  save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+}
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-sink()
 ```
 
 What if we PCA that?
+
 ```{r}
-ncv = 5
-nrepeatcv = 2
-nsplits = 5
-set.seed(107)
-train_test_ratio = .85
-root_fname = '~/tmp/dti_NVvsADHD_FAonly_pca'
-# saving output
-sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-save(list=c('ldata', 'groups'), file=sprintf('%s.RData', root_fname))
-ncpus <- detectBatchCPUs()
-njobs = ncpus - 1
-run_models = c('rndForest', 'lr', 'rsvm', 'xgb') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
+ldata.pca <- prcomp(ldata, center=T, scale=T)
+plot(ldata.pca, type = "l")
+print(ldata.pca$sdev^2)  # these are the eignevalues
+```
+Both metrics agree on only two PCs.
 
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-metric = "ROC"
-default_preproc = c('pca')
-default_options = c()
-ctrl_cv <- trainControl(method = "repeatedcv",
-                        number = ncv,
-                        repeats = nrepeatcv,
-                        classProbs = TRUE,
-                        returnData = FALSE,
-                        summaryFunction = twoClassSummary,
-                        preProcOptions = default_options,
-                        search='grid')
-
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+```{r}
+ldata = ldata.pca$x[, 1:2]
+root_fname = '~/data/baseline_prediction/results/dtiFA_PCAElbow_NVvsADHD'
+if (! file.exists(sprintf('%s.RData', root_fname))) {
+  save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+}
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-sink()
 ```
 
 
-PCA seems to have helped overall... interesting. Let's try just AD and RD:
+Let's try just AD and RD:
 
 ```{r}
 phen_vars = c(which(grepl("^AD_", colnames(ldata_orig))),
               which(grepl("^RD_", colnames(ldata_orig))))
 ldata = ldata_orig[, phen_vars]
 
-set.seed(107)
-ncv = 5
-nrepeatcv = 2
-nsplits = 5
-train_test_ratio = .85
-root_fname = '~/tmp/dti_NVvsADHD_ADRD'
-# saving output
-sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-save(list=c('ldata', 'groups'), file=sprintf('%s.RData', root_fname))
-ncpus <- detectBatchCPUs()
-njobs = ncpus - 1
-run_models = c('rndForest', 'lr', 'rsvm', 'xgb') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
-
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-metric = "ROC"
-default_preproc = c('center', 'scale')
-default_options = c()
-ctrl_cv <- trainControl(method = "repeatedcv",
-                        number = ncv,
-                        repeats = nrepeatcv,
-                        classProbs = TRUE,
-                        returnData = FALSE,
-                        summaryFunction = twoClassSummary,
-                        preProcOptions = default_options,
-                        search='grid')
-
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+root_fname = '~/data/baseline_prediction/results/dtiADRD_NVvsADHD'
+if (! file.exists(sprintf('%s.RData', root_fname))) {
+  save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+}
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-sink()
 ```
-
 
 And the PCA countepart:
 
 ```{r}
-ncv = 5
-set.seed(107)
-nrepeatcv = 2
-nsplits = 5
-train_test_ratio = .85
-root_fname = '~/tmp/dti_NVvsADHD_ADRD_pca'
-# saving output
-sink(sprintf('%s.log', root_fname), append=FALSE, split=TRUE)
-save(list=c('ldata', 'groups'), file=sprintf('%s.RData', root_fname))
-ncpus <- detectBatchCPUs()
-njobs = ncpus - 1
-run_models = c('rndForest', 'lr', 'rsvm', 'xgb') #c('rndForest', 'lr', 'lsvm', 'rsvm', 'xgb', 'gbm')
+ldata.pca <- prcomp(ldata, center=T, scale=T)
+plot(ldata.pca, type = "l")
+print(ldata.pca$sdev^2)  # these are the eignevalues
+```
+Here, we can try EV1=5 and 3 for elbow.
 
-inTrain = createDataPartition(y = groups,
-                              times= nsplits,
-                              p=train_test_ratio)
-metric = "ROC"
-default_preproc = c('pca')
-default_options = c()
-ctrl_cv <- trainControl(method = "repeatedcv",
-                        number = ncv,
-                        repeats = nrepeatcv,
-                        classProbs = TRUE,
-                        returnData = FALSE,
-                        summaryFunction = twoClassSummary,
-                        preProcOptions = default_options,
-                        search='grid')
-
-source('~/ncr_notebooks/baseline_prediction/src/do_classification.R')
+```{r}
+ldata = ldata.pca$x[, 1:3]
+root_fname = '~/data/baseline_prediction/results/dtiADRD_PCAElbow_NVvsADHD'
+if (! file.exists(sprintf('%s.RData', root_fname))) {
+  save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+}
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
-sink()
 ```
 
+```{r}
+ldata = ldata.pca$x[, 1:5]
+root_fname = '~/data/baseline_prediction/results/dtiADRD_PCAEV1_NVvsADHD'
+if (! file.exists(sprintf('%s.RData', root_fname))) {
+  save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+}
+# ... waiting ...
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+```
 
 PCA might have hurt this a bit, now.
