@@ -20,6 +20,7 @@ mbeery = mergeOnClosestDate(gf, beery_data, my_ids, y.date='record.date.collecte
 Finally, let's remove anyone with difference between clinical and neuropsych that's too big:
 
 ```{r}
+nbreaks = 40
 hist(mbeery$dateX.minus.dateY.months, breaks=nbreaks)
 ```
 
@@ -132,12 +133,12 @@ groups = y
 root_fname = '~/data/baseline_prediction/results/stripped_neuropsych_NVvsADHD'
 save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
 
-# #runInCluster(root_fname, train_test_ratio=.8, cpuDiff=2, run_models=c('rndForest', 'lr', 'rsvm', 'xgb'))
-# 
-# res = collect_results(root_fname)
-# mylist = res[[1]]
-# run_models = res[[2]]
-# source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+#runInCluster(root_fname, train_test_ratio=.8, cpuDiff=2, run_models=c('rndForest', 'lr', 'rsvm', 'xgb'))
+
+res = collect_results(root_fname)
+mylist = res[[1]]
+run_models = res[[2]]
+source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
 ```
 
 
