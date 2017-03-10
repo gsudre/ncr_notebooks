@@ -148,10 +148,7 @@ root_fname = '~/data/baseline_prediction/results/stripped_combinedNoNA_NVvsADHD'
 
 #runInCluster(root_fname, train_test_ratio=.8, cpuDiff=2, nsplits=30, nrepeatcv=5, run_models=c('rndForest', 'lr', 'xgb'))
 
-res = collect_results(root_fname)
-mylist = res[[1]]
-run_models = res[[2]]
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+do_metrics_plots(root_fname)
 ```
 
 Not really encouraging... a bit all over the place. It would need some more filtering, or at least a better tunning of parameters.
@@ -219,10 +216,7 @@ root_fname = '~/data/baseline_prediction/results/stripped_combinedMedianImpute_N
 
 #runInCluster(root_fname, train_test_ratio=.8, cpuDiff=2, nsplits=30, nrepeatcv=5, run_models=c('rndForest', 'lr', 'xgb'), default_preproc=c('center', 'scale', 'medianImpute'))
 
-res = collect_results(root_fname)
-mylist = res[[1]]
-run_models = res[[2]]
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+do_metrics_plots(root_fname)
 ```
 
 bagImpute and knnImpute crashed. There might be some tweaking needed to make them work, but I think we have other approaches for now to try first.
@@ -230,15 +224,14 @@ bagImpute and knnImpute crashed. There might be some tweaking needed to make the
 Well, it improves by a bit, so that's nice. But still nothing to write home about. Does further processing of the data help?
 
 ```{r}
-ldata = X
-groups = y
+# ldata = X
+# groups = y
 root_fname = '~/data/baseline_prediction/results/stripped_combinedNZVYJMedianImpute_NVvsADHD'
-save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
+# save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
 
 # #runInCluster(root_fname, train_test_ratio=.8, cpuDiff=2, nsplits=30, nrepeatcv=5, run_models=c('rndForest', 'lr', 'xgb'), default_preproc=c('nzv', 'YeoJohnson', 'center', 'scale', 'medianImpute'))
 # 
-# res = collect_results(root_fname)
-# mylist = res[[1]]
-# run_models = res[[2]]
-# source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+do_metrics_plots(root_fname)
 ```
+
+The normalizations didn't affect random forest by a bit...

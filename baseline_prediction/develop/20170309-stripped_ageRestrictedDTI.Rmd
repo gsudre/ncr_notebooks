@@ -8,10 +8,7 @@ Let's first plot the DTI results we're comparing to, before we do the age restri
 ```{r}
 source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
 root_fname = '~/data/baseline_prediction/results/stripped_allDTI_NVvsADHD_big'
-res = collect_results(root_fname)
-mylist = res[[1]]
-run_models = res[[2]]
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+do_metrics_plots(root_fname)
 ```
 
 Now we can run a series of age restrictions to the data, and see if it gets better or worse:
@@ -62,10 +59,7 @@ root_fname = '~/data/baseline_prediction/results/stripped_allDTISE13_NVvsADHD'
 
 # #runInCluster(root_fname, train_test_ratio=.8, cpuDiff=0, nsplits=30, nrepeatcv=5, run_models=c('rndForest', 'lr', 'xgb'))
 # 
-res = collect_results(root_fname)
-mylist = res[[1]]
-run_models = res[[2]]
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+do_metrics_plots(root_fname)
 ```
 
 ```{r}
@@ -77,10 +71,7 @@ root_fname = '~/data/baseline_prediction/results/stripped_allDTISE12_NVvsADHD'
 
 # #runInCluster(root_fname, train_test_ratio=.8, cpuDiff=0, nsplits=30, nrepeatcv=5, run_models=c('rndForest', 'lr', 'xgb'))
 # 
-res = collect_results(root_fname)
-mylist = res[[1]]
-run_models = res[[2]]
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+do_metrics_plots(root_fname)
 ```
 
 ```{r}
@@ -92,10 +83,7 @@ root_fname = '~/data/baseline_prediction/results/stripped_allDTISE11_NVvsADHD'
 
 #runInCluster(root_fname, train_test_ratio=.8, cpuDiff=0, nsplits=30, nrepeatcv=5, run_models=c('rndForest', 'lr', 'xgb'))
 
-res = collect_results(root_fname)
-mylist = res[[1]]
-run_models = res[[2]]
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+do_metrics_plots(root_fname)
 ```
 
 ```{r}
@@ -107,10 +95,7 @@ root_fname = '~/data/baseline_prediction/results/stripped_allDTISE10_NVvsADHD'
 
 #runInCluster(root_fname, train_test_ratio=.8, cpuDiff=0, nsplits=30, nrepeatcv=5, run_models=c('rndForest', 'lr', 'xgb'))
 
-res = collect_results(root_fname)
-mylist = res[[1]]
-run_models = res[[2]]
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+do_metrics_plots(root_fname)
 ```
 
 ```{r}
@@ -121,11 +106,7 @@ root_fname = '~/data/baseline_prediction/results/stripped_allDTISE9_NVvsADHD'
 # save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
 # 
 #runInCluster(root_fname, train_test_ratio=.8, cpuDiff=0, nsplits=30, nrepeatcv=5, run_models=c('rndForest', 'lr', 'xgb'))
-
-res = collect_results(root_fname)
-mylist = res[[1]]
-run_models = res[[2]]
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+do_metrics_plots(root_fname)
 ```
 
 ```{r}
@@ -137,10 +118,7 @@ root_fname = '~/data/baseline_prediction/results/stripped_allDTISE8_NVvsADHD'
 
 #runInCluster(root_fname, train_test_ratio=.8, cpuDiff=0, nsplits=30, nrepeatcv=5, run_models=c('rndForest', 'lr', 'xgb'))
 
-res = collect_results(root_fname)
-mylist = res[[1]]
-run_models = res[[2]]
-source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
+do_metrics_plots(root_fname)
 ```
 
 The results are a bit concerning. It looks like we need all that data, in particular the data from the older kids, in order to make a baseline prediction. Not sure how clinically informative that is. Should we try to really fit our models within the < 8 y.o range, and then expand it?
