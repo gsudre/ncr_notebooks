@@ -225,6 +225,14 @@ cvCtrl <- trainControl(method = "cv",
                        allowParallel = FALSE)
 ctrl$functions <- caretFuncs
 
+rndForest = rfFull,
+                          bayLasso = blaFull,
+                          elasticN = enetFull,
+                          penalize = penFull,
+                          bayRidge = briFull,
+                          svmLinear = svmLFull,
+                          svmRadial = svmRFull,
+
 set.seed(myseed)
 blaRFE <- rfe(Xtrain, ytrain,
               sizes = varSeq,

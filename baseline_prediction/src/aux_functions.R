@@ -254,6 +254,14 @@ runInCluster <- function(root_fname, ncv=5, nrepeatcv=2, nsplits=5, train_test_r
   if (fixed_seed) {
     set.seed(107)
   }
+  if (length(levels(groups)) > 2) {
+    my_func = multiClassSummary
+    if (metric == 'ROC') {
+      metric = 'Mean_ROC'
+    }
+  } else {
+    my_func = twoClassSummary
+  }
   inTrain = createDataPartition(y = groups,
                                 times= nsplits,
                                 p=train_test_ratio)
@@ -262,7 +270,7 @@ runInCluster <- function(root_fname, ncv=5, nrepeatcv=2, nsplits=5, train_test_r
                           repeats = nrepeatcv,
                           classProbs = TRUE,
                           returnData = FALSE,
-                          summaryFunction = twoClassSummary,
+                          summaryFunction = my_func,
                           preProcOptions = default_options,
                           search='grid')
   do_classification(root_fname, ldata, groups, run_models, inTrain, ctrl_cv, njobs, default_preproc, metric)
