@@ -1,0 +1,95 @@
+---
+title: "Improving DTI results"
+output: html_notebook
+---
+
+So, the goal is to improve on these results, either by using data from other domains, or better tuning the best model.
+
+```{r}
+library(pROC)
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
+root_fname = '~/data/baseline_prediction/results/stripped_allDTI_NVvsADHD_big'
+do_metrics_plots(root_fname)
+```
+
+Let's try better tunning of the RF model:
+
+```{r}
+myseed = 107
+phen_vars = c(which(grepl("^FA_", colnames(merged))),
+              which(grepl("^AD_", colnames(merged))),
+              which(grepl("^RD_", colnames(merged))),
+              which(grepl("^MO_", colnames(merged)))
+              )
+X = merged[, phen_vars]
+y = as.character(merged$DX_BASELINE)
+y[y != 'NV'] = 'ADHD'
+y = factor(y, levels=c('NV', 'ADHD'))
+
+# remove subjects with NA
+rm_me = rowSums(is.na(X)) > 0
+X = X[!rm_me, ]
+y = y[!rm_me]
+
+cpuDiff = 1
+tuneLength = 10
+default_preproc = c("center", 'scale')
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+library(doMC)
+ncpus <- detectBatchCPUs()
+njobs <- ncpus - cpuDiff
+registerDoMC(njobs)
+selFunc = 'oneSE'  # maybe try oneSE and tolerance as well?
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         search='grid',
+                         summaryFunction = twoClassSummary,
+                         classProbs = TRUE)
+rndForestGrid <- expand.grid(.mtry=c(1:sqrt(ncol(Xtrain))))
+rfFull <- train(Xtrain, ytrain,
+                method = "rf",
+                trControl = fullCtrl,
+                tuneGrid=rndForestGrid,
+                metric = 'ROC',
+                preProcess = default_preproc)
+  
+rfFull
+pred = predict(rfFull, Xtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+
+varSeq = 1:ncol(X)
+ctrl <- rfeControl(method = "repeatedcv",
+                   saveDetails = TRUE,
+                   index = index,
+                   returnResamp = "final")
+
+ctrl$functions <- rfFuncs
+set.seed(myseed)
+rfRFE <- rfe(Xtrain, ytrain,
+             sizes = varSeq,
+             rfeControl = ctrl,
+             preProcess = default_preproc,
+             summaryFunction = twoClassSummary,
+             metric = 'ROC')
+rfRFE
+pred = predict(rfRFE, Xtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred$pred))
+```
+
+It's worrisome to me that the ROC and accuracy results are not within the intervals we're seeing in the original plot. 
+
+

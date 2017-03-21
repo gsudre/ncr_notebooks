@@ -1,432 +1,541 @@
 ---
-title: "DTI for 3 group and SX baseline"
+title: "Neuropsych analysis using stripped files"
 output: html_notebook
 ---
 
-Let's first plot the DTI results we're comparing to, before we do the age restriction analysis:
+There isn't much cleaning to do for neuropsych. Assuming the data is good, we can try to clip based on date difference later:
 
 ```{r}
 source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
-root_fname = '~/data/baseline_prediction/results/stripped_allDTI_NVvsADHD_big'
-do_metrics_plots(root_fname)
-```
 
-Now let's see if separating it into 3 groups makes any difference:
-
-```{r}
-tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
-rm_me = (tract_data$fa_avg < .4 | tract_data$ad_avg < 1.18 | tract_data$rd_avg > .65 | tract_data$rd_avg < .5 |
-         tract_data$norm.trans > .45 | tract_data$norm.rot > .008 | tract_data$goodSlices < 45 | tract_data$goodSlices > 70)
-print(sprintf('Reducing from %d to %d scans', nrow(tract_data), nrow(tract_data)-sum(rm_me)))
-tract_data = tract_data[!rm_me, ]
+beery_data = read.csv('~/data/baseline_prediction/stripped/beeryVMI.csv')
 gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
 gf = read.csv(gf_fname)
+
 gf = gf[gf$BASELINE=='BASELINE', ]
-my_ids = intersect(gf$MRN, tract_data$MRN)
-merged = mergeOnClosestDate(gf, tract_data, my_ids)
-rm_me = abs(merged$dateX.minus.dateY.months) > 12
-print(sprintf('Reducing from %d to %d scans', nrow(merged), nrow(merged)-sum(rm_me)))
-merged = merged[!rm_me, ]
+my_ids = intersect(gf$MRN, beery_data$Medical.Record...MRN)
+mbeery = mergeOnClosestDate(gf, beery_data, my_ids, y.date='record.date.collected', y.id='Medical.Record...MRN')
 ```
 
-The distribution looks like this:
-```{r}
-library(ggplot2)
-ggplot(merged) + geom_point(aes(1:nrow(merged), GAS, color=merged$DX_BASELINE))
-```
-Wendy has already looked over those outliers, so let's just go ahead and split them based on GAS:
+Finally, let's remove anyone with difference between clinical and neuropsych that's too big:
 
 ```{r}
-myc = kmeans(merged[merged$DX_BASELINE != 'NV',]$GAS, 2)
-print(sprintf('Cutoff: %.2f', myc$centers[1] + diff(myc$centers)/2))
+nbreaks = 40
+hist(mbeery$dateX.minus.dateY.months, breaks=nbreaks)
 ```
+
+There is a big spread. Let's err in the side of caution and cap it to 1 year before or after:
+
+```{r}
+rm_me = abs(mbeery$dateX.minus.dateY.months) > 12
+print(sprintf('Reducing from %d to %d tests', nrow(mbeery), nrow(mbeery)-sum(rm_me)))
+mbeery = mbeery[!rm_me, ]
+mbeery$dateClinical.minus.dateBeery.months = mbeery$dateX.minus.dateY.months
+mbeery$dateX.minus.dateY.months = NULL
+```
+
+With Beery incorporated, let's add other neuropsych:
+
+```{r}
+cpt_data = read.csv('~/data/baseline_prediction/stripped/cpt.csv')
+my_ids = intersect(gf$MRN, cpt_data$MRN)
+mcpt = mergeOnClosestDate(gf, cpt_data, my_ids)
+rm_me = abs(mcpt$dateX.minus.dateY.months) > 12
+print(sprintf('Reducing from %d to %d tests', nrow(mcpt), nrow(mcpt)-sum(rm_me)))
+mcpt = mcpt[!rm_me, ]
+mcpt$dateClinical.minus.dateCPT.months = mcpt$dateX.minus.dateY.months
+mcpt$dateX.minus.dateY.months = NULL
+```
+
+```{r}
+iq_data = read.csv('~/data/baseline_prediction/stripped/iq.csv')
+my_ids = intersect(gf$MRN, iq_data$Medical.Record...MRN)
+miq = mergeOnClosestDate(gf, iq_data, my_ids, y.id='Medical.Record...MRN', y.date='record.date.collected')
+rm_me = abs(miq$dateX.minus.dateY.months) > 12
+print(sprintf('Reducing from %d to %d tests', nrow(miq), nrow(miq)-sum(rm_me)))
+miq = miq[!rm_me, ]
+miq$dateClinical.minus.dateIQ.months = miq$dateX.minus.dateY.months
+miq$dateX.minus.dateY.months = NULL
+```
+
+```{r}
+wisc_data = read.csv('~/data/baseline_prediction/stripped/wisc.csv')
+my_ids = intersect(gf$MRN, wisc_data$Medical.Record...MRN)
+mwisc = mergeOnClosestDate(gf, wisc_data, my_ids, y.id='Medical.Record...MRN', y.date='record.date.collected')
+rm_me = abs(mwisc$dateX.minus.dateY.months) > 12
+print(sprintf('Reducing from %d to %d tests', nrow(mwisc), nrow(mwisc)-sum(rm_me)))
+mwisc = mwisc[!rm_me, ]
+mwisc$dateClinical.minus.dateWISC.months = mwisc$dateX.minus.dateY.months
+mwisc$dateX.minus.dateY.months = NULL
+```
+
+```{r}
+wj_data = read.csv('~/data/baseline_prediction/stripped/wj.csv')
+my_ids = intersect(gf$MRN, wj_data$Medical.Record...MRN)
+mwj = mergeOnClosestDate(gf, wj_data, my_ids, y.id='Medical.Record...MRN', y.date='record.date.collected')
+rm_me = abs(mwj$dateX.minus.dateY.months) > 12
+print(sprintf('Reducing from %d to %d tests', nrow(mwj), nrow(mwj)-sum(rm_me)))
+mwj = mwj[!rm_me, ]
+mwj$dateClinical.minus.dateWJ.months = mwj$dateX.minus.dateY.months
+mwj$dateX.minus.dateY.months = NULL
+```
+
+Finally, we merge across neuropsych tests based on MRN. Let's go from most rows to least rows:
+
+```{r}
+merged = merge(mwj, mbeery, by='MRN')
+merged = merge(merged, miq, by='MRN')
+merged = merge(merged, mwisc, by='MRN')
+merged = merge(merged, mcpt, by='MRN')
+```
+
+Ready for some ML. Let's get all features first, and try some NV vs ADHD classification, clumping in the ADHD_NOS folks.
 
 ```{r}
 library(caret)
 library(randomForest)
 seed = 107
-phen_vars = c(which(grepl("^FA_", colnames(merged))),
-              which(grepl("^AD_", colnames(merged))),
-              which(grepl("^RD_", colnames(merged))),
-              which(grepl("^MO_", colnames(merged)))
+# I'm selecting mostly raw or standard scores depending on NAs
+phen_vars = c('FSIQ',
+              # CPT
+              'N_of_omissions', 'N_commissions', 'hit_RT', 'hit_RT_SE', 'variability_of_SE', 'N_perservations',
+              'hit_RT_block_change', 'hit_RT_SE_block_change', 'hit_RT_ISI_change', 'hit_RT_SE_ISI_change',
+              # WISC
+              'Raw.score..DSF', 'Raw.score..DSB', 'Raw.score..SSF', 'Raw.score..SSB',
+              # WJ
+              'PS',
+              # Beery
+              'Standard.score'
               )
-X = merged[, phen_vars]
-y = as.character(merged$DX_BASELINE)
+keep_me = c()
+for (v in phen_vars) {
+  keep_me = c(keep_me, which(colnames(merged) == v))
+}
+X = merged[, keep_me]
+y = merged$DX_BASELINE
 y[y != 'NV'] = 'ADHD'
-y[y == 'ADHD' & merged$GAS > 68.91] = 'ADHD_high'
-y[y == 'ADHD'] = 'ADHD_low'
-y = factor(y, levels=c('NV', 'ADHD_low', 'ADHD_high'))
-# remove subjects with NA
+y = factor(y, levels = c('NV', 'ADHD'))
+```
+
+Before we do some ML, we need to clean up the NAs. For now, I'll just remove the subjects:
+
+```{r}
 rm_me = rowSums(is.na(X)) > 0
 X = X[!rm_me, ]
 y = y[!rm_me]
 ```
 
-Let's do some ML now:
+Let's do some ML:
 
 ```{r}
 # ldata = X
 # groups = y
-root_fname = '~/data/baseline_prediction/results/stripped_allDTI_3group'
+root_fname = '~/data/baseline_prediction/results/stripped_neuropsych_NVvsADHD'
 # save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
 
-# runInCluster(root_fname, train_test_ratio=.7, cpuDiff=1, nsplits=5, nrepeatcv=5, run_models=c('rndForest', 'rsvm'))
+#runInCluster(root_fname, train_test_ratio=.8, cpuDiff=2, run_models=c('rndForest', 'lr', 'rsvm', 'xgb'))
 
 do_metrics_plots(root_fname)
 ```
 
-The issue here is that we would have to look at AUC, because accuracy is shot by having almost 50% NVs. Let's take a look at regression:
+Let's try to improve this a bit. First, let's study the rf model a bit more:
 
 ```{r}
-seed = 107
-phen_vars = c(which(grepl("^FA_", colnames(merged))),
-              which(grepl("^AD_", colnames(merged))),
-              which(grepl("^RD_", colnames(merged))),
-              which(grepl("^MO_", colnames(merged)))
-              )
-X = merged[, phen_vars]
-y = merged$SX_inatt
-# remove subjects with NA
-rm_me = rowSums(is.na(X)) > 0
-X = X[!rm_me, ]
-y = y[!rm_me]
+set.seed(107)
+split <- createDataPartition(y, p = .8, list = FALSE)
+
+Xtrain <- X[ split, ]
+Xtest  <- X[-split, ]
+ytrain = y[split]
+ytest = y[-split]
+
+library(doMC)
+library(caret)
+registerDoMC(7)
+
+## create the cross-validation files as a list to use with different 
+## functions
+set.seed(107)
+index <- createMultiFolds(ytrain, times = 5)
+fiveStats <- function(...) c(twoClassSummary(...), defaultSummary(...))
+
+fullCtrl <- trainControl(method = "repeatedcv",
+                         repeats = 5,
+                         summaryFunction = fiveStats,
+                         classProbs = TRUE,
+                         index = index)
+
+rfFull <- train(Xtrain, ytrain,
+                method = "rf",
+                metric = "ROC",
+                tuneGrid = data.frame(mtry = floor(sqrt(length(predVars)))),
+                ntree = 1000,
+                trControl = fullCtrl)
+rfFull
 ```
+
+OK, right at the median accuracy from above, and a bit below AUC. Let's tune it a bit:
+
+```{r}
+ctrl <- rfeControl(method = "repeatedcv", repeats = 5,
+                   saveDetails = TRUE,
+                   index = index,
+                   returnResamp = "final")
+ctrl$functions <- rfFuncs
+ctrl$functions$summary <- fiveStats
+varSeq <- seq(1, ncol(X), by = 1)
+set.seed(107)
+rfRFE <- rfe(Xtrain, ytrain,
+             sizes = varSeq,
+             metric = "ROC",
+             ntree = 1000,
+             rfeControl = ctrl)
+rfRFE
+```
+
+We might need to do a more in-depth study of these neuropsych variables. Let's copy the example from https://raw.githubusercontent.com/cran/AppliedPredictiveModeling/master/inst/chapters/19_Feature_Select.R:
 
 ```{r}
 myseed = 107
-cpuDiff = 1
-tuneLength = 10
-default_preproc = c("center", 'scale')
 library(caret)
 set.seed(myseed)
 split <- createDataPartition(y, p = .8, list = FALSE)
 
-Xtrain <- X[ split, ]
-ytrain <- y[ split ]
-Xtest  <- X[-split, ]
-ytest = y[-split]
+adData <- X
+adData$Class <- y
+
+training <- adData[ split, ]
+testing  <- adData[-split, ]
+
+predVars <- names(adData)[!(names(adData) %in% c("Class",  "Genotype"))]
+
+fiveStats <- function(...) c(twoClassSummary(...), defaultSummary(...))
 
 set.seed(myseed)
-index <- createMultiFolds(ytrain, times = 5)
+index <- createMultiFolds(training$Class, times = 5)
+
+varSeq <- seq(1, length(predVars)-1, by = 2)
 
 library(doMC)
-ncpus <- detectBatchCPUs()
-njobs <- ncpus - cpuDiff
-registerDoMC(njobs)
-selFunc = 'best'  # maybe try oneSE and tolerance as well?
+registerDoMC(7)
 
-fullCtrl <- trainControl(method = "repeatedcv",
-                         repeats = 5,
-                         index = index,
-                         search='grid',
-                         selectionFunction = selFunc)
-
-set.seed(myseed)
-rfFull <- train(Xtrain, ytrain,
-                method = "rf",
-                tuneLength = tuneLength,
-                ntree = 1000,
-                trControl = fullCtrl,
-                preProcess = default_preproc)
-rfFull
-
-set.seed(myseed)
-blaFull <- train(Xtrain, ytrain,
-                method = "blassoAveraged",
-                tuneLength = tuneLength,
-                trControl = fullCtrl,
-                preProcess = default_preproc)
-blaFull
-
-set.seed(myseed)
-enetFull <- train(Xtrain, ytrain,
-                method = "enet",
-                tuneLength = tuneLength,
-                trControl = fullCtrl,
-                preProcess = default_preproc)
-enetFull
-
-set.seed(myseed)
-penFull <- train(Xtrain, ytrain,
-                method = "penalized",
-                tuneLength = tuneLength,
-                trControl = fullCtrl,
-                preProcess = default_preproc)
-penFull
-
-set.seed(myseed)
-briFull <- train(Xtrain, ytrain,
-                method = "bridge",
-                tuneLength = tuneLength,
-                trControl = fullCtrl,
-                preProcess = default_preproc)
-briFull
-
-set.seed(myseed)
-svmLFull <- train(Xtrain, ytrain,
-                method = "svmLinear2",
-                tuneLength = tuneLength,
-                trControl = fullCtrl,
-                preProcess = default_preproc)
-svmLFull
-
-set.seed(myseed)
-svmRFull <- train(Xtrain, ytrain,
-                method = "svmRadial",
-                tuneLength = tuneLength,
-                trControl = fullCtrl,
-                preProcess = default_preproc)
-svmRFull
-
-set.seed(myseed)
-xgbFull <- train(Xtrain, ytrain,
-                method = "xgbTree",
-                tuneLength = tuneLength,
-                trControl = fullCtrl,
-                preProcess = default_preproc)
-xgbFull
-
-resamps <- resamples(list(rndForest = rfFull,
-                          bayLasso = blaFull,
-                          elasticN = enetFull,
-                          penalize = penFull,
-                          bayRidge = briFull,
-                          svmLinear = svmLFull,
-                          svmRadial = svmRFull,
-                          XGB = xgbFull))
-
-bwplot(resamps)  # dotplot(resamps) shoes 95% CI
-difValues <- diff(resamps)
-summary(difValues)
-bwplot(difValues)
-
-# evaluate test set using postResample(predict(rfFull, Xtest), obs = ytest)
-
-```
-
-Now we try out some RFE:
-
-```{r}
-varSeq = 1:ncol(X)
 ctrl <- rfeControl(method = "repeatedcv", repeats = 5,
                    saveDetails = TRUE,
                    index = index,
                    returnResamp = "final")
 
-ctrl$functions <- rfFuncs
+fullCtrl <- trainControl(method = "repeatedcv",
+                         repeats = 5,
+                         summaryFunction = fiveStats,
+                         classProbs = TRUE,
+                         index = index)
+
 set.seed(myseed)
-rfRFE <- rfe(Xtrain, ytrain,
+rfFull <- train(training[, predVars],
+                training$Class,
+                method = "rf",
+                metric = "ROC",
+                tuneGrid = data.frame(mtry = floor(sqrt(length(predVars)))),
+                ntree = 1000,
+                trControl = fullCtrl)
+rfFull
+
+set.seed(myseed)
+ldaFull <- train(training[, predVars],
+                 training$Class,
+                 method = "lda",
+                 metric = "ROC",
+                 ## The 'tol' argument helps lda() know when a matrix is 
+                 ## singular. One of the predictors has values very close to 
+                 ## zero, so we raise the vaue to be smaller than the default
+                 ## value of 1.0e-4.
+                 tol = 1.0e-12,
+                 trControl = fullCtrl)
+ldaFull
+
+set.seed(myseed)
+svmFull <- train(training[, predVars],
+                 training$Class,
+                 method = "svmRadial",
+                 metric = "ROC",
+                 tuneLength = 12,
+                 preProc = c("center", "scale"),
+                 trControl = fullCtrl)
+svmFull
+
+set.seed(myseed)
+nbFull <- train(training[, predVars],
+                training$Class,
+                method = "nb",
+                metric = "ROC",
+                trControl = fullCtrl)
+nbFull
+
+lrFull <- train(training[, predVars],
+                training$Class,
+                method = "glm",
+                metric = "ROC",
+                trControl = fullCtrl)
+lrFull
+
+set.seed(myseed)
+knnFull <- train(training[, predVars],
+                 training$Class,
+                 method = "knn",
+                 metric = "ROC",
+                 tuneLength = 20,
+                 preProc = c("center", "scale"),
+                 trControl = fullCtrl)
+knnFull
+
+
+ctrl$functions <- rfFuncs
+ctrl$functions$summary <- fiveStats
+set.seed(myseed)
+rfRFE <- rfe(training[, predVars],
+             training$Class,
              sizes = varSeq,
+             metric = "ROC",
+             ntree = 1000,
              rfeControl = ctrl)
 rfRFE
 
+ctrl$functions <- ldaFuncs
+ctrl$functions$summary <- fiveStats
+
+set.seed(myseed)
+ldaRFE <- rfe(training[, predVars],
+              training$Class,
+              sizes = varSeq,
+              metric = "ROC",
+              tol = 1.0e-12,
+              rfeControl = ctrl)
+ldaRFE
+
+ctrl$functions <- nbFuncs
+ctrl$functions$summary <- fiveStats
+set.seed(myseed)
+nbRFE <- rfe(training[, predVars],
+             training$Class,
+             sizes = varSeq,
+             metric = "ROC",
+             rfeControl = ctrl)
+nbRFE
+
+ctrl$functions <- caretFuncs
+ctrl$functions$summary <- fiveStats
+
 cvCtrl <- trainControl(method = "cv",
                        verboseIter = FALSE,
+                       classProbs = TRUE,
                        allowParallel = FALSE)
-ctrl$functions <- caretFuncs
 
 set.seed(myseed)
-blaRFE <- rfe(Xtrain, ytrain,
+svmRFE <- rfe(training[, predVars],
+              training$Class,
               sizes = varSeq,
               rfeControl = ctrl,
-              method = "blassoAveraged",
-              tuneLength = tuneLength,
-              preProc = default_preproc,
-              trControl = cvCtrl)
-blaRFE
-
-set.seed(myseed)
-enetRFE <- rfe(Xtrain, ytrain,
-              sizes = varSeq,
-              rfeControl = ctrl,
-              method = "enet",
-              tuneLength = tuneLength,
-              preProc = default_preproc,
-              trControl = cvCtrl)
-enetRFE
-
-set.seed(myseed)
-penRFE <- rfe(Xtrain, ytrain,
-              sizes = varSeq,
-              rfeControl = ctrl,
-              method = "penalyzed",
-              tuneLength = tuneLength,
-              preProc = default_preproc,
-              trControl = cvCtrl)
-penRFE
-
-set.seed(myseed)
-briRFE <- rfe(Xtrain, ytrain,
-              sizes = varSeq,
-              rfeControl = ctrl,
-              method = "bridge",
-              tuneLength = tuneLength,
-              preProc = default_preproc,
-              trControl = cvCtrl)
-briRFE
-
-set.seed(myseed)
-svmLRFE <- rfe(Xtrain, ytrain,
-              sizes = varSeq,
-              rfeControl = ctrl,
-              method = "svmLinear2",
-              tuneLength = tuneLength,
-              preProc = default_preproc,
-              trControl = cvCtrl)
-svmLRFE
-
-set.seed(myseed)
-svmRRFE <- rfe(Xtrain, ytrain,
-              sizes = varSeq,
-              rfeControl = ctrl,
+              metric = "ROC",
+              ## Now arguments to train() are used.
               method = "svmRadial",
-              tuneLength = tuneLength,
-              preProc = default_preproc,
+              tuneLength = 12,
+              preProc = c("center", "scale"),
               trControl = cvCtrl)
-svmRRFE
+svmRFE
+
+ctrl$functions <- lrFuncs
+ctrl$functions$summary <- fiveStats
 
 set.seed(myseed)
-xgbRFE <- rfe(Xtrain, ytrain,
+lrRFE <- rfe(training[, predVars],
+             training$Class,
+             sizes = varSeq,
+             metric = "ROC",
+             rfeControl = ctrl)
+lrRFE
+
+ctrl$functions <- caretFuncs
+ctrl$functions$summary <- fiveStats
+
+set.seed(myseed)
+knnRFE <- rfe(training[, predVars],
+              training$Class,
               sizes = varSeq,
-              rfeControl = ctrl,
-              method = "xgbTree",
-              tuneLength = tuneLength,
-              preProc = default_preproc,
-              trControl = cvCtrl)
-xgbRFE
+              metric = "ROC",
+              method = "knn",
+              tuneLength = 20,
+              preProc = c("center", "scale"),
+              trControl = cvCtrl,
+              rfeControl = ctrl)
+knnRFE
+
+## Each of these models can be evaluate using the plot() function to see
+## the profile across subset sizes.
+
+library(pROC)
+rfROCfull <- roc(testing$Class,
+                 predict(rfFull, testing[,predVars], type = "prob")[,1])
+rfROCfull
+rfROCrfe <- roc(as.numeric(testing$Class), as.numeric(predict(rfRFE, testing[,predVars])$pred))
+rfROCrfe
+
+ldaROCfull <- roc(testing$Class,
+                  predict(ldaFull, testing[,predVars], type = "prob")[,1])
+ldaROCfull
+ldaROCrfe <- roc(as.numeric(testing$Class), as.numeric(predict(ldaRFE, testing[,predVars])$pred))
+ldaROCrfe
+
+nbROCfull <- roc(testing$Class,
+                 predict(nbFull, testing[,predVars], type = "prob")[,1])
+nbROCfull
+nbROCrfe <- roc(as.numeric(testing$Class), as.numeric(predict(nbRFE, testing[,predVars])$pred))
+nbROCrfe
+
+svmROCfull <- roc(testing$Class,
+                  predict(svmFull, testing[,predVars], type = "prob")[,1])
+svmROCfull
+svmROCrfe <- roc(as.numeric(testing$Class), as.numeric(predict(svmRFE, testing[,predVars])$pred))
+svmROCrfe
+
+lrROCfull <- roc(testing$Class,
+                 predict(lrFull, testing[,predVars], type = "prob")[,1])
+lrROCfull
+lrROCrfe <- roc(as.numeric(testing$Class), as.numeric(predict(lrRFE, testing[,predVars])$pred))
+lrROCrfe
+
+knnROCfull <- roc(testing$Class,
+                  predict(knnFull, testing[,predVars], type = "prob")[,1])
+knnROCfull
+knnROCrfe <- roc(as.numeric(testing$Class), as.numeric(predict(knnRFE, testing[,predVars])$pred))
+knnROCrfe
+
+sbfResamp <- function(x, fun = mean)
+{
+  x <- unlist(lapply(x$variables, length))
+  fun(x)
+}
+sbfROC <- function(mod) auc(roc(testing$Class, predict(mod, testing)$Impaired))
+
+pScore <- function(x, y)
+{
+  numX <- length(unique(x))
+  if(numX > 2)
+  {
+    out <- t.test(x ~ y)$p.value
+  } else {
+    out <- fisher.test(factor(x), y)$p.value
+  }
+  out
+}
+ldaWithPvalues <- ldaSBF
+ldaWithPvalues$score <- pScore
+ldaWithPvalues$summary <- fiveStats
+
+ldaWithPvalues$filter <- function (score, x, y)
+{
+  keepers <- score <= 0.05
+  keepers
+}
+
+sbfCtrl <- sbfControl(method = "repeatedcv",
+                      repeats = 5,
+                      verbose = TRUE,
+                      functions = ldaWithPvalues,
+                      index = index)
+
+rawCorr <- sbf(training[, predVars],
+               training$Class,
+               tol = 1.0e-12,
+               sbfControl = sbfCtrl)
+rawCorr
+
+ldaWithPvalues$filter <- function (score, x, y)
+{
+  score <- p.adjust(score,  "bonferroni")
+  keepers <- score <= 0.05
+  keepers
+}
+sbfCtrl <- sbfControl(method = "repeatedcv",
+                      repeats = 5,
+                      verbose = TRUE,
+                      functions = ldaWithPvalues,
+                      index = index)
+
+adjCorr <- sbf(training[, predVars],
+               training$Class,
+               tol = 1.0e-12,
+               sbfControl = sbfCtrl)
+adjCorr
+
+ldaWithPvalues$filter <- function (score, x, y)
+{
+  keepers <- score <= 0.05
+  corrMat <- cor(x[,keepers])
+  tooHigh <- findCorrelation(corrMat, .75)
+  if(length(tooHigh) > 0) keepers[tooHigh] <- FALSE
+  keepers
+}
+sbfCtrl <- sbfControl(method = "repeatedcv",
+                      repeats = 5,
+                      verbose = TRUE,
+                      functions = ldaWithPvalues,
+                      index = index)
+
+rawNoCorr <- sbf(training[, predVars],
+                 training$Class,
+                 tol = 1.0e-12,
+                 sbfControl = sbfCtrl)
+rawNoCorr
+
+ldaWithPvalues$filter <- function (score, x, y)
+{
+  score <- p.adjust(score,  "bonferroni")
+  keepers <- score <= 0.05
+  corrMat <- cor(x[,keepers])
+  tooHigh <- findCorrelation(corrMat, .75)
+  if(length(tooHigh) > 0) keepers[tooHigh] <- FALSE
+  keepers
+}
+sbfCtrl <- sbfControl(method = "repeatedcv",
+                      repeats = 5,
+                      verbose = TRUE,
+                      functions = ldaWithPvalues,
+                      index = index)
+
+adjNoCorr <- sbf(training[, predVars],
+                 training$Class,
+                 tol = 1.0e-12,
+                 sbfControl = sbfCtrl)
+adjNoCorr
+
+## Filter methods test set ROC results:
+
+sbfROC(rawCorr)
+sbfROC(rawNoCorr)
+sbfROC(adjCorr)
+sbfROC(adjNoCorr)
+
+rfeResamples <- resamples(list(RF = rfRFE,
+                               "Logistic Reg." = lrRFE,
+                               "SVM" = svmRFE,
+                               "$K$--NN" = knnRFE,
+                               "N. Bayes" = nbRFE,
+                               "LDA" = ldaRFE))
+summary(rfeResamples)
+
+fullResamples <- resamples(list(RF = rfFull,
+                                "Logistic Reg." = lrFull,
+                                "SVM" = svmFull,
+                                "$K$--NN" = knnFull,
+                                "N. Bayes" = nbFull,
+                                "LDA" = ldaFull))
+summary(fullResamples)
+
+filteredResamples <- resamples(list("No Adjustment, Corr Vars" = rawCorr,
+                                    "No Adjustment, No Corr Vars" = rawNoCorr,
+                                    "Bonferroni, Corr Vars" = adjCorr,
+                                    "Bonferroni, No Corr Vars" = adjNoCorr))
+summary(filteredResamples)
 
 ```
 
-```{r}
-# rm_me = (merged$age_at_scan > 9) | (rowSums(is.na(X)) > 0)
-# ldata = X[!rm_me, ]
-# groups = y[!rm_me]
-root_fname = '~/data/baseline_prediction/results/stripped_allDTISE9_NVvsADHD'
-# save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
-# 
-#runInCluster(root_fname, train_test_ratio=.8, cpuDiff=0, nsplits=30, nrepeatcv=5, run_models=c('rndForest', 'lr', 'xgb'))
-do_metrics_plots(root_fname)
-```
-
-```{r}
-# rm_me = (merged$age_at_scan > 8) | (rowSums(is.na(X)) > 0)
-# ldata = X[!rm_me, ]
-# groups = y[!rm_me]
-root_fname = '~/data/baseline_prediction/results/stripped_allDTISE8_NVvsADHD'
-# save(ldata, groups, file=sprintf('%s.RData', root_fname), compress=T)
-
-#runInCluster(root_fname, train_test_ratio=.8, cpuDiff=0, nsplits=30, nrepeatcv=5, run_models=c('rndForest', 'lr', 'xgb'))
-
-do_metrics_plots(root_fname)
-```
-
-The results are a bit concerning. It looks like we need all that data, in particular the data from the older kids, in order to make a baseline prediction. Not sure how clinically informative that is. Should we try to really fit our models within the < 8 y.o range, and then expand it?
-
-The trick is that I only have 76 scans < 8, but 120 < 9. That's a more manageable number that we could work with in better fitting classifiers.
-
-Another way of getting more scans would be to possibly derive the visual thresholds from histograms in the age subgroups. Maybe that would savage  some of the data?
-
-# Deeper exploring of < 9 y.o. scans
-
-What does the histogram look like?
-
-```{r}
-tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
-tract_data = tract_data[tract_data$age_at_scan <= 9, ]
-par(mfrow=c(2, 3))
-nbreaks = 40
-hist(tract_data$fa_avg, breaks=nbreaks)
-hist(tract_data$ad_avg, breaks=nbreaks)
-hist(tract_data$rd_avg, breaks=nbreaks)
-hist(tract_data$norm.trans, breaks=nbreaks)
-hist(tract_data$norm.rot, breaks=nbreaks)
-hist(tract_data$goodSlices, breaks=nbreaks)
-```
-
-It turns out that it doesn't make that much difference in the cut-offs, at least visually.
-
-```{r}
-rm_me = (tract_data$fa_avg < .4 | tract_data$ad_avg < 1.18 | tract_data$rd_avg > .65 | tract_data$rd_avg < .5 |
-         tract_data$norm.trans > .45 | tract_data$norm.rot > .008 | tract_data$goodSlices < 45 | tract_data$goodSlices > 70)
-print(sprintf('Reducing from %d to %d scans', nrow(tract_data), nrow(tract_data)-sum(rm_me)))
-tract_data = tract_data[!rm_me, ]
-```
-``` {r}
-gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
-gf = read.csv(gf_fname)
-gf = gf[gf$BASELINE=='BASELINE', ]
-my_ids = intersect(gf$MRN, tract_data$MRN)
-merged = mergeOnClosestDate(gf, tract_data, my_ids)
-rm_me = abs(merged$dateX.minus.dateY.months) > 12
-print(sprintf('Reducing from %d to %d scans', nrow(merged), nrow(merged)-sum(rm_me)))
-merged = merged[!rm_me, ]
-```
-
-OK, so we arrived at the same number as before. Do we have any NAs?
-
-```{r}
-phen_vars = c(which(grepl("^FA_", colnames(merged))),
-              which(grepl("^AD_", colnames(merged))),
-              which(grepl("^RD_", colnames(merged))),
-              which(grepl("^MO_", colnames(merged)))
-              )
-X = merged[, phen_vars]
-y = merged$DX_BASELINE
-y[y != 'NV'] = 'ADHD'
-y = factor(y)
-sum(rowSums(is.na(X)) > 0)
-```
-
-Nope. Now, let's do a more in-depth study of this data using Random Forests:
-
-```{r}
-library(caret)
-library(randomForest)
-seed = 107
-inTraining <- createDataPartition(y, p = .75, list = FALSE)
-training <- cbind(X[ inTraining,], y[inTraining])
-testing  <- cbind(X[-inTraining,], y[-inTraining])
-colnames(training)[ncol(X) + 1] = 'Class'
-colnames(testing)[ncol(X) + 1] = 'Class'
-```
-
-```{r}
-fitControl <- trainControl(## 10-fold CV
-                           method = "oob",
-                           number = 10,
-                           ## repeated ten times
-                           repeats = 10)
-set.seed(seed)
-rndForestGrid <- expand.grid(.mtry=c(1:sqrt(ncol(X))))
-myFit <- train(Class ~ ., data = training, 
-                 method = "rf", 
-                 trControl = fitControl,
-               tuneGrid=rndForestGrid,
-               # search='grid',
-               # tuneLength=10,
-               preProcess = c('nzv', 'pca'),
-              verbose=F)
-myFit
-```
-
-It doesn't look like we're going to improve much here... let's see how well we do with xgb though:
-
-```{r}
-fitControl <- trainControl(## 10-fold CV
-                           method = "repeatedcv",
-                           number = 10,
-                           ## repeated ten times
-                           repeats = 10)
-set.seed(seed)
-myFit <- train(Class ~ ., data = training, 
-                 method = "xgbTree", 
-                 trControl = fitControl,
-               # tuneGrid=rndForestGrid,
-               search='grid',
-               tuneLength=10,
-               preProcess = c('nzv', 'pca'),
-              verbose=F)
-myFit
-```
-
-Also not great... 
