@@ -36,9 +36,9 @@ nvVSadhd_test = function(X, merged, dtype) {
   y = factor(y, levels=c('NV', 'ADHD'))
   modality <- apply(X, 2, function(dat) {dtype})
   tstat <- apply(X, 2, function(dat) {
-    +     t.test(dat[y=='NV'], dat[y=='ADHD'])$statistic})
+    +     summary(lm(dat ~ y + merged$age + merged$SEX))$coefficients[2, 3]})
   pvals <- apply(X, 2, function(dat) {
-    +     t.test(dat[y=='NV'], dat[y=='ADHD'])$p.value})
+    +     summary(lm(dat ~ y + merged$age + merged$SEX))$coefficients[2, 4]})
   res = cbind(modality, tstat, pvals)
   colnames(res) = c('dtype', 'nvVSadhd_tstat', 'nvVSadhd_pval')
   return(res)
@@ -55,9 +55,9 @@ nvVSadhd_lowVSadhd_high_test = function(X, merged) {
   y[y == 'ADHD'] = 'ADHD_low'
   y = factor(y, levels=c('NV', 'ADHD_low', 'ADHD_high'))
   fstat <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ y)))[[1]][4][[1, 1]]})
+    +     summary(aov(lm(dat ~ y + merged$age + merged$SEX)))[[1]][4][[1, 1]]})
   pvals <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ y)))[[1]][5][[1, 1]]})
+    +     summary(aov(lm(dat ~ y + merged$age + merged$SEX)))[[1]][5][[1, 1]]})
   res = cbind(fstat, pvals)
   colnames(res) = c('nvVSadhdlowVSadhdhigh_Fstat', 'nvVSadhdlowVSadhdhigh_pval')
   return(res)
@@ -66,17 +66,17 @@ nvVSadhd_lowVSadhd_high_test = function(X, merged) {
 outcome_test = function(X, merged) {
   y = merged$inatt3_named
   fstat <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ y)))[[1]][4][[1, 1]]})
+    +     summary(aov(lm(dat ~ y + merged$age + merged$SEX)))[[1]][4][[1, 1]]})
   pvals <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ y)))[[1]][5][[1, 1]]})
+    +     summary(aov(lm(dat ~ y + merged$age + merged$SEX)))[[1]][5][[1, 1]]})
   res_inatt = cbind(fstat, pvals)
   colnames(res_inatt) = c('outcomeInatt3Grp_Fstat', 'outcomeInatt3Grp_pval')
   
   y = merged$HI3_named
   fstat <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ y)))[[1]][4][[1, 1]]})
+    +     summary(aov(lm(dat ~ y + merged$age + merged$SEX)))[[1]][4][[1, 1]]})
   pvals <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ y)))[[1]][5][[1, 1]]})
+    +     summary(aov(lm(dat ~ y + merged$age + merged$SEX)))[[1]][5][[1, 1]]})
   res_hi = cbind(fstat, pvals)
   colnames(res_hi) = c('outcomeHI3Grp_Fstat', 'outcomeHI3Grp_pval')
   return(cbind(res_inatt, res_hi))
@@ -88,18 +88,18 @@ symptom_test = function(X, merged, thresh) {
   
   y = merged[keep_me,]$SX_inatt
   tstat <- apply(X, 2, function(dat) {
-    +      cor.test(dat, y)$statistic})
+    +      summary(lm(dat ~ y + merged[keep_me,]$age + merged[keep_me,]$SEX))$coefficients[2, 3]})
   pvals <- apply(X, 2, function(dat) {
-    +      cor.test(dat, y)$p.value})
+    +      summary(lm(dat ~ y + merged[keep_me,]$age + merged[keep_me,]$SEX))$coefficients[2, 4]})
   res_inatt = cbind(tstat, pvals)
   colnames(res_inatt) = c(sprintf('inattBE%d_tstat', thresh),
                           sprintf('inattBE%d_pval', thresh))
    
   y = merged[keep_me,]$SX_HI
   tstat <- apply(X, 2, function(dat) {
-    +      cor.test(dat, y)$statistic})
+    +      summary(lm(dat ~ y + merged[keep_me,]$age + merged[keep_me,]$SEX))$coefficients[2, 3]})
   pvals <- apply(X, 2, function(dat) {
-    +      cor.test(dat, y)$p.value})
+    +      summary(lm(dat ~ y + merged[keep_me,]$age + merged[keep_me,]$SEX))$coefficients[2, 4]})
   res_hi = cbind(tstat, pvals)
   colnames(res_hi) = c(sprintf('hiBE%d_tstat', thresh),
                           sprintf('hiBE%d_pval', thresh))
@@ -256,7 +256,44 @@ Finally, we just merge everything and spit out the file:
 ```{r}
 res = rbind(dti_descriptive, demo_descriptive, geo_descriptive, neuropsych_descriptive,
             struct_descriptive)
-write.csv(res, file='~/data/baseline_prediction/stripped/descriptives.csv')
+write.csv(res, file='~/data/baseline_prediction/stripped/descriptives_age_sex.csv')
 ```
 
+# Correlation with movement
 
+Philip suggested we should check whether the DTI variables correlate with the movement variables. Let's see:
+
+```{r}
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+rm_me = (tract_data$fa_avg < .4 | tract_data$ad_avg < 1.18 | tract_data$rd_avg > .65 | tract_data$rd_avg < .5 |
+         tract_data$norm.trans > .45 | tract_data$norm.rot > .008 | tract_data$goodSlices < 45 | tract_data$goodSlices > 70)
+print(sprintf('Reducing from %d to %d scans', nrow(tract_data), nrow(tract_data)-sum(rm_me)))
+tract_data = tract_data[!rm_me, ]
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+gf = gf[gf$BASELINE=='BASELINE', ]
+my_ids = intersect(gf$MRN, tract_data$MRN)
+merged = mergeOnClosestDate(gf, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+print(sprintf('Reducing from %d to %d scans', nrow(merged), nrow(merged)-sum(rm_me)))
+merged = merged[!rm_me, ]
+phen_vars = c(which(grepl("^FA_", colnames(merged))),
+              which(grepl("^AD_", colnames(merged))),
+              which(grepl("^RD_", colnames(merged))),
+              which(grepl("^MO_", colnames(merged)))
+              )
+X = merged[, phen_vars]
+pvals.trans <- apply(X, 2, function(dat) {
+  +      summary(lm(dat ~  merged$norm.trans))$coefficients[2, 4]})
+pvals.rot <- apply(X, 2, function(dat) {
+  +      summary(lm(dat ~  merged$norm.rot))$coefficients[2, 4]})
+sum(pvals.trans < .05)
+sum(pvals.rot < .05)
+```
+
+Well, 4 and 3 is not so bad, out of 44. Which ones?
+
+```{r}
+colnames(X)[pvals.trans < .05]
+colnames(X)[pvals.rot < .05]
+```

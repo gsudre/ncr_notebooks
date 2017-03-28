@@ -1,0 +1,242 @@
+---
+title: "Missing data"
+output: html_notebook
+---
+
+I want to play a bit with the models that handle missing data, just to get a feel for them. I might end up using them in the future when combining the different datasets:
+
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
+
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+rm_me = (tract_data$fa_avg < .4 | tract_data$ad_avg < 1.18 | tract_data$rd_avg > .65 | tract_data$rd_avg < .5 |
+         tract_data$norm.trans > .45 | tract_data$norm.rot > .008 | tract_data$goodSlices < 45 | 
+         tract_data$goodSlices > 70)
+tract_data = tract_data[!rm_me, ]
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+gf = gf[gf$BASELINE=='BASELINE', ]
+my_ids = intersect(gf$MRN, tract_data$MRN)
+merged = mergeOnClosestDate(gf, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+merged = merged[!rm_me, ]
+
+phen_vars = c(which(grepl("^FA_", colnames(merged))),
+              which(grepl("^AD_", colnames(merged))),
+              which(grepl("^RD_", colnames(merged))),
+              which(grepl("^MO_", colnames(merged)))
+              )
+X = merged[, phen_vars]
+y = merged$DX_BASELINE
+y[y != 'NV'] = 'ADHD'
+y = factor(y)
+```
+
+Let's start without separate feature selection, just to get a feel for it:
+```{r}
+library(pROC)
+
+myseed = 1234
+cpuDiff = 1
+tuneLength = 10
+default_preproc = c("center", 'scale')
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+library(doMC)
+ncpus <- detectBatchCPUs()
+njobs <- ncpus - cpuDiff
+registerDoMC(njobs)
+selFunc = 'best'  # maybe try oneSE and tolerance as well?
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         search='grid',
+                         summaryFunction = twoClassSummary,
+                         classProbs = TRUE)
+
+
+m1 <- train(Xtrain, ytrain,
+                method = 'AdaBoost.M1',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'ROC',
+                preProcess = default_preproc)
+m1
+pred = predict(m1, Xtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+
+m2 <- train(Xtrain, ytrain,
+                method = 'AdaBag',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'ROC',
+                preProcess = default_preproc)
+m2
+pred = predict(m2, Xtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+
+m3 <- train(Xtrain, ytrain,
+                method = 'ada',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'ROC',
+                preProcess = default_preproc)
+m3
+pred = predict(m3, Xtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+
+m4 <- train(Xtrain, ytrain,
+                method = 'C5.0',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'ROC',
+                preProcess = default_preproc)
+m4
+pred = predict(m4, Xtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+
+m5 <- train(Xtrain, ytrain,
+                method = 'rpart',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'ROC',
+                preProcess = default_preproc)
+m5
+pred = predict(m5, Xtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+
+# these next models don't implement class probabilities
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         search='grid',
+                         summaryFunction = defaultSummary)
+m6 <- train(Xtrain, ytrain,
+                method = 'C5.0Cost',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'Accuracy',
+                preProcess = default_preproc)
+m6
+pred = predict(m6, Xtest)
+postResample(pred, ytest)
+
+m7 <- train(Xtrain, ytrain,
+                method = 'rpartScore',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'Accuracy',
+                preProcess = default_preproc)
+m7
+pred = predict(m7, Xtest)
+postResample(pred, ytest)
+
+m8 <- train(Xtrain, ytrain,
+                method = 'rpartCost',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'Accuracy',
+                preProcess = default_preproc)
+m8
+pred = predict(m8, Xtest)
+postResample(pred, ytest)
+
+```
+
+Because I'm running most of these models in the cluster, here are some benchmarks:
+
+Model  | TrainROC | TestROC | TestAcc | TestKappa
+------------- | ------------- | ------------- | ------------- | -------------
+AdaBag    | .56 | .73 | .73 | .45
+ada        | .55 | .67 | .68 | 
+C5.0        | .57 | .41 | .43 | -.18
+rpart | .6 | .56 | .55 | .11
+AdaBoost.M1 | .52 | .63 | .63 | .25
+
+And some models were trained to optimize Accuracy instead:
+
+Model  | TrainAcc | TestAcc | TestKappa
+------------- | ------------- | ------------- | -------------
+rpartScore    | .57 | .63 | .26
+C5.0Cost        | .55 | .43 | -.17
+rpartCost        | .59 | .58 | .13
+
+Let's try it for regression as well:
+
+```{r}
+thresh = 1
+keep_me = merged$SX_inatt >= thresh & merged$SX_HI >= thresh
+X = X[keep_me,]
+y = merged[keep_me,]$SX_inatt
+
+myseed = 1234
+cpuDiff = 1
+tuneLength = 10
+default_preproc = c("center", 'scale')
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+library(doMC)
+ncpus <- detectBatchCPUs()
+njobs <- ncpus - cpuDiff
+registerDoMC(njobs)
+selFunc = 'best'  # maybe try oneSE and tolerance as well?
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         search='grid',
+                         summaryFunction = defaultSummary)
+
+rm1 <- train(Xtrain, ytrain,
+                method = "rpart",
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                preProcess = default_preproc)
+  
+rm1
+pred = predict(rm1, Xtest)
+postResample(pred, ytest)
+
+rm2 <- train(Xtrain, ytrain,
+                method = "rpart2",
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                preProcess = default_preproc)
+  
+rm2
+pred = predict(rm2, Xtest)
+postResample(pred, ytest)
+
+```
+
+Model  | TrainRMSE | TestRMSE
+------------- | ------------- | -------------
+rpart    | 2.34 | 1.90
+rpart2        | 2.69 | 2.34
+
+The other option here would be imputation. We could also do some sort of feature selection to make these specific results better. Let's first put the entire dataset together.
+
+
