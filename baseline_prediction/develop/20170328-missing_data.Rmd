@@ -573,3 +573,73 @@ rpart2        | 2.41 | 2.45
 For regression, rpart still did better. Overall the results are similar, but there is still quite a bit of room for improvement.
 
 Now we should also explore some imputation or some sort of feature selection to make these specific results better.
+
+# Imputation
+
+Let's impute the training data, and see how well we can do. Note that we'll just do some simple imputation first, and we can always transform the data further later. Then, we can compare the current algorithms with a few more that don't handle missing data.
+
+```{r}
+preProc  <- preProcess(Xtrain, method='knnImpute')
+impXtrain = predict(preProc, Xtrain)
+impXtest = predict(preProc, Xtest)
+
+rm1 <- train(impXtrain, ytrain,
+                method = "rpart",
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                preProcess = default_preproc)
+  
+rm1
+pred = predict(rm1, impXtest)
+postResample(pred, ytest)
+
+rm2 <- train(impXtrain, ytrain,
+                method = "rpart2",
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                preProcess = default_preproc)
+  
+rm2
+pred = predict(rm2, impXtest)
+postResample(pred, ytest)
+
+rm3 <- train(impXtrain, ytrain,
+                method = "blassoAveraged",
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                preProcess = default_preproc)
+  
+rm3
+pred = predict(rm3, impXtest)
+postResample(pred, ytest)
+
+rm4 <- train(impXtrain, ytrain,
+                method = "rf",
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                preProcess = default_preproc)
+  
+rm4
+pred = predict(rm4, impXtest)
+postResample(pred, ytest)
+
+rm5 <- train(impXtrain, ytrain,
+                method = "svmRadial",
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                preProcess = default_preproc)
+  
+rm5
+pred = predict(rm5, impXtest)
+postResample(pred, ytest)
+
+rm6 <- train(impXtrain, ytrain,
+                method = "xgbTree",
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                preProcess = default_preproc)
+  
+rm6
+pred = predict(rm6, impXtest)
+postResample(pred, ytest)
+```
