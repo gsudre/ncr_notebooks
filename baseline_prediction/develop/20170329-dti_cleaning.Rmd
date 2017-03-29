@@ -243,3 +243,6 @@ xgbTree      | .57 |  .57 | .58  | .15
 svmRadial      | .52 |  .71 | .3 | -.41
 logReg      |  .53 |  .54 | .55 | .09 
 
+So, although our training results weren't much different, it looks like the models with processed data do generalize better to the test set. So, this might be an argument for cleaning up all variables we have using a similar flow.
+
+As for classifiers, it seems like the Ada variants (Bad and Boost) were better than the other ones, even with the DTI data, which doesn't have many NAs. That's not great, as they take a long time to train, but if that's what it takes, then let's do it.

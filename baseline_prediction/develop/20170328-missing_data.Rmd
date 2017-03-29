@@ -771,7 +771,93 @@ Model  | TrainRMSE | TestRMSE
 ------------- | ------------- | -------------
 rpart    | 2.26  | 2.14
 rpart2        | 2.30 | 2.41 
-blasso    |   |
+blasso    | 2.16  | 2.10
 rf        | 2.19 | 2.14 
 xgbTree    |  2.39 | 2.22
 svmRadial       | 2.19 | 2.11 
+
+# Cleaning but not imputing
+
+So, it looks like if I don't impute I do better generalizing to test set. And based on the cleaning DTI note, when I clean I also generalize better to the test set. Let's see if we can get some extra humpf by cleaning the non-imputed data as well.
+
+```{r}
+X = merged[, keep_me]
+y = merged$DX_BASELINE
+y[y != 'NV'] = 'ADHD'
+y = factor(y)
+
+library(pROC)
+myseed = 1234
+cpuDiff = 0
+tuneLength = 10
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale'))
+filtXtrain = predict(pp, Xtrain)
+nearZeroVar(filtXtrain)
+correlations = cor(filtXtrain, use='na.or.complete')
+highCorr = findCorrelation(correlations, cutoff=.75)
+length(highCorr)
+noncorrXtrain = filtXtrain[, -highCorr]
+```
+
+```{r}
+noncorrXtest = predict(pp, Xtest)[, -highCorr]
+
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+library(pROC)
+cpuDiff = 0
+tuneLength = 10
+default_preproc = c("center", 'scale')
+library(doMC)
+ncpus <- detectBatchCPUs()
+njobs <- ncpus - cpuDiff
+registerDoMC(njobs)
+selFunc = 'best'  # maybe try oneSE and tolerance as well?
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         search='grid',
+                         summaryFunction = twoClassSummary,
+                         classProbs = TRUE)
+
+
+m1 <- train(noncorrXtrain, ytrain,
+                method = 'AdaBoost.M1',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'ROC',
+                preProcess = default_preproc)
+m1
+pred = predict(m1, noncorrXtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+
+m2 <- train(noncorrXtrain, ytrain,
+                method = 'AdaBag',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'ROC',
+                preProcess = default_preproc)
+m2
+pred = predict(m2, noncorrXtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+
+```
+Model  | TrainROC | TestROC | TestAcc | TestKappa
+------------- | ------------- | ------------- | ------------- | -------------
+AdaBag     | | | |
+AdaBoost.M1     | | | |
+
+
+
