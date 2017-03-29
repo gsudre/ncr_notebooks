@@ -495,19 +495,21 @@ Because I'm running most of these models in the cluster, here are some benchmark
 
 Model  | TrainROC | TestROC | TestAcc | TestKappa
 ------------- | ------------- | ------------- | ------------- | -------------
-AdaBag    |  |  |  | 
-ada     |  |  |  | 
-C5.0        |  |  |  | 
-rpart     |  |  |  | 
-AdaBoost.M1     |  |  |  | 
+AdaBag    | .72 | .69 | .73 | .39 
+ada     | .73 |  |  | 
+C5.0        | .73 | .64 | .66 | .29
+rpart     | .58 | .52 | .56 | .05
+AdaBoost.M1     | .73 | .74 | .76 | .49
 
 And some models were trained to optimize Accuracy instead:
 
 Model  | TrainAcc | TestAcc | TestKappa
 ------------- | ------------- | ------------- | -------------
-rpartScore    |  |  | 
-C5.0Cost       |  |  | 
-rpartCost        |  |  | 
+rpartScore    | .61 | .58 | .13
+C5.0Cost       | .68 |.65 | .26 
+rpartCost        | .62 | .61 | .10 
+
+Adding all the data gives a very encouraging result. I bet we can tweak the best models even further to squeeze more juice out of them, especially Adaboost and AdaBag.
 
 Let's try it for regression as well:
 
@@ -583,6 +585,128 @@ preProc  <- preProcess(Xtrain, method='knnImpute')
 impXtrain = predict(preProc, Xtrain)
 impXtest = predict(preProc, Xtest)
 
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+library(doMC)
+ncpus <- detectBatchCPUs()
+njobs <- ncpus - cpuDiff
+registerDoMC(njobs)
+selFunc = 'best'  # maybe try oneSE and tolerance as well?
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         search='grid',
+                         summaryFunction = twoClassSummary,
+                         classProbs = TRUE)
+
+
+m1 <- train(impXtrain, ytrain,
+                method = 'AdaBoost.M1',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'ROC',
+                preProcess = default_preproc)
+m1
+pred = predict(m1, impXtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+
+m2 <- train(impXtrain, ytrain,
+                method = 'AdaBag',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'ROC',
+                preProcess = default_preproc)
+m2
+pred = predict(m2, impXtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+
+m3 <- train(impXtrain, ytrain,
+                method = 'rf',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'ROC',
+                preProcess = default_preproc)
+m3
+pred = predict(m3, impXtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+
+m4 <- train(impXtrain, ytrain,
+                method = 'svmRadial',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'ROC',
+                preProcess = default_preproc)
+m4
+pred = predict(m4, impXtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+
+m5 <- train(impXtrain, ytrain,
+                method = 'xgbTree',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'ROC',
+                preProcess = default_preproc)
+m5
+pred = predict(m5, impXtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+
+m6 <- train(impXtrain, ytrain,
+                method = 'LogitBoost',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'ROC',
+                preProcess = default_preproc)
+m6
+pred = predict(m6, impXtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+```
+
+Model  | TrainROC | TestROC | TestAcc | TestKappa
+------------- | ------------- | ------------- | ------------- | -------------
+AdaBag     | .70 | .61   |  .65 | .22 
+AdaBoost.M1     | .72 | .66 | .69 | .33
+rndForest        | .69 |  .63|  .66| .26 
+xgbTree      | .72 |  .73 | .76 | .48
+svmRadial      | .65 |  .61 |.66  | .23 
+logReg      | .63 | .60 | .63 | .21 
+
+And then we see how it affects regression:
+
+```{r}
+thresh = 1
+keep_me = merged$SX_inatt >= thresh & merged$SX_HI >= thresh
+X = X[keep_me,]
+y = merged[keep_me,]$SX_inatt
+
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+preProc  <- preProcess(Xtrain, method='knnImpute')
+impXtrain = predict(preProc, Xtrain)
+impXtest = predict(preProc, Xtest)
+
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         search='grid',
+                         summaryFunction = defaultSummary)
+
 rm1 <- train(impXtrain, ytrain,
                 method = "rpart",
                 trControl = fullCtrl,
@@ -643,3 +767,11 @@ rm6
 pred = predict(rm6, impXtest)
 postResample(pred, ytest)
 ```
+Model  | TrainRMSE | TestRMSE
+------------- | ------------- | -------------
+rpart    | 2.26  | 2.14
+rpart2        | 2.30 | 2.41 
+blasso    |   |
+rf        | 2.19 | 2.14 
+xgbTree    |  2.39 | 2.22
+svmRadial       | 2.19 | 2.11 
