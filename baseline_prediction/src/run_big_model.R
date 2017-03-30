@@ -1,4 +1,5 @@
 myseed = 1234
+# myseed = as.integer((as.double(Sys.time())*1000+Sys.getpid()) %% 2^31)
 cpuDiff = 1
 tuneLength = 2
 mymod = 'AdaBag'  # AdaBoost.M1, AdaBag, ada
@@ -181,11 +182,10 @@ postResample(pred, ytest)
 roc(as.numeric(ytest), as.numeric(pred))
 
 fname = sprintf('%s_%04d.RData', root_fname, myseed)
-save_list = c('m1', 'myseed', 'index', 'splits')
+save_list = c('m1', 'myseed', 'index', 'split')
 save(list=save_list, file=fname)
 
 stopImplicitCluster()
 sink()
 
-# generate seed
 # check we get same result
