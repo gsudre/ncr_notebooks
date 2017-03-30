@@ -1,9 +1,17 @@
-myseed = 1234
-# myseed = as.integer((as.double(Sys.time())*1000+Sys.getpid()) %% 2^31)
-cpuDiff = 1
-tuneLength = 2
-mymod = 'AdaBag'  # AdaBoost.M1, AdaBag, ada
-root_fname = '~/tmp/hello'
+args = commandArgs(trailingOnly=TRUE)
+if (length(args) != 5) {
+  stop("Arguments: seed[-1] cpuDiff tuneLength mymod root_fname", call.=FALSE)
+} else {
+  if (args[1] == -1) {
+    myseed = as.integer((as.double(Sys.time())*1000+Sys.getpid()) %% 2^31)
+  } else {
+    myseed = args[1]
+  }
+  cpuDiff = args[2]
+  tuneLength = args[3]
+  mymod = args[4] # AdaBoost.M1, AdaBag, ada
+  root_fname = args[5] '~/tmp/hello'
+}
 
 ###########
 
@@ -185,7 +193,6 @@ fname = sprintf('%s_%04d.RData', root_fname, myseed)
 save_list = c('m1', 'myseed', 'index', 'split')
 save(list=save_list, file=fname)
 
-stopImplicitCluster()
 sink()
 
 # check we get same result
