@@ -142,6 +142,12 @@ y = merged$DX_BASELINE
 y[y != 'NV'] = 'ADHD'
 y = factor(y)
 
+# save X and y if not already done so
+fname = sprintf('%s_Xy.RData', root_fname)
+if(!file.exists(fname)){
+  save(X, y, file=fname, compress=T) 
+}
+
 library(pROC)
 
 set.seed(myseed)
