@@ -194,5 +194,3 @@ save_list = c('m1', 'myseed', 'index', 'split')
 save(list=save_list, file=fname)
 
 sink()
-
-# check we get same result
