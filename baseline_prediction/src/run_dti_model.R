@@ -40,7 +40,7 @@ phen_vars = c(which(grepl("^FA_", colnames(merged))),
 X = merged[, phen_vars]
 y = merged$DX_BASELINE
 y[y != 'NV'] = 'ADHD'
-y = factor(y)
+y = factor(y, levels = c('NV', 'ADHD'))
 
 # save X and y if not already done so
 fname = sprintf('%s_Xy.RData', root_fname)

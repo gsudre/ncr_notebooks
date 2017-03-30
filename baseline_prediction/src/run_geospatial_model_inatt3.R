@@ -19,20 +19,26 @@ fname = sprintf('%s_%04d.log', root_fname, myseed)
 sink(fname, append=FALSE, split=TRUE)
 source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
 
-struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
-rm_me = (struct_data$mprage_score > 2)
-struct_data = struct_data[!rm_me, ]
+geo_data = read.csv('~/data/baseline_prediction/stripped/geospatial.csv')
 gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
 gf = read.csv(gf_fname)
 gf = gf[gf$BASELINE=='BASELINE', ]
-my_ids = intersect(gf$MRN, struct_data$MRN)
-merged = mergeOnClosestDate(gf, struct_data, my_ids)
-rm_me = abs(merged$dateX.minus.dateY.months) > 12
-merged = merged[!rm_me, ]
-X = merged[, 32:301]
-y = merged$DX_BASELINE
-y[y != 'NV'] = 'ADHD'
-y = factor(y, levels = c('NV', 'ADHD'))
+merged = merge(gf, geo_data, by='MRN')
+# some variables are being read as numeric...
+merged$Home_Price = as.numeric(merged$Home_Price)
+merged$Fam_Income = as.numeric(merged$Fam_Income)
+merged$Crime_Rate = as.numeric(merged$Crime_Rate)
+
+phen_vars = c('SES', 'Home_Type', 'Home_Price', 'Fam_Income', 'Pop_BPL', 'Fam_BPL', 'Pub_School',
+              'Crime_Rate', 'Green_Space', 'Park_Access', 'Air_Quality', 'Obesity_Rate',
+              'Food_Index', 'Exercise_Access', 'Excessive_Drinking')
+keep_me = c()
+for (v in phen_vars) {
+  keep_me = c(keep_me, which(colnames(merged) == v))
+}
+X = merged[, keep_me]
+y = merged$inatt3_named
+y = factor(y, levels=c('low', 'medium', 'high'))
 
 # save X and y if not already done so
 fname = sprintf('%s_Xy.RData', root_fname)
@@ -72,7 +78,7 @@ set.seed(myseed)
 fullCtrl <- trainControl(method = "repeatedcv",
                          index = index,
                          search='grid',
-                         summaryFunction = twoClassSummary,
+                         summaryFunction = multiClassSummary,
                          classProbs = TRUE)
 
 ptm <- proc.time()

@@ -22,10 +22,7 @@ source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
 beery_data = read.csv('~/data/baseline_prediction/stripped/beeryVMI.csv')
 gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
 gf = read.csv(gf_fname)
-
 gf = gf[gf$BASELINE=='BASELINE', ]
-# we only need to keep MRN and DOA for now, to avoid duplicated
-gf = gf[, c('MRN', 'DOA')]
 my_ids = intersect(gf$MRN, beery_data$Medical.Record...MRN)
 mbeery = mergeOnClosestDate(gf, beery_data, my_ids, y.date='record.date.collected', y.id='Medical.Record...MRN')
 rm_me = abs(mbeery$dateX.minus.dateY.months) > 12
@@ -75,42 +72,6 @@ merged = merge(merged, miq, by='MRN', all.x = T, all.y = T)
 merged = merge(merged, mwisc, by='MRN', all.x = T, all.y = T)
 merged = merge(merged, mcpt, by='MRN', all.x = T, all.y = T)
 
-tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
-rm_me = (tract_data$fa_avg < .4 | tract_data$ad_avg < 1.18 | tract_data$rd_avg > .65 | tract_data$rd_avg < .5 |
-tract_data$norm.trans > .45 | tract_data$norm.rot > .008 | tract_data$goodSlices < 45 | tract_data$goodSlices > 70)
-print(sprintf('Reducing from %d to %d scans', nrow(tract_data), nrow(tract_data)-sum(rm_me)))
-tract_data = tract_data[!rm_me, ]
-my_ids = intersect(gf$MRN, tract_data$MRN)
-mdti = mergeOnClosestDate(gf, tract_data, my_ids)
-rm_me = abs(mdti$dateX.minus.dateY.months) > 12
-print(sprintf('Reducing from %d to %d scans', nrow(mdti), nrow(mdti)-sum(rm_me)))
-mdti = mdti[!rm_me, ]
-
-geo_data = read.csv('~/data/baseline_prediction/stripped/geospatial.csv')
-mgeo = merge(gf, geo_data, by='MRN')
-# some variables are being read as numeric...
-mgeo$Home_Price = as.numeric(mgeo$Home_Price)
-mgeo$Fam_Income = as.numeric(mgeo$Fam_Income)
-mgeo$Crime_Rate = as.numeric(mgeo$Crime_Rate)
-
-merged = merge(merged, mdti, by='MRN', all.x = T, all.y = T)
-merged = merge(merged, mgeo, by='MRN', all.x = T, all.y = T)
-
-struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
-rm_me = (struct_data$mprage_score > 2)
-struct_data = struct_data[!rm_me, ]
-my_ids = intersect(gf$MRN, struct_data$MRN)
-mstruct = mergeOnClosestDate(gf, struct_data, my_ids)
-rm_me = abs(mstruct$dateX.minus.dateY.months) > 12
-print(sprintf('Reducing from %d to %d scans', nrow(mstruct), nrow(mstruct)-sum(rm_me)))
-mstruct = mstruct[!rm_me, ]
-merged = merge(merged, mstruct, by='MRN', all.x = T, all.y = T)
-
-# putting back clinical data
-clin = read.csv(gf_fname)
-my_ids = gf$MRN
-merged = mergeOnClosestDate(merged, clin, my_ids)
-
 phen_vars = c('FSIQ',
               # CPT
               'N_of_omissions', 'N_commissions', 'hit_RT', 'hit_RT_SE', 'variability_of_SE', 'N_perservations',
@@ -120,27 +81,14 @@ phen_vars = c('FSIQ',
               # WJ
               'PS',
               # Beery
-              'Standard.score',
-              #GeoSpatial
-              'SES', 'Home_Type', 'Home_Price', 'Fam_Income', 'Pop_BPL', 'Fam_BPL', 'Pub_School',
-              'Crime_Rate', 'Green_Space', 'Park_Access', 'Air_Quality', 'Obesity_Rate',
-              'Food_Index', 'Exercise_Access', 'Excessive_Drinking',
-              # DTI
-              colnames(merged)[grepl("^FA_", colnames(merged))],
-              colnames(merged)[grepl("^AD_", colnames(merged))],
-              colnames(merged)[grepl("^RD_", colnames(merged))],
-              colnames(merged)[grepl("^MO_", colnames(merged))],
-              colnames(merged)[grepl("^lh_", colnames(merged))],
-              colnames(merged)[grepl("^rh_", colnames(merged))],
-              colnames(merged)[grepl("^Left", colnames(merged))],
-              colnames(merged)[grepl("^Right", colnames(merged))],
-              colnames(merged)[grepl("^CC_", colnames(merged))]
-)
-keep_me = sapply(phen_vars, function(d) which(colnames(merged) == d))
+              'Standard.score')
+keep_me = c()
+for (v in phen_vars) {
+  keep_me = c(keep_me, which(colnames(merged) == v))
+}
 X = merged[, keep_me]
-y = merged$DX_BASELINE
-y[y != 'NV'] = 'ADHD'
-y = factor(y, levels = c('NV', 'ADHD'))
+y = merged$HI3_named
+y = factor(y)
 
 # save X and y if not already done so
 fname = sprintf('%s_Xy.RData', root_fname)
@@ -148,25 +96,24 @@ if(!file.exists(fname)){
   save(X, y, file=fname, compress=T) 
 }
 
-library(pROC)
-
 set.seed(myseed)
 split <- createDataPartition(y, p = .8, list = FALSE)
-
 Xtrain <- X[ split, ]
 ytrain <- y[ split ]
 Xtest  <- X[-split, ]
 ytest = y[-split]
 
-pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale'))
+pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale', 'knnImpute'))
 filtXtrain = predict(pp, Xtrain)
 nearZeroVar(filtXtrain)
-correlations = cor(filtXtrain, use='na.or.complete')
+correlations = cor(filtXtrain)
+
 highCorr = findCorrelation(correlations, cutoff=.75)
 length(highCorr)
 noncorrXtrain = filtXtrain[, -highCorr]
-
 noncorrXtest = predict(pp, Xtest)[, -highCorr]
+
+library(pROC)
 
 set.seed(myseed)
 index <- createMultiFolds(ytrain, k = 5, times = 5)
@@ -181,7 +128,7 @@ set.seed(myseed)
 fullCtrl <- trainControl(method = "repeatedcv",
                          index = index,
                          search='grid',
-                         summaryFunction = twoClassSummary,
+                         summaryFunction = multiClassSummary,
                          classProbs = TRUE)
 
 ptm <- proc.time()

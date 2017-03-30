@@ -19,20 +19,27 @@ fname = sprintf('%s_%04d.log', root_fname, myseed)
 sink(fname, append=FALSE, split=TRUE)
 source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
 
-struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
-rm_me = (struct_data$mprage_score > 2)
-struct_data = struct_data[!rm_me, ]
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+rm_me = (tract_data$fa_avg < .4 | tract_data$ad_avg < 1.18 | tract_data$rd_avg > .65 | tract_data$rd_avg < .5 |
+           tract_data$norm.trans > .45 | tract_data$norm.rot > .008 | tract_data$goodSlices < 45 | 
+           tract_data$goodSlices > 70)
+tract_data = tract_data[!rm_me, ]
 gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
 gf = read.csv(gf_fname)
 gf = gf[gf$BASELINE=='BASELINE', ]
-my_ids = intersect(gf$MRN, struct_data$MRN)
-merged = mergeOnClosestDate(gf, struct_data, my_ids)
+my_ids = intersect(gf$MRN, tract_data$MRN)
+merged = mergeOnClosestDate(gf, tract_data, my_ids)
 rm_me = abs(merged$dateX.minus.dateY.months) > 12
 merged = merged[!rm_me, ]
-X = merged[, 32:301]
-y = merged$DX_BASELINE
-y[y != 'NV'] = 'ADHD'
-y = factor(y, levels = c('NV', 'ADHD'))
+
+phen_vars = c(which(grepl("^FA_", colnames(merged))),
+              which(grepl("^AD_", colnames(merged))),
+              which(grepl("^RD_", colnames(merged))),
+              which(grepl("^MO_", colnames(merged)))
+)
+X = merged[, phen_vars]
+y = merged$inatt3_named
+y = factor(y, levels=c('low', 'medium', 'high'))
 
 # save X and y if not already done so
 fname = sprintf('%s_Xy.RData', root_fname)
@@ -72,7 +79,7 @@ set.seed(myseed)
 fullCtrl <- trainControl(method = "repeatedcv",
                          index = index,
                          search='grid',
-                         summaryFunction = twoClassSummary,
+                         summaryFunction = multiClassSummary,
                          classProbs = TRUE)
 
 ptm <- proc.time()

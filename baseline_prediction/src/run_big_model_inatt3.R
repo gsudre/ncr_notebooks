@@ -138,9 +138,8 @@ phen_vars = c('FSIQ',
 )
 keep_me = sapply(phen_vars, function(d) which(colnames(merged) == d))
 X = merged[, keep_me]
-y = merged$DX_BASELINE
-y[y != 'NV'] = 'ADHD'
-y = factor(y, levels = c('NV', 'ADHD'))
+y = merged$inatt3_named
+y = factor(y, levels=c('low', 'medium', 'high'))
 
 # save X and y if not already done so
 fname = sprintf('%s_Xy.RData', root_fname)
@@ -181,7 +180,7 @@ set.seed(myseed)
 fullCtrl <- trainControl(method = "repeatedcv",
                          index = index,
                          search='grid',
-                         summaryFunction = twoClassSummary,
+                         summaryFunction = multiClassSummary,
                          classProbs = TRUE)
 
 ptm <- proc.time()
