@@ -2,13 +2,13 @@ args = commandArgs(trailingOnly=TRUE)
 if (length(args) != 5) {
   stop("Arguments: seed[-1] cpuDiff tuneLength mymod root_fname", call.=FALSE)
 } else {
-  if (args[1] == -1) {
+  if (args[1] == '-1') {
     myseed = as.integer((as.double(Sys.time())*1000+Sys.getpid()) %% 2^31)
   } else {
-    myseed = args[1]
+    myseed = as.integer(args[1])
   }
-  cpuDiff = args[2]
-  tuneLength = args[3]
+  cpuDiff = as.integer(args[2])
+  tuneLength = as.integer(args[3])
   mymod = args[4] # AdaBoost.M1, AdaBag, ada
   root_fname = args[5] 
 }
