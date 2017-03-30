@@ -496,7 +496,7 @@ Because I'm running most of these models in the cluster, here are some benchmark
 Model  | TrainROC | TestROC | TestAcc | TestKappa
 ------------- | ------------- | ------------- | ------------- | -------------
 AdaBag    | .72 | .69 | .73 | .39 
-ada     | .73 |  |  | 
+ada     | .73 | .75 | .77  | .52 
 C5.0        | .73 | .64 | .66 | .29
 rpart     | .58 | .52 | .56 | .05
 AdaBoost.M1     | .73 | .74 | .76 | .49
@@ -667,6 +667,17 @@ m6
 pred = predict(m6, impXtest)
 postResample(pred, ytest)
 roc(as.numeric(ytest), as.numeric(pred))
+
+m7 <- train(impXtrain, ytrain,
+                method = 'ada',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'ROC',
+                preProcess = default_preproc)
+m7
+pred = predict(m7, impXtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
 ```
 
 Model  | TrainROC | TestROC | TestAcc | TestKappa
@@ -677,6 +688,7 @@ rndForest        | .69 |  .63|  .66| .26
 xgbTree      | .72 |  .73 | .76 | .48
 svmRadial      | .65 |  .61 |.66  | .23 
 logReg      | .63 | .60 | .63 | .21 
+ada      | .70 |  .59 | .65 | .20  
 
 And then we see how it affects regression:
 
@@ -853,11 +865,35 @@ pred = predict(m2, noncorrXtest)
 postResample(pred, ytest)
 roc(as.numeric(ytest), as.numeric(pred))
 
+m3 <- train(noncorrXtrain, ytrain,
+                method = 'ada',
+                trControl = fullCtrl,
+                tuneLength = tuneLength,
+                metric = 'ROC',
+                preProcess = default_preproc)
+m3
+pred = predict(m3, noncorrXtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+
 ```
 Model  | TrainROC | TestROC | TestAcc | TestKappa
 ------------- | ------------- | ------------- | ------------- | -------------
-AdaBag     | | | |
-AdaBoost.M1     | | | |
+AdaBag     | .72 | .74 | .77  | .51
+AdaBoost.M1     | .74 | .74 | .76 | .49
+ada     | .74 | .73 | .76 | .48 
+
+Cleaning up had a small effect on AdaBag, but didn't affect AdaBoost at all. That's OK though. We might end up running both anyways.
+
+The thing here is that the Ada family already has built-in feature selection. So, doing RFE on top of that will likely be overkill, let alone the long time to run it because they all take a considerable amount of time to begin with. We could possible play with the grid of parameters to search.
+
+For now, let's estimate a distribution of test results.
+
+CAN WE DO A BETTER JOB OF TUNING THE ADA CLASSIFIER (CLEAN OR NON CLEAN)? maybe RFE?
+IF ALL WORKS:
+  FIGURE OUT BEST FEATURES
+  RUN CLASSIFIER PER DOMAIN
+  RUN SCRIPTS WITH DIFFERENT SEEDS AND FARM IT OUT SO WE CAN HAVE A NICE DISTRIBUTION OF TEST SET RESULTS
 
 
 
