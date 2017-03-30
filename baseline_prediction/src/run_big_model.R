@@ -15,8 +15,8 @@ if (length(args) != 5) {
 
 ###########
 
-fname = sprintf('%s_%04d.RData', root_fname, myseed)
-sink(sprintf('%s.log', fname), append=FALSE, split=TRUE)
+fname = sprintf('%s_%04d.log', root_fname, myseed)
+sink(fname, append=FALSE, split=TRUE)
 source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
 
 beery_data = read.csv('~/data/baseline_prediction/stripped/beeryVMI.csv')
