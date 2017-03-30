@@ -10,7 +10,7 @@ if (length(args) != 5) {
   cpuDiff = args[2]
   tuneLength = args[3]
   mymod = args[4] # AdaBoost.M1, AdaBag, ada
-  root_fname = args[5] '~/tmp/hello'
+  root_fname = args[5] 
 }
 
 ###########
