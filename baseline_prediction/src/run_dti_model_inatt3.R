@@ -41,6 +41,6 @@ X = merged[, phen_vars]
 y = merged$inatt3_named
 y = factor(y, levels=c('low', 'medium', 'high'))
 
-source('~/ncr_notebooks/baseline_prediction/do_multi_classification.R')
+source('~/ncr_notebooks/baseline_prediction/src/do_multi_classification.R')
 
 sink()
