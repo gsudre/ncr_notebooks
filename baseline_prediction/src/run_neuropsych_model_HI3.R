@@ -23,6 +23,8 @@ beery_data = read.csv('~/data/baseline_prediction/stripped/beeryVMI.csv')
 gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
 gf = read.csv(gf_fname)
 gf = gf[gf$BASELINE=='BASELINE', ]
+# we only need to keep MRN and DOA for now, to avoid duplicated
+gf = gf[, c('MRN', 'DOA')]
 my_ids = intersect(gf$MRN, beery_data$Medical.Record...MRN)
 mbeery = mergeOnClosestDate(gf, beery_data, my_ids, y.date='record.date.collected', y.id='Medical.Record...MRN')
 rm_me = abs(mbeery$dateX.minus.dateY.months) > 12
@@ -39,6 +41,8 @@ print(sprintf('Reducing from %d to %d tests', nrow(mcpt), nrow(mcpt)-sum(rm_me))
 mcpt = mcpt[!rm_me, ]
 mcpt$dateClinical.minus.dateCPT.months = mcpt$dateX.minus.dateY.months
 mcpt$dateX.minus.dateY.months = NULL
+colnames(mcpt)[colnames(mcpt)=="DOA.x"] <- "DOA.gf"
+colnames(mcpt)[colnames(mcpt)=="DOA.y"] <- "DOA.cpt"
 
 iq_data = read.csv('~/data/baseline_prediction/stripped/iq.csv')
 my_ids = intersect(gf$MRN, iq_data$Medical.Record...MRN)
@@ -67,10 +71,15 @@ mwj = mwj[!rm_me, ]
 mwj$dateClinical.minus.dateWJ.months = mwj$dateX.minus.dateY.months
 mwj$dateX.minus.dateY.months = NULL
 
-merged = merge(mwj, mbeery, by='MRN', all.x = T, all.y = T)
+merged = merge(mwj, mbeery, by='MRN', all.x = T, all.y = T, suffixes=c('.wj', '.beery'))
 merged = merge(merged, miq, by='MRN', all.x = T, all.y = T)
-merged = merge(merged, mwisc, by='MRN', all.x = T, all.y = T)
+merged = merge(merged, mwisc, by='MRN', all.x = T, all.y = T, suffixes=c('.iq', '.wisc'))
 merged = merge(merged, mcpt, by='MRN', all.x = T, all.y = T)
+
+clin = read.csv(gf_fname)
+clin = clin[clin$BASELINE=='BASELINE', ]
+my_ids = gf$MRN
+merged = merge(merged, clin, by='MRN')
 
 phen_vars = c('FSIQ',
               # CPT
