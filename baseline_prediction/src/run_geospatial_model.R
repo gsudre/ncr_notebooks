@@ -10,7 +10,7 @@ if (length(args) != 5) {
   cpuDiff = as.integer(args[2])
   tuneLength = as.integer(args[3])
   mymod = args[4] # AdaBoost.M1, AdaBag, ada
-  root_fname = args[5] 
+  root_fname = args[5]
 }
 
 ###########
@@ -44,7 +44,7 @@ y = factor(y, levels = c('NV', 'ADHD'))
 # save X and y if not already done so
 fname = sprintf('%s_Xy.RData', root_fname)
 if(!file.exists(fname)){
-  save(X, y, file=fname, compress=T) 
+  save(X, y, file=fname, compress=T)
 }
 
 set.seed(myseed)
