@@ -10,7 +10,7 @@ if (length(args) != 5) {
   cpuDiff = as.integer(args[2])
   tuneLength = as.integer(args[3])
   mymod = args[4] # AdaBoost.M1, AdaBag, ada
-  root_fname = args[5] 
+  root_fname = args[5]
 }
 
 ###########
@@ -21,7 +21,7 @@ source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
 
 tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
 rm_me = (tract_data$fa_avg < .4 | tract_data$ad_avg < 1.18 | tract_data$rd_avg > .65 | tract_data$rd_avg < .5 |
-           tract_data$norm.trans > .45 | tract_data$norm.rot > .008 | tract_data$goodSlices < 45 | 
+           tract_data$norm.trans > .45 | tract_data$norm.rot > .008 | tract_data$goodSlices < 45 |
            tract_data$goodSlices > 70)
 tract_data = tract_data[!rm_me, ]
 gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
@@ -44,7 +44,7 @@ y = factor(y)
 # save X and y if not already done so
 fname = sprintf('%s_Xy.RData', root_fname)
 if(!file.exists(fname)){
-  save(X, y, file=fname, compress=T) 
+  save(X, y, file=fname, compress=T)
 }
 
 set.seed(myseed)
@@ -54,9 +54,13 @@ ytrain <- y[ split ]
 Xtest  <- X[-split, ]
 ytest = y[-split]
 
-pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale', 'knnImpute'))
+pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale'))
 filtXtrain = predict(pp, Xtrain)
-nearZeroVar(filtXtrain)
+nzv = nearZeroVar(filtXtrain)
+nzv
+if (length(nzv) > 0) {
+    filtXtrain = filtXtrain[, -nzv]
+}
 correlations = cor(filtXtrain)
 
 highCorr = findCorrelation(correlations, cutoff=.75)
@@ -87,12 +91,13 @@ m1 <- train(noncorrXtrain, ytrain,
             method = mymod,
             trControl = fullCtrl,
             tuneLength = tuneLength,
-            metric = 'ROC')
+            metric = 'Mean_ROC')
 print(proc.time() - ptm)
 m1
+getTrainPerf(m1)
 pred = predict(m1, noncorrXtest)
 postResample(pred, ytest)
-roc(as.numeric(ytest), as.numeric(pred))
+multiclass.roc(as.numeric(ytest), as.numeric(pred))
 
 fname = sprintf('%s_%04d.RData', root_fname, myseed)
 save_list = c('m1', 'myseed', 'index', 'split')

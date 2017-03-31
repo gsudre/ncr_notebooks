@@ -1,4 +1,4 @@
-args = commandArgs(trailingOnly=TRUE)
+ args = commandArgs(trailingOnly=TRUE)
 if (length(args) != 5) {
   stop("Arguments: seed[-1] cpuDiff tuneLength mymod root_fname", call.=FALSE)
 } else {
@@ -54,7 +54,7 @@ ytrain <- y[ split ]
 Xtest  <- X[-split, ]
 ytest = y[-split]
 
-pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale', 'knnImpute'))
+pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale'))
 filtXtrain = predict(pp, Xtrain)
 nearZeroVar(filtXtrain)
 correlations = cor(filtXtrain)

@@ -10,7 +10,7 @@ if (length(args) != 5) {
   cpuDiff = as.integer(args[2])
   tuneLength = as.integer(args[3])
   mymod = args[4] # AdaBoost.M1, AdaBag, ada
-  root_fname = args[5] 
+  root_fname = args[5]
 }
 
 ###########
@@ -43,7 +43,7 @@ y = factor(y, levels=c('low', 'medium', 'high'))
 # save X and y if not already done so
 fname = sprintf('%s_Xy.RData', root_fname)
 if(!file.exists(fname)){
-  save(X, y, file=fname, compress=T) 
+  save(X, y, file=fname, compress=T)
 }
 
 set.seed(myseed)
@@ -53,9 +53,13 @@ ytrain <- y[ split ]
 Xtest  <- X[-split, ]
 ytest = y[-split]
 
-pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale', 'knnImpute'))
+pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale'))
 filtXtrain = predict(pp, Xtrain)
-nearZeroVar(filtXtrain)
+nzv = nearZeroVar(filtXtrain)
+nzv
+if (length(nzv) > 0) {
+    filtXtrain = filtXtrain[, -nzv]
+}
 correlations = cor(filtXtrain)
 
 highCorr = findCorrelation(correlations, cutoff=.75)
@@ -86,12 +90,13 @@ m1 <- train(noncorrXtrain, ytrain,
             method = mymod,
             trControl = fullCtrl,
             tuneLength = tuneLength,
-            metric = 'ROC')
+            metric = 'Mean_ROC')
 print(proc.time() - ptm)
 m1
+getTrainPerf(m1)
 pred = predict(m1, noncorrXtest)
 postResample(pred, ytest)
-roc(as.numeric(ytest), as.numeric(pred))
+multiclass.roc(as.numeric(ytest), as.numeric(pred))
 
 fname = sprintf('%s_%04d.RData', root_fname, myseed)
 save_list = c('m1', 'myseed', 'index', 'split')
