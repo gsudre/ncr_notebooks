@@ -14,14 +14,14 @@ ytest = y[-split]
 pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale'))
 filtXtrain = predict(pp, Xtrain)
 nzv = nearZeroVar(filtXtrain)
-nzv
+print(nzv)
 if (length(nzv) > 0) {
     filtXtrain = filtXtrain[, -nzv]
 }
 correlations = cor(filtXtrain, use='na.or.complete')
 
 highCorr = findCorrelation(correlations, cutoff=.75)
-length(highCorr)
+print(length(highCorr))
 noncorrXtrain = filtXtrain[, -highCorr]
 noncorrXtest = predict(pp, Xtest)[, -highCorr]
 
@@ -50,11 +50,11 @@ m1 <- train(noncorrXtrain, ytrain,
             tuneLength = tuneLength,
             metric = 'Mean_ROC')
 print(proc.time() - ptm)
-m1
-getTrainPerf(m1)
+print(m1)
+print(getTrainPerf(m1))
 pred = predict(m1, noncorrXtest)
-postResample(pred, ytest)
-multiclass.roc(as.numeric(ytest), as.numeric(pred))
+print(postResample(pred, ytest))
+print(multiclass.roc(as.numeric(ytest), as.numeric(pred)))
 
 fname = sprintf('%s_%04d.RData', root_fname, myseed)
 save_list = c('m1', 'myseed', 'index', 'split')
