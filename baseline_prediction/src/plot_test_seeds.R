@@ -4,8 +4,13 @@ get_random_vote = function(ts, nperms) {
   for (i in 1:nperms) {
     perm_ts = ts
     perm_ts$obs = sample(ts$obs)
-    tmp = multiClassSummary(perm_ts, lev=levels(ts$obs))
-    res[i, ] = tmp[c('Accuracy', 'ROC', 'Sensitivity', 'Specificity')]
+    if (length(levels(ts$obs)) > 2) {
+      tmp = multiClassSummary(perm_ts, lev=levels(ts$obs))
+      res[i, ] = tmp[c('Accuracy', 'Mean_ROC', 'Mean_Sensitivity', 'Mean_Specificity')]
+    } else {
+      tmp = twoClassSummary(perm_ts, lev=levels(ts$obs))
+      res[i, ] = tmp[c('Accuracy', 'ROC', 'Sensitivity', 'Specificity')]
+    }
   }
   res = as.data.frame(res)
   return(res)
@@ -14,7 +19,7 @@ get_random_vote = function(ts, nperms) {
 library(caret)
 models = c('AdaBag', 'AdaBoost')
 fname_path = '~/data/baseline_prediction/results/bw/'
-fname_root = 'allDTIClean'
+fname_root = 'allGeospatialCleanInatt3'
 pct = .95
 nperms = 1000
 
@@ -23,28 +28,42 @@ rnd_res = c()
 for (m in models) {
   load(sprintf('%s/%s_%s_Xy.RData', fname_path, fname_root, m))
   tfiles = list.files(path=fname_path, pattern=glob2rx(sprintf('%s_%s_???*.RData', fname_root, m)))
-  print(sprintf('Found %d test result files for %s.', length(tfiles), m))
-  res = matrix(nrow = length(tfiles), ncol = 4)
+  nfiles = length(tfiles)
+  print(sprintf('Found %d test result files for %s_%s.', nfiles, fname_root, m))
+  res = matrix(nrow = nfiles, ncol = 4)
   colnames(res) = c('accuracy', 'auc', 'sensitivity', 'specificity')
-  for (f in 1:2){ #length(tfiles)) {
+  for (f in 1:nfiles) {
     cat(sprintf('%d ', f))
     load(sprintf('%s/%s', fname_path, tfiles[f]))
+    
     Xtrain <- X[ split, ]
     ytrain <- y[ split ]
     Xtest  <- X[-split, ]
     ytest = y[-split]
-    pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale', 'knnImpute'))
+    
+    pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale'))
     filtXtrain = predict(pp, Xtrain)
-    correlations = cor(filtXtrain)
+    nzv = nearZeroVar(filtXtrain)
+    if (length(nzv) > 0) {
+      filtXtrain = filtXtrain[, -nzv]
+    }
+    correlations = cor(filtXtrain, use='na.or.complete')
     highCorr = findCorrelation(correlations, cutoff=.75)
+    noncorrXtrain = filtXtrain[, -highCorr]
     noncorrXtest = predict(pp, Xtest)[, -highCorr]
+    
     preds = predict(m1, newdata=noncorrXtest)
     probs = predict(m1, newdata=noncorrXtest, type="prob")
     ts = data.frame(obs=ytest, pred=preds, probs)
-    tmp = multiClassSummary(ts, lev=levels(ts$obs))
-    res[f, ] = tmp[c('Accuracy', 'ROC', 'Sensitivity', 'Specificity')]
+    if (length(levels(ts$obs)) > 2) {
+      tmp = multiClassSummary(ts, lev=levels(ts$obs))
+      res[f, ] = tmp[c('Accuracy', 'Mean_ROC', 'Mean_Sensitivity', 'Mean_Specificity')]
+    } else {
+      tmp = twoClassSummary(ts, lev=levels(ts$obs))
+      res[f, ] = tmp[c('Accuracy', 'ROC', 'Sensitivity', 'Specificity')]
+    }
     
-    rnd_res = rbind(rnd_res, get_random_vote(ts, ceiling(nperms / length(tfiles))))
+    rnd_res = rbind(rnd_res, get_random_vote(ts, ceiling(nperms / nfiles)))
   }
   cat('\n')
   eval(parse(text=sprintf('model_results$%s = res', m)))
@@ -67,8 +86,3 @@ abline(h=qtiles['sensitivity'], col='red', lty=2)
 boxplot(sapply(model_results, function(d) d[,c('specificity')]), ylab='specificity', las=2, ylim=c(.4, 1))
 abline(h=qtiles['specificity'], col='red', lty=2)
 title(main=sprintf('%s_nperms%d_pct%.2f', fname_root, nperms, pct),outer=T)
-# library(Hmisc)
-# res = binconf(x=max(table(groups)), n=length(groups), alpha=.05)
-# abline(h=res[1], col='red')
-# abline(h=res[2], col='red', lty=2)
-# abline(h=res[3], col='red', lty=2)

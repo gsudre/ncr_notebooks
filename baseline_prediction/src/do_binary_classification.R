@@ -53,6 +53,9 @@ print(proc.time() - ptm)
 print(m1)
 pred = predict(m1, noncorrXtest)
 print(postResample(pred, ytest))
+# note that this value below is an approximation. When we run the classSummary
+# function it takes the probabilities of each class into consideration, which
+# can be more reliable?
 print(roc(as.numeric(ytest), as.numeric(pred)))
 
 fname = sprintf('%s_%04d.RData', root_fname, myseed)
