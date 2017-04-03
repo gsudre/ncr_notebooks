@@ -8,7 +8,7 @@ get_random_vote = function(ts, nperms) {
       tmp = multiClassSummary(perm_ts, lev=levels(ts$obs))
       res[i, ] = tmp[c('Accuracy', 'Mean_ROC', 'Mean_Sensitivity', 'Mean_Specificity')]
     } else {
-      tmp = twoClassSummary(perm_ts, lev=levels(ts$obs))
+      tmp = multiClassSummary(perm_ts, lev=levels(ts$obs))
       res[i, ] = tmp[c('Accuracy', 'ROC', 'Sensitivity', 'Specificity')]
     }
   }
@@ -17,9 +17,9 @@ get_random_vote = function(ts, nperms) {
 }
 
 library(caret)
-models = c('AdaBag', 'AdaBoost')
+models = c('Ada', 'AdaBag', 'AdaBoost')
 fname_path = '~/data/baseline_prediction/results/bw/'
-fname_root = 'allGeospatialCleanInatt3'
+fname_root = 'allGeospatialClean'
 pct = .95
 nperms = 1000
 
@@ -59,7 +59,9 @@ for (m in models) {
       tmp = multiClassSummary(ts, lev=levels(ts$obs))
       res[f, ] = tmp[c('Accuracy', 'Mean_ROC', 'Mean_Sensitivity', 'Mean_Specificity')]
     } else {
-      tmp = twoClassSummary(ts, lev=levels(ts$obs))
+      # we use multi here because it gives Accuracy, while two doesn't.
+      # but the titles change
+      tmp = multiClassSummary(ts, lev=levels(ts$obs))
       res[f, ] = tmp[c('Accuracy', 'ROC', 'Sensitivity', 'Specificity')]
     }
     
@@ -71,7 +73,7 @@ for (m in models) {
 
 qtiles = vector(mode = 'numeric')
 for (k in 1:ncol(rnd_res)) {
-  qtiles = c(qtiles, quantile(rnd_res[, k], pct))
+  qtiles = c(qtiles, quantile(rnd_res[, k], pct, na.rm=T))
 }
 names(qtiles) = colnames(rnd_res)
 
