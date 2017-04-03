@@ -56,6 +56,49 @@ y = factor(y)
 
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+This seems to work for DTI. Let's transfer it to the scripts.
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).
+Now we go for other ones that are also somewhat straight forward, like struct and geo.
+
+```{r}
+y_target = 'inatt3_named'
+
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
+
+struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
+rm_me = (struct_data$mprage_score > 2)
+struct_data = struct_data[!rm_me, ]
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+my_ids = unique(gf$MRN)
+Xraw = struct_data[, 7:276]
+
+# MAKE SURE nrow(tract_data) == nrow(Xraw)!!!!
+
+get_delta = function (d) {
+  # if we have too many NAs, return NA
+  if (sum(is.na(d)) >= (length(d)-1)) {
+    return(NA)
+  }
+  else {
+    lm(d ~ struct_data[idx, ]$age_at_scan)$coefficients[2]
+  }
+}
+
+X = c()
+y = c()
+target_col = which(colnames(gf)==y_target)
+for (s in my_ids) {
+  idx = struct_data$MRN==s
+  # proceed if we have more than one observation in the data
+  if (sum(idx) >= 2) {
+    slopes = sapply(Xraw[idx, ], get_delta)
+    names(slopes) = colnames(Xraw)
+    X = rbind(X, slopes)
+    idxy = gf$MRN==s
+    y = c(y, unique(as.character(gf[idxy, target_col])))
+  }
+}
+y = factor(y)
+
+```
