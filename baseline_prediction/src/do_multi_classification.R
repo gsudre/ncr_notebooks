@@ -13,6 +13,7 @@ ytest = y[-split]
 
 pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale'))
 filtXtrain = predict(pp, Xtrain)
+filtXtest = predict(pp, Xtest)
 nzv = nearZeroVar(filtXtrain)
 print(nzv)
 if (length(nzv) > 0) {
@@ -22,8 +23,13 @@ correlations = cor(filtXtrain, use='na.or.complete')
 
 highCorr = findCorrelation(correlations, cutoff=.75)
 print(length(highCorr))
-noncorrXtrain = filtXtrain[, -highCorr]
-noncorrXtest = predict(pp, Xtest)[, -highCorr]
+if (length(highCorr) > 0) {
+  noncorrXtrain = filtXtrain[, -highCorr]
+  noncorrXtest = filtXtest[, -highCorr]
+} else {
+  noncorrXtrain = filtXtrain
+  noncorrXtest = filtXtest
+}
 
 library(pROC)
 
