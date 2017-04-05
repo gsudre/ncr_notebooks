@@ -19,7 +19,7 @@ get_random_vote = function(ts, nperms) {
 library(caret)
 models = c('Ada', 'AdaBag', 'AdaBoost')
 fname_path = '~/data/baseline_prediction/results/bw/'
-fname_root = 'allGeospatialClean'
+fname_root = 'allGeospatialPCAClean'
 pct = .95
 nperms = 1000
 
@@ -28,7 +28,7 @@ rnd_res = c()
 for (m in models) {
   load(sprintf('%s/%s_%s_Xy.RData', fname_path, fname_root, m))
   tfiles = list.files(path=fname_path, pattern=glob2rx(sprintf('%s_%s_???*.RData', fname_root, m)))
-  nfiles = length(tfiles)
+  nfiles = 3#length(tfiles)
   print(sprintf('Found %d test result files for %s_%s.', nfiles, fname_root, m))
   res = matrix(nrow = nfiles, ncol = 4)
   colnames(res) = c('accuracy', 'auc', 'sensitivity', 'specificity')
@@ -42,16 +42,23 @@ for (m in models) {
     ytest = y[-split]
     
     pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale'))
-    filtXtrain = predict(pp, Xtrain)
-    nzv = nearZeroVar(filtXtrain)
-    if (length(nzv) > 0) {
-      filtXtrain = filtXtrain[, -nzv]
-    }
-    correlations = cor(filtXtrain, use='na.or.complete')
-    highCorr = findCorrelation(correlations, cutoff=.75)
-    noncorrXtrain = filtXtrain[, -highCorr]
-    noncorrXtest = predict(pp, Xtest)[, -highCorr]
-    
+filtXtrain = predict(pp, Xtrain)
+filtXtest = predict(pp, Xtest)
+nzv = nearZeroVar(filtXtrain)
+if (length(nzv) > 0) {
+  filtXtrain = filtXtrain[, -nzv]
+}
+correlations = cor(filtXtrain, use='na.or.complete')
+
+highCorr = findCorrelation(correlations, cutoff=.75)
+if (length(highCorr) > 0) {
+  noncorrXtrain = filtXtrain[, -highCorr]
+  noncorrXtest = filtXtest[, -highCorr]
+} else {
+  noncorrXtrain = filtXtrain
+  noncorrXtest = filtXtest
+}
+
     preds = predict(m1, newdata=noncorrXtest)
     probs = predict(m1, newdata=noncorrXtest, type="prob")
     ts = data.frame(obs=ytest, pred=preds, probs)
