@@ -55,9 +55,9 @@ nvVSadhd_lowVSadhd_high_test = function(X, merged) {
   y[y == 'ADHD'] = 'ADHD_low'
   y = factor(y, levels=c('NV', 'ADHD_low', 'ADHD_high'))
   fstat <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ y + merged$age + merged$SEX)))[[1]][4][[1, 1]]})
+    +     summary(aov(lm(dat ~  + merged$age + merged$SEX + y)))[[1]][4][[3, 1]]})
   pvals <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ y + merged$age + merged$SEX)))[[1]][5][[1, 1]]})
+    +     summary(aov(lm(dat ~ merged$age + merged$SEX + y)))[[1]][5][[3, 1]]})
   res = cbind(fstat, pvals)
   colnames(res) = c('nvVSadhdlowVSadhdhigh_Fstat', 'nvVSadhdlowVSadhdhigh_pval')
   return(res)
@@ -66,17 +66,17 @@ nvVSadhd_lowVSadhd_high_test = function(X, merged) {
 outcome_test = function(X, merged) {
   y = merged$inatt3_named
   fstat <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ y + merged$age + merged$SEX)))[[1]][4][[1, 1]]})
+    +     summary(aov(lm(dat ~ merged$age + merged$SEX + y)))[[1]][4][[3, 1]]})
   pvals <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ y + merged$age + merged$SEX)))[[1]][5][[1, 1]]})
+    +     summary(aov(lm(dat ~ merged$age + merged$SEX + y)))[[1]][5][[3, 1]]})
   res_inatt = cbind(fstat, pvals)
   colnames(res_inatt) = c('outcomeInatt3Grp_Fstat', 'outcomeInatt3Grp_pval')
   
   y = merged$HI3_named
   fstat <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ y + merged$age + merged$SEX)))[[1]][4][[1, 1]]})
+    +     summary(aov(lm(dat ~ merged$age + merged$SEX + y)))[[1]][4][[3, 1]]})
   pvals <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ y + merged$age + merged$SEX)))[[1]][5][[1, 1]]})
+    +     summary(aov(lm(dat ~ merged$age + merged$SEX + y)))[[1]][5][[3, 1]]})
   res_hi = cbind(fstat, pvals)
   colnames(res_hi) = c('outcomeHI3Grp_Fstat', 'outcomeHI3Grp_pval')
   return(cbind(res_inatt, res_hi))
@@ -216,7 +216,7 @@ phen_vars = c('FSIQ',
               # WISC
               'Raw.score..DSF', 'Raw.score..DSB', 'Raw.score..SSF', 'Raw.score..SSB',
               # WJ
-              'PS',
+              'Raw.Score..VM', 'Raw.Score..DS', 'PS',
               # Beery
               'Standard.score'
               )
