@@ -83,32 +83,13 @@ rfFull <- train(Xtrain, ytrain,
                 method = "rf",
                 trControl = fullCtrl,
                 tuneGrid=rndForestGrid,
-                metric = 'Accuracy',
+                metric = 'ROC',
                 preProcess = default_preproc)
   
-rfFull
+getTrainPerf(rfFull)
 pred = predict(rfFull, Xtest)
 postResample(pred, ytest)
 roc(as.numeric(ytest), as.numeric(pred))
-
-varSeq = 1:ncol(X)
-ctrl <- rfeControl(method = "repeatedcv",
-                   saveDetails = TRUE,
-                   index = index,
-                   returnResamp = "final")
-
-ctrl$functions <- rfFuncs
-set.seed(myseed)
-rfRFE <- rfe(Xtrain, ytrain,
-             sizes = varSeq,
-             rfeControl = ctrl,
-             preProcess = default_preproc,
-             summaryFunction = twoClassSummary,
-             metric = 'Accuracy')
-rfRFE
-pred = predict(rfRFE, Xtest)
-postResample(pred, ytest)
-roc(as.numeric(ytest), as.numeric(pred$pred))
 ```
 
 Very underwhelming results... let's see what we can get with symptom regression. None of them has a significant correlation to symptoms, so let's include everything.
@@ -237,6 +218,125 @@ pred = predict(rfRFE, Xtest)
 postResample(pred, ytest)
 ```
 
+# Residualizing when necessary
+
+Let's look into residualizing a variable only when it's significant, similar to what SOLAR does.
+
+```{r}
+get_needed_residuals = function(y, fm_str, cutoff) {
+  fm = as.formula(fm_str)
+  fit = lm(fm)
+  # selecting which covariates to use
+  fm = "y ~ "
+  for (r in 2:dim(summary(fit)$coefficients)[1]) {
+    if (summary(fit)$coefficients[r, 4] < cutoff) {
+      cname = rownames(summary(fit)$coefficients)[r]
+      cname = gsub("SEXMale", "SEX", cname)
+      fm = sprintf('%s + %s', fm, cname)
+    }
+  }
+  # don't do anything if no variables were significant
+  if (fm == 'y ~ ') {
+    return(y)
+  } else {
+    opt_fit = lm(as.formula(fm))
+    return(opt_fit$residuals)
+  }
+}
+
+X = merged[, phen_vars]
+y = merged$DX_BASELINE
+y[y != 'NV'] = 'ADHD'
+y = factor(y)
+rm_me = rowSums(is.na(X)) > 0
+X = X[!rm_me, ]
+merged = merged[!rm_me, ]
+y = y[!rm_me]
+
+X_resid = sapply(X, get_needed_residuals, 'y ~ merged$age_at_scan + I(merged$age_at_scan^2) + merged$SEX', .1)
+X_resid = as.data.frame(X_resid)
+```
+
+Let's first run the results without removing the components, and then the residualized ones:
+
+```{r}
+myseed = 34
+cpuDiff = 1
+tuneLength = 10
+default_preproc = c("center", 'scale')
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+library(doMC)
+ncpus <- detectBatchCPUs()
+njobs <- ncpus - cpuDiff
+registerDoMC(njobs)
+selFunc = 'best'  # maybe try oneSE and tolerance as well?
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         search='grid',
+                         summaryFunction = twoClassSummary,
+                         classProbs = TRUE)
+rndForestGrid <- expand.grid(.mtry=c(1:sqrt(ncol(Xtrain))))
+rfFull <- train(Xtrain, ytrain,
+                method = "rf",
+                trControl = fullCtrl,
+                tuneGrid=rndForestGrid,
+                metric = 'ROC',
+                preProcess = default_preproc)
+  
+getTrainPerf(rfFull)
+pred = predict(rfFull, Xtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+```
+
+```{r}
+Xtrain <- X_resid[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X_resid[-split, ]
+ytest = y[-split]
+
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+library(doMC)
+ncpus <- detectBatchCPUs()
+njobs <- ncpus - cpuDiff
+registerDoMC(njobs)
+selFunc = 'best'  # maybe try oneSE and tolerance as well?
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         search='grid',
+                         summaryFunction = twoClassSummary,
+                         classProbs = TRUE)
+rndForestGrid <- expand.grid(.mtry=c(1:sqrt(ncol(Xtrain))))
+rfFull <- train(Xtrain, ytrain,
+                method = "rf",
+                trControl = fullCtrl,
+                tuneGrid=rndForestGrid,
+                metric = 'ROC',
+                preProcess = default_preproc)
+  
+getTrainPerf(rfFull)
+pred = predict(rfFull, Xtest)
+postResample(pred, ytest)
+roc(as.numeric(ytest), as.numeric(pred))
+```
+
+It did better in training for a given seed, but not in testing. Let's try other seeds... that's the pattern I saw across seeds. It might be worth removing it later to se if results still hold? Not sure. Results were inconclusive, at least for DTI. Need to run it for the entire set, and for a distribution of seeds.
 
 
 

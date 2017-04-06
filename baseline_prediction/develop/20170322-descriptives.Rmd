@@ -297,3 +297,10 @@ Well, 4 and 3 is not so bad, out of 44. Which ones?
 colnames(X)[pvals.trans < .05]
 colnames(X)[pvals.rot < .05]
 ```
+
+# Descriptives on deltas
+
+Let's see which deltas (slopes) are correlated with the different targets. Let's do an uncorrected one, and then one correcting for sex, as age won't matter here.
+
+
+
