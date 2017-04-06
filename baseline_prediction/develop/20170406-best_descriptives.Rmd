@@ -207,6 +207,11 @@ print(postResample(pred, ytest))
 print(roc(as.numeric(ytest), as.numeric(pred)))
 ```
 
+
+Test accuracy: 
+Kappa: 
+Test AUC:
+
 Now we select the variables differently, based on our top (p < .01) NV vs ADHD descriptive.
 
 ```{r}
@@ -287,6 +292,11 @@ print(postResample(pred, ytest))
 # can be more reliable?
 print(roc(as.numeric(ytest), as.numeric(pred)))
 ```
+
+Test accuracy: .71
+Kappa: .36
+Test AUC: .67
+
 
 And just for completeness, we run the best at p < .05:
 
@@ -384,6 +394,11 @@ print(postResample(pred, ytest))
 # can be more reliable?
 print(roc(as.numeric(ytest), as.numeric(pred)))
 ```
+
+Test accuracy: 
+Kappa: 
+Test AUC:
+
 
 # Inattention 3 group outcome
 
@@ -484,6 +499,11 @@ print(postResample(pred, ytest))
 print(multiclass.roc(as.numeric(ytest), as.numeric(pred)))
 ```
 
+
+Test accuracy: 
+Kappa: 
+Test AUC:
+
 Then, we do a similar thing, but with variables at p < .01:
 
 ```{r}
@@ -560,6 +580,11 @@ pred = predict(m1, noncorrXtest)
 print(postResample(pred, ytest))
 print(multiclass.roc(as.numeric(ytest), as.numeric(pred)))
 ```
+
+
+Test accuracy: 
+Kappa: 
+Test AUC:
 
 And finally, with variables at p < .05:
 
@@ -648,8 +673,9 @@ print(postResample(pred, ytest))
 print(multiclass.roc(as.numeric(ytest), as.numeric(pred)))
 ```
 
-
-
+Test accuracy: 
+Kappa: 
+Test AUC:
 
 
 
