@@ -208,9 +208,9 @@ print(roc(as.numeric(ytest), as.numeric(pred)))
 ```
 
 
-Test accuracy: 
-Kappa: 
-Test AUC:
+Test accuracy: .66
+Kappa: .23
+Test AUC: .61
 
 Now we select the variables differently, based on our top (p < .01) NV vs ADHD descriptive.
 
@@ -395,9 +395,9 @@ print(postResample(pred, ytest))
 print(roc(as.numeric(ytest), as.numeric(pred)))
 ```
 
-Test accuracy: 
-Kappa: 
-Test AUC:
+Test accuracy: .77 
+Kappa: .51
+Test AUC: .74
 
 
 # Inattention 3 group outcome
