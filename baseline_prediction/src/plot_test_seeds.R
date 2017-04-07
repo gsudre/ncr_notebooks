@@ -17,9 +17,9 @@ get_random_vote = function(ts, nperms) {
 }
 
 library(caret)
-models = c('Ada', 'AdaBag', 'AdaBoost')
+models = c('AdaBag', 'AdaBoost')
 fname_path = '~/data/baseline_prediction/results/bw/'
-fname_root = 'allGeospatialPCAClean'
+fname_root = 'allNeuropsychCleanGASsplit'
 pct = .95
 nperms = 1000
 
@@ -35,12 +35,12 @@ for (m in models) {
   for (f in 1:nfiles) {
     cat(sprintf('%d ', f))
     load(sprintf('%s/%s', fname_path, tfiles[f]))
-    
+
     Xtrain <- X[ split, ]
     ytrain <- y[ split ]
     Xtest  <- X[-split, ]
     ytest = y[-split]
-    
+
     pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale'))
     filtXtrain = predict(pp, Xtrain)
     filtXtest = predict(pp, Xtest)
@@ -49,7 +49,7 @@ for (m in models) {
       filtXtrain = filtXtrain[, -nzv]
     }
     correlations = cor(filtXtrain, use='na.or.complete')
-    
+
     highCorr = findCorrelation(correlations, cutoff=.75)
     if (length(highCorr) > 0) {
       noncorrXtrain = filtXtrain[, -highCorr]
@@ -71,7 +71,7 @@ for (m in models) {
       tmp = multiClassSummary(ts, lev=levels(ts$obs))
       res[f, ] = tmp[c('Accuracy', 'ROC', 'Sensitivity', 'Specificity')]
     }
-    
+
     rnd_res = rbind(rnd_res, get_random_vote(ts, ceiling(nperms / nfiles)))
   }
   cat('\n')

@@ -500,9 +500,9 @@ print(multiclass.roc(as.numeric(ytest), as.numeric(pred)))
 ```
 
 
-Test accuracy: 
-Kappa: 
-Test AUC:
+Test accuracy: .47
+Kappa:.13
+Test AUC: .57
 
 Then, we do a similar thing, but with variables at p < .01:
 
@@ -582,9 +582,9 @@ print(multiclass.roc(as.numeric(ytest), as.numeric(pred)))
 ```
 
 
-Test accuracy: 
-Kappa: 
-Test AUC:
+Test accuracy: .55
+Kappa: .28
+Test AUC: .66
 
 And finally, with variables at p < .05:
 
@@ -673,11 +673,11 @@ print(postResample(pred, ytest))
 print(multiclass.roc(as.numeric(ytest), as.numeric(pred)))
 ```
 
-Test accuracy: 
-Kappa: 
-Test AUC:
+Test accuracy: .60
+Kappa: .35
+Test AUC: .65
 
-
+OK, so it is clear that (at least with this seed) by using a univariate filter we can get an improvement in results. This is an approach we can use iteratively within the cross validation folds. We just need to code it.
 
 
 
