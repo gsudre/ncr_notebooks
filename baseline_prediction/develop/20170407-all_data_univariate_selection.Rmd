@@ -128,6 +128,8 @@ X = X[, !rm_me]
 So, at this point X has 410 variables, because we didn't select anything a priori. Let's do our current cleaning pipeline. Note that I'm residualizing based on the age at the clinical assessment, because we always cut off to stuff happening within the year, and the assumption is that nothing changes then. That's what I'm going to do. 
 
 ```{r}
+library(pROC)
+
 # let's work with residuals
 get_needed_residuals = function(y, fm_str, cutoff) {
   fm = as.formula(fm_str)
@@ -222,6 +224,14 @@ print(postResample(pred, ytest))
 print(roc(as.numeric(ytest), as.numeric(pred)))
 ```
 
+> print(getTrainPerf(m1))
+   TrainROC TrainSens TrainSpec      method
+1 0.7372638 0.5388571 0.7825806 AdaBoost.M1
+> print(postResample(pred, ytest))
+ Accuracy     Kappa 
+0.6612903 0.2525832 
+Area under the curve: 0.6189
+
 Or doing some extra cleaning:
 
 ```{r}
@@ -258,6 +268,16 @@ pred = predict(m1, filtXtest)
 print(postResample(pred, ytest))
 print(roc(as.numeric(ytest), as.numeric(pred)))
 ```
+
+> print(getTrainPerf(m1))
+   TrainROC TrainSens TrainSpec      method
+1 0.7411747 0.5489524  0.776043 AdaBoost.M1
+> print(postResample(pred, ytest))
+ Accuracy     Kappa
+0.6935484 0.3329558
+Area under the curve: 0.6589
+
+As we had seen from before, doing osme cleaning helps it generalize to the test set better, even though it doesn't matter much for the training set.
 
 # Inattention 3 group outcome
 
@@ -362,6 +382,13 @@ print(postResample(pred, ytest))
 print(roc(as.numeric(ytest), as.numeric(pred)))
 ```
 
+TrainMean_ROC TrainAccuracy TrainKappa TrainMean_Sensitivity TrainMean_Specificity
+0.6739128     0.5336959  0.2496729             0.4667539             0.7511792
+> print(postResample(pred, ytest))
+ Accuracy     Kappa 
+0.5000000 0.1944677 
+Multi-class area under the curve: 0.5809
+
 And like the binary test, we try the clean version:
 
 ```{r}
@@ -399,4 +426,11 @@ print(postResample(pred, ytest))
 print(roc(as.numeric(ytest), as.numeric(pred)))
 ```
 
+TrainMean_ROC TrainAccuracy TrainKappa TrainMean_Sensitivity TrainMean_Specificity
+0.679289      0.537308  0.2545592             0.4704306              0.752479
+> print(postResample(pred, ytest))
+ Accuracy     Kappa
+0.4677419 0.1388889
+Multi-class area under the curve: 0.564
 
+In the 3-class case, cleaning didn't help with generalization to test set.
