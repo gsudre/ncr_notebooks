@@ -269,10 +269,10 @@ print(postResample(pred, ytest))
 print(roc(as.numeric(ytest), as.numeric(pred)))
 ```
 
-> print(getTrainPerf(m1))
-   TrainROC TrainSens TrainSpec      method
-1 0.7411747 0.5489524  0.776043 AdaBoost.M1
-> print(postResample(pred, ytest))
+print(getTrainPerf(m1))
+TrainROC TrainSens TrainSpec      method
+0.7411747 0.5489524  0.776043 AdaBoost.M1
+print(postResample(pred, ytest))
  Accuracy     Kappa
 0.6935484 0.3329558
 Area under the curve: 0.6589

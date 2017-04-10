@@ -11,29 +11,6 @@ source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
 fmri_meta = read.csv('~/data/baseline_prediction/fmri/good_scans_01312017.csv')
 histogram(fmri_meta$trs_left, breaks=40)
 plot(ecdf(fmri_meta$trs_left))
-# gf = read.csv(gf_fname)
-# tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
-# rm_me = (tract_data$fa_avg < .4 | tract_data$ad_avg < 1.18 | tract_data$rd_avg > .65 | tract_data$rd_avg < .5 |
-#          tract_data$norm.trans > .45 | tract_data$norm.rot > .008 | tract_data$goodSlices < 45 | 
-#          tract_data$goodSlices > 70)
-# tract_data = tract_data[!rm_me, ]
-# gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
-# gf = read.csv(gf_fname)
-# gf = gf[gf$BASELINE=='BASELINE', ]
-# my_ids = intersect(gf$MRN, tract_data$MRN)
-# merged = mergeOnClosestDate(gf, tract_data, my_ids)
-# rm_me = abs(merged$dateX.minus.dateY.months) > 12
-# merged = merged[!rm_me, ]
-# 
-# phen_vars = c(which(grepl("^FA_", colnames(merged))),
-#               which(grepl("^AD_", colnames(merged))),
-#               which(grepl("^RD_", colnames(merged))),
-#               which(grepl("^MO_", colnames(merged)))
-#               )
-# X = merged[, phen_vars]
-# y = merged$DX_BASELINE
-# y[y != 'NV'] = 'ADHD'
-# y = factor(y)
 ```
 
 Given that the total of a run is 123, we have a few subjects with data combined for more than one run. Also, each TR is 2.5s, so we should probably establish how many minutes we want to use as a threshold. There isn't a clear cut-off in the cumulative plot either... maybe we can do it around 45 TRs, where there is the first vertical split? Let's find a round cut-off. If each TR is 2.5, 50 TRs is a little above 2min (125sec), so let's go with 48 TRs for 2min.
@@ -99,8 +76,10 @@ get_needed_residuals = function(y, fm_str, cutoff) {
   return(y)
 }
 
-X_resid = sapply(X, get_needed_residuals, 'y ~ merged$age + I(merged$age^2) + merged$SEX', .1)
+X_resid = sapply(as.data.frame(X), get_needed_residuals, 'y ~ merged$age + I(merged$age^2) + merged$SEX', .1)
+rm(X)
 X_resid = as.data.frame(X_resid)
+
 
 myseed = 1234
 
@@ -111,6 +90,12 @@ Xtrain <- X_resid[ split, ]
 ytrain <- y[ split ]
 Xtest  <- X_resid[-split, ]
 ytest = y[-split]
+
+# in resting it's actually more costly to do the correlation in the entire set of variables
+# then to run the for loop, so let's first reduce the variables to only the univariate ones
+pvals = sapply(Xtrain, function(d) t.test(d ~ ytrain)$p.value)
+Xtrain = Xtrain[pvals <= .05]
+print(dim(Xtrain))
 
 # now we can remove correlated and non-informative variables
 nzv = nearZeroVar(Xtrain)
@@ -128,13 +113,11 @@ if (length(highCorr) > 0) {
 }
 
 # only evaluate variables with p-value < .05
-pvals = sapply(Xtrain, function(d) t.test(d ~ ytrain)$p.value)
-Xtrain = Xtrain[pvals <= .05]
-print(dim(Xtrain))
+
 
 keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
 Xtest = Xtest[, keep_me]
 ```
-```
 
 
+Trying to run some of this in the cluster because the matrix is HUGE.
