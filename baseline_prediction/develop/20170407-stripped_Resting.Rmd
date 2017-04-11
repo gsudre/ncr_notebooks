@@ -94,7 +94,7 @@ ytest = y[-split]
 # in resting it's actually more costly to do the correlation in the entire set of variables
 # then to run the for loop, so let's first reduce the variables to only the univariate ones
 pvals = sapply(Xtrain, function(d) t.test(d ~ ytrain)$p.value)
-Xtrain = Xtrain[pvals <= .05]
+Xtrain = Xtrain[, pvals <= .05]
 print(dim(Xtrain))
 
 # now we can remove correlated and non-informative variables
@@ -112,12 +112,11 @@ if (length(highCorr) > 0) {
   Xtrain = Xtrain[, -highCorr]
 }
 
-# only evaluate variables with p-value < .05
-
-
 keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
 Xtest = Xtest[, keep_me]
 ```
 
 
 Trying to run some of this in the cluster because the matrix is HUGE.
+
+But even after removing anything not significant, I still have 132956 variables, and R complains it cannot allocate a vecotr of size 131.7Gb...  
