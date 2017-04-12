@@ -119,4 +119,4 @@ Xtest = Xtest[, keep_me]
 
 Trying to run some of this in the cluster because the matrix is HUGE.
 
-But even after removing anything not significant, I still have 132956 variables, and R complains it cannot allocate a vecotr of size 131.7Gb...  
+But even after removing anything not significant, I still have 132956 variables, and R complains it cannot allocate a vector of size 131.7Gb...  let me try cutting the p-value even deeper.
