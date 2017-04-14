@@ -29,16 +29,30 @@ phen_vars = c(which(grepl("^FA_", colnames(merged))),
               )
 X = merged[, phen_vars]
 ```
+
+
 ```{r}
 nvVSadhd_test = function(X, merged, dtype) {
   y = as.character(merged$DX_BASELINE)
   y[y != 'NV'] = 'ADHD'
   y = factor(y, levels=c('NV', 'ADHD'))
   modality <- apply(X, 2, function(dat) {dtype})
+  
+  # tstat <- apply(X, 2, function(dat) {
+  #   +     summary(lm(dat ~ y + merged$age + merged$SEX))$coefficients[2, 3]})
+  # pvals <- apply(X, 2, function(dat) {
+  #   +     summary(lm(dat ~ y + merged$age + merged$SEX))$coefficients[2, 4]})
+  
+  # tstat <- apply(X, 2, function(dat) {
+  #   +     summary(lm(dat ~ y))$coefficients[2, 3]})
+  # pvals <- apply(X, 2, function(dat) {
+  #   +     summary(lm(dat ~ y))$coefficients[2, 4]})
+  
   tstat <- apply(X, 2, function(dat) {
-    +     summary(lm(dat ~ y + merged$age + merged$SEX))$coefficients[2, 3]})
+    +     summary(lm(dat ~ y + merged$SEX))$coefficients[2, 3]})
   pvals <- apply(X, 2, function(dat) {
-    +     summary(lm(dat ~ y + merged$age + merged$SEX))$coefficients[2, 4]})
+    +     summary(lm(dat ~ y + merged$SEX))$coefficients[2, 4]})
+  
   res = cbind(modality, tstat, pvals)
   colnames(res) = c('dtype', 'nvVSadhd_tstat', 'nvVSadhd_pval')
   return(res)
@@ -54,10 +68,22 @@ nvVSadhd_lowVSadhd_high_test = function(X, merged) {
   y[y == 'ADHD' & merged$GAS > thresh] = 'ADHD_high'
   y[y == 'ADHD'] = 'ADHD_low'
   y = factor(y, levels=c('NV', 'ADHD_low', 'ADHD_high'))
+  
+  # fstat <- apply(X, 2, function(dat) {
+  #   +     summary(aov(lm(dat ~  + merged$age + merged$SEX + y)))[[1]][4][[3, 1]]})
+  # pvals <- apply(X, 2, function(dat) {
+  #   +     summary(aov(lm(dat ~ merged$age + merged$SEX + y)))[[1]][5][[3, 1]]})
+  
+  # fstat <- apply(X, 2, function(dat) {
+  #   +     summary(aov(lm(dat ~ y)))[[1]][4][[1, 1]]})
+  # pvals <- apply(X, 2, function(dat) {
+  #   +     summary(aov(lm(dat ~ y)))[[1]][5][[1, 1]]})
+  
   fstat <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~  + merged$age + merged$SEX + y)))[[1]][4][[3, 1]]})
+    +     summary(aov(lm(dat ~ merged$SEX + y)))[[1]][4][[2, 1]]})
   pvals <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ merged$age + merged$SEX + y)))[[1]][5][[3, 1]]})
+    +     summary(aov(lm(dat ~ merged$SEX + y)))[[1]][5][[2, 1]]})
+  
   res = cbind(fstat, pvals)
   colnames(res) = c('nvVSadhdlowVSadhdhigh_Fstat', 'nvVSadhdlowVSadhdhigh_pval')
   return(res)
@@ -65,18 +91,40 @@ nvVSadhd_lowVSadhd_high_test = function(X, merged) {
 
 outcome_test = function(X, merged) {
   y = merged$inatt3_named
+  # fstat <- apply(X, 2, function(dat) {
+  #   +     summary(aov(lm(dat ~ merged$age + merged$SEX + y)))[[1]][4][[3, 1]]})
+  # pvals <- apply(X, 2, function(dat) {
+  #   +     summary(aov(lm(dat ~ merged$age + merged$SEX + y)))[[1]][5][[3, 1]]})
+
+  # fstat <- apply(X, 2, function(dat) {
+  #   +     summary(aov(lm(dat ~ y)))[[1]][4][[1, 1]]})
+  # pvals <- apply(X, 2, function(dat) {
+  #   +     summary(aov(lm(dat ~ y)))[[1]][5][[1, 1]]})
+  
   fstat <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ merged$age + merged$SEX + y)))[[1]][4][[3, 1]]})
+    +     summary(aov(lm(dat ~ merged$SEX + y)))[[1]][4][[2, 1]]})
   pvals <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ merged$age + merged$SEX + y)))[[1]][5][[3, 1]]})
+    +     summary(aov(lm(dat ~ merged$SEX + y)))[[1]][5][[2, 1]]})
+  
   res_inatt = cbind(fstat, pvals)
   colnames(res_inatt) = c('outcomeInatt3Grp_Fstat', 'outcomeInatt3Grp_pval')
   
   y = merged$HI3_named
+  # fstat <- apply(X, 2, function(dat) {
+  #   +     summary(aov(lm(dat ~ merged$age + merged$SEX + y)))[[1]][4][[3, 1]]})
+  # pvals <- apply(X, 2, function(dat) {
+  #   +     summary(aov(lm(dat ~ merged$age + merged$SEX + y)))[[1]][5][[3, 1]]})
+  
+  # fstat <- apply(X, 2, function(dat) {
+  #   +     summary(aov(lm(dat ~ y)))[[1]][4][[1, 1]]})
+  # pvals <- apply(X, 2, function(dat) {
+  #   +     summary(aov(lm(dat ~ y)))[[1]][5][[1, 1]]})
+  
   fstat <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ merged$age + merged$SEX + y)))[[1]][4][[3, 1]]})
+    +     summary(aov(lm(dat ~ merged$SEX + y)))[[1]][4][[2, 1]]})
   pvals <- apply(X, 2, function(dat) {
-    +     summary(aov(lm(dat ~ merged$age + merged$SEX + y)))[[1]][5][[3, 1]]})
+    +     summary(aov(lm(dat ~ merged$SEX + y)))[[1]][5][[2, 1]]})
+  
   res_hi = cbind(fstat, pvals)
   colnames(res_hi) = c('outcomeHI3Grp_Fstat', 'outcomeHI3Grp_pval')
   return(cbind(res_inatt, res_hi))
@@ -302,5 +350,64 @@ colnames(X)[pvals.rot < .05]
 
 Let's see which deltas (slopes) are correlated with the different targets. Let's do an uncorrected one, and then one correcting for sex, as age won't matter here.
 
+```{r}
+y_target = 'DX_BASELINE'
 
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
 
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+rm_me = (tract_data$fa_avg < .4 | tract_data$ad_avg < 1.18 | tract_data$rd_avg > .65 | tract_data$rd_avg < .5 |
+           tract_data$norm.trans > .45 | tract_data$norm.rot > .008 | tract_data$goodSlices < 45 |
+           tract_data$goodSlices > 70)
+tract_data = tract_data[!rm_me, ]
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+
+phen_vars = c(which(grepl("^FA_", colnames(tract_data))),
+              which(grepl("^AD_", colnames(tract_data))),
+              which(grepl("^RD_", colnames(tract_data))),
+              which(grepl("^MO_", colnames(tract_data)))
+)
+Xraw = tract_data[, phen_vars]
+my_ids = unique(gf$MRN)
+
+# MAKE SURE nrow(tract_data) == nrow(Xraw)!!!!
+
+get_delta = function (d) {
+  # if we have too many NAs, return NA
+  if (sum(is.na(d)) >= (length(d)-1)) {
+    return(NA)
+  }
+  else {
+    lm(d ~ tract_data[idx, ]$age_at_scan)$coefficients[2]
+  }
+}
+
+X = c()
+y_idx = c()
+target_col = which(colnames(gf)==y_target)
+for (s in my_ids) {
+  idx = tract_data$MRN==s
+  # proceed if we have more than one observation in the data
+  if (sum(idx) >= 2) {
+    slopes = sapply(Xraw[idx, ], get_delta)
+    names(slopes) = colnames(Xraw)
+    X = rbind(X, slopes)
+    idxy = gf$MRN==s
+    y_idx = c(y_idx, which(idxy)[1])
+  }
+}
+merged = gf[y_idx, ]
+```
+
+```{r}
+dti_delta_descriptive = cbind(nvVSadhd_test(X, merged, 'DTI'),
+                        nvVSadhd_lowVSadhd_high_test(X, merged),
+                        outcome_test(X, merged))
+```
+
+Same thing for structural:
+
+```{r}
+
+```
