@@ -1,0 +1,691 @@
+---
+title: "DTI baseline and symptom change"
+output: html_notebook
+---
+
+One option we have is to try to predict symptom change from baseline, which would be the end goal anyways. Here, we could go for symptom slope, delta, or corrected delta. Also, it could use the last time point, or just the next one. Finally, we can restrict it to ADHD only, or include NVs in the mix. Let's play a bit with these options, and maybe how different model ensembles perform.
+
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
+
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+rm_me = (tract_data$fa_avg < .4 | tract_data$ad_avg < 1.18 | tract_data$rd_avg > .65 | tract_data$rd_avg < .5 |
+           tract_data$norm.trans > .45 | tract_data$norm.rot > .008 | tract_data$goodSlices < 45 |
+           tract_data$goodSlices > 70)
+tract_data = tract_data[!rm_me, ]
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+gf_base = gf[gf$BASELINE=='BASELINE', ]
+my_ids = intersect(gf_base$MRN, tract_data$MRN)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+merged = merged[!rm_me, ]
+
+phen_vars = c(which(grepl("^FA_", colnames(merged))),
+              which(grepl("^AD_", colnames(merged))),
+              which(grepl("^RD_", colnames(merged))),
+              which(grepl("^MO_", colnames(merged)))
+)
+X = merged[, phen_vars]
+base_class = merged$DX_BASELINE
+base_class[base_class != 'NV'] = 'ADHD'
+base_class = factor(base_class, levels = c('NV', 'ADHD'))
+
+# just so we have more options for regressors, remove features with NAs
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+```
+
+Now let's define a few different targets. First, we start with some basic SX slope:
+
+```{r}
+y = vector()
+target_col = which(colnames(gf)=='SX_inatt')
+for (s in merged$MRN) {
+  idx = gf$MRN==s
+  sx_slope = lm(gf[idx, target_col] ~ gf[idx, ]$age)$coefficients[2]
+  y = c(y, sx_slope)
+}
+```
+
+Let's see what we can get here.
+
+```{r}
+myseed = 1234
+cpuDiff = 1
+tuneLength = 10
+default_preproc = c("center", 'scale')
+
+library(doMC)
+ncpus <- detectBatchCPUs()
+njobs <- ncpus - cpuDiff
+registerDoMC(njobs)
+
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+set.seed(myseed)
+index <- createResample(ytrain, 25)
+
+print(sprintf('No information rate: RMSE=%f', postResample(mean(ytrain), ytest)[1]))
+
+my_control <- trainControl(
+  method="boot",
+  number=25,
+  savePredictions="final",
+  index=index
+  )
+
+library("caretEnsemble")
+model_list <- caretList(
+  Xtrain, ytrain,
+  tuneLength=10,
+  trControl=my_control,
+  methodList=c('svmRadial', 'rf', 'xgbTree')
+  )
+
+greedy_ensemble <- caretEnsemble(
+  model_list, 
+  trControl=trainControl(
+    number=2
+    ))
+
+glm_ensemble <- caretStack(
+  model_list,
+  method="glm",
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    savePredictions="final"
+  )
+)
+
+gbm_ensemble <- caretStack(
+  model_list,
+  method="gbm",
+  verbose=FALSE,
+  tuneLength=10,
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    savePredictions="final"
+  )
+)
+summary(greedy_ensemble)
+summary(glm_ensemble)
+summary(gbm_ensemble)
+model_preds <- lapply(model_list, predict, newdata=Xtest)
+model_preds <- lapply(model_preds, RMSE, obs=ytest)
+model_preds <- data.frame(model_preds)
+ens_preds <- predict(greedy_ensemble, newdata=Xtest)
+model_preds$greedyE <- RMSE(ens_preds, ytest)
+ens_preds <- predict(glm_ensemble, newdata=Xtest)
+model_preds$glmE <- RMSE(ens_preds, ytest)
+ens_preds <- predict(gbm_ensemble, newdata=Xtest)
+model_preds$gbmE <- RMSE(ens_preds, ytest)
+```
+
+
+So, we're not doing better than predicting the mean. Now, it makes sense to only use ADHDs, as we wouldn't realistically put a NV kid in the scanner to see how her symptoms would evolve. Let's try that. 
+
+```{r}
+y = vector()
+target_col = which(colnames(gf)=='SX_inatt')
+for (s in merged[base_class=='ADHD',]$MRN) {
+  idx = gf$MRN==s
+  sx_slope = lm(gf[idx, target_col] ~ gf[idx, ]$age)$coefficients[2]
+  y = c(y, sx_slope)
+}
+X = X[base_class=='ADHD', ]
+```
+
+```{r}
+myseed = 1234
+cpuDiff = 1
+tuneLength = 10
+default_preproc = c("center", 'scale')
+
+library(doMC)
+ncpus <- detectBatchCPUs()
+njobs <- ncpus - cpuDiff
+registerDoMC(njobs)
+
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+set.seed(myseed)
+index <- createResample(ytrain, 25)
+
+print(sprintf('No information rate: RMSE=%f', postResample(mean(ytrain), ytest)[1]))
+
+my_control <- trainControl(
+  method="boot",
+  number=25,
+  savePredictions="final",
+  index=index
+  )
+
+library("caretEnsemble")
+model_list <- caretList(
+  Xtrain, ytrain,
+  tuneLength=10,
+  trControl=my_control,
+  methodList=c('svmRadial', 'rf', 'xgbTree')
+  )
+
+greedy_ensemble <- caretEnsemble(
+  model_list, 
+  trControl=trainControl(
+    number=2
+    ))
+
+glm_ensemble <- caretStack(
+  model_list,
+  method="glm",
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    savePredictions="final"
+  )
+)
+
+gbm_ensemble <- caretStack(
+  model_list,
+  method="gbm",
+  verbose=FALSE,
+  tuneLength=10,
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    savePredictions="final"
+  )
+)
+summary(greedy_ensemble)
+summary(glm_ensemble)
+summary(gbm_ensemble)
+model_preds <- lapply(model_list, predict, newdata=Xtest)
+model_preds <- lapply(model_preds, RMSE, obs=ytest)
+model_preds <- data.frame(model_preds)
+ens_preds <- predict(greedy_ensemble, newdata=Xtest)
+model_preds$greedyE <- RMSE(ens_preds, ytest)
+ens_preds <- predict(glm_ensemble, newdata=Xtest)
+model_preds$glmE <- RMSE(ens_preds, ytest)
+ens_preds <- predict(gbm_ensemble, newdata=Xtest)
+model_preds$gbmE <- RMSE(ens_preds, ytest)
+print(model_preds)
+```
+
+Still not good... according to Philip, we could try restricting the age of first assessment to < 12, and/or only look at people with sx >= 2, which would also add some NVs.
+
+```{r}
+X = merged[, phen_vars]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+y = vector()
+keep_me = vector()
+target_col = which(colnames(gf)=='SX_inatt')
+for (s in merged$MRN) {
+  if ((gf_base[gf_base$MRN==s,]$age <= 12) && (gf_base[gf_base$MRN==s, target_col] >= 2)) {
+    idx = gf$MRN==s
+    sx_slope = lm(gf[idx, target_col] ~ gf[idx, ]$age)$coefficients[2]
+    keep_me = c(keep_me, which(merged$MRN == s))
+    y = c(y, sx_slope)
+  }
+}
+X = X[keep_me, ]
+```
+
+```{r}
+myseed = 1234
+cpuDiff = 1
+tuneLength = 10
+default_preproc = c("center", 'scale')
+
+library(doMC)
+ncpus <- detectBatchCPUs()
+njobs <- ncpus - cpuDiff
+registerDoMC(njobs)
+
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+set.seed(myseed)
+index <- createResample(ytrain, 25)
+
+print(sprintf('No information rate: RMSE=%f', postResample(mean(ytrain), ytest)[1]))
+
+my_control <- trainControl(
+  method="boot",
+  number=25,
+  savePredictions="final",
+  index=index
+  )
+
+library("caretEnsemble")
+model_list <- caretList(
+  Xtrain, ytrain,
+  tuneLength=10,
+  trControl=my_control,
+  methodList=c('svmRadial', 'rf', 'xgbTree')
+  )
+
+greedy_ensemble <- caretEnsemble(
+  model_list, 
+  trControl=trainControl(
+    number=2
+    ))
+
+glm_ensemble <- caretStack(
+  model_list,
+  method="glm",
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    savePredictions="final"
+  )
+)
+
+gbm_ensemble <- caretStack(
+  model_list,
+  method="gbm",
+  verbose=FALSE,
+  tuneLength=10,
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    savePredictions="final"
+  )
+)
+summary(greedy_ensemble)
+summary(glm_ensemble)
+summary(gbm_ensemble)
+model_preds <- lapply(model_list, predict, newdata=Xtest)
+model_preds <- lapply(model_preds, RMSE, obs=ytest)
+model_preds <- data.frame(model_preds)
+ens_preds <- predict(greedy_ensemble, newdata=Xtest)
+model_preds$greedyE <- RMSE(ens_preds, ytest)
+ens_preds <- predict(glm_ensemble, newdata=Xtest)
+model_preds$glmE <- RMSE(ens_preds, ytest)
+ens_preds <- predict(gbm_ensemble, newdata=Xtest)
+model_preds$gbmE <- RMSE(ens_preds, ytest)
+print(model_preds)
+```
+
+Still nothing... maybe single voxel would help?
+
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+dti_vdata = read.csv('~/data/baseline_prediction/dti/dti_fa_voxels.csv',
+                     nrow=nrow(tract_data), colClasses='numeric')
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+gf_base = gf[gf$BASELINE=='BASELINE', ]
+my_ids = intersect(gf_base$MRN, tract_data$MRN)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+merged = merged[!rm_me, ]
+dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+```
+
+Now we have to do some filtering, as we have way too many variables in the voxel analysis:
+
+```{r}
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+y = vector()
+keep_me = vector()
+target_col = which(colnames(gf)=='SX_inatt')
+for (s in merged$MRN) {
+  if ((gf_base[gf_base$MRN==s,]$age <= 12) && (gf_base[gf_base$MRN==s, target_col] >= 2)) {
+    idx = gf$MRN==s
+    sx_slope = lm(gf[idx, target_col] ~ gf[idx, ]$age)$coefficients[2]
+    keep_me = c(keep_me, which(merged$MRN == s))
+    y = c(y, sx_slope)
+  }
+}
+X = X[keep_me, ]
+
+myseed = 1234
+
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+# in voxel analysis it's actually more costly to do the correlation in the entire set of variables
+# then to run the for loop, so let's first reduce the variables to only the univariate ones
+pvals = sapply(Xtrain, function(d) cor.test(d, ytrain)$p.value)
+Xtrain = Xtrain[, which(pvals <= .05)]
+print(dim(Xtrain))
+
+# now we can remove correlated and non-informative variables
+nzv = nearZeroVar(Xtrain)
+print(nzv)
+if (length(nzv) > 0) {
+  Xtrain = Xtrain[, -nzv]
+}
+correlations = cor(Xtrain, use='na.or.complete')
+# library(corrplot)
+# corrplot(correlations, order = "hclust")
+highCorr = findCorrelation(correlations, cutoff=.75)
+print(length(highCorr))
+if (length(highCorr) > 0) {
+  Xtrain = Xtrain[, -highCorr]
+}
+print(dim(Xtrain))
+
+keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
+Xtest = Xtest[, keep_me]
+```
+
+Now we're ready for some regression...
+
+```{r}
+cpuDiff=1
+tuneLength=10
+mymod='rf'
+
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+library(doMC)
+ncpus <- detectBatchCPUs()
+njobs <- ncpus - cpuDiff
+registerDoMC(njobs)
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         savePredictions="final")
+m1 <- train(Xtrain, ytrain,
+            method = mymod,
+            trControl = fullCtrl,
+            tuneLength = tuneLength)
+print(m1)
+pred = predict(m1, Xtest)
+print(postResample(pred, ytest))
+print(sprintf('No information rate: RMSE=%f', postResample(mean(ytrain), ytest)[1]))
+```
+
+Well, at least our trained RF model does better than the no information rate. It just doesn't predict well.
+
+Let's see if using other methods works better, with this type of filter selection. The other option would be to try wrapper methods for feature selection... more to come.
+
+```{r}
+library(caretEnsemble)
+model_list <- caretList(
+  Xtrain, ytrain,
+  tuneLength=10,
+  trControl=fullCtrl,
+  # when doing classification, also try 'LogitBoost', 'lda', and 'nb'
+  methodList=c('rf', 'kernelpls', 'svmRadial', 'lasso', 'knn', 'rpart', 'bagEarthGCV')
+  )
+
+greedy_ensemble <- caretEnsemble(
+  model_list, 
+  trControl=trainControl(
+    number=2
+    ))
+
+glm_ensemble <- caretStack(
+  model_list,
+  method="glm",
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    savePredictions="final"
+  )
+)
+
+gbm_ensemble <- caretStack(
+  model_list,
+  method="gbm",
+  verbose=FALSE,
+  tuneLength=10,
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    savePredictions="final"
+  )
+)
+summary(greedy_ensemble)
+model_preds <- lapply(model_list, predict, newdata=Xtest)
+model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+model_preds <- data.frame(model_preds)
+ens_preds <- predict(greedy_ensemble, newdata=Xtest)
+model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+ens_preds <- predict(glm_ensemble, newdata=Xtest)
+model_preds$glmE <- postResample(ens_preds, ytest)[1]
+ens_preds <- predict(gbm_ensemble, newdata=Xtest)
+model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+print(model_preds)
+print(sprintf('No information rate: RMSE=%f', postResample(mean(ytrain), ytest)[1]))
+```
+
+Differently than the structural data, our trained models can do better than the NIR, but they just don't generalize too well:
+
+```
+> summary(greedy_ensemble)
+The following models were ensembled: rf, kernelpls, svmRadial, lasso, knn, rpart, bagEarthGCV
+They were weighted:
+-0.0408 -0.2308 1.174 0.4966 -0.2964 -0.2609 -0.0135 -0.0488
+The resulting RMSE is: 0.549
+The fit for each individual model on the RMSE is:
+      method      RMSE    RMSESD
+          rf 1.0068311 0.2068528
+   kernelpls 0.5691138 0.0880059
+   svmRadial 0.7625152 0.1906792
+       lasso 0.9737567 0.1640132
+         knn 0.9109432 0.1822245
+       rpart 1.3329387 0.2132794
+ bagEarthGCV 0.9712748 0.1708745
+> model_preds <- lapply(model_list, predict, newdata=Xtest)
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> ens_preds <- predict(greedy_ensemble, newdata=Xtest)
+> model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(glm_ensemble, newdata=Xtest)
+> model_preds$glmE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(gbm_ensemble, newdata=Xtest)
+> model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+> print(model_preds)
+           rf kernelpls svmRadial    lasso      knn    rpart bagEarthGCV  greedyE     glmE     gbmE
+RMSE 1.482455  1.540107  1.516895 1.633493 1.459702 1.609111     1.48728 1.545074 1.545074 1.610505
+> print(sprintf('No information rate: RMSE=%f', postResample(mean(ytrain), ytest)[1]))
+[1] "No information rate: RMSE=1.361248"
+```
+
+Before we try wrapping methods, as they're more computationally intensive, let's see if we can do better with either HI slopes, or any of the two types of outcomes:
+
+## HI slopes
+
+```
+The following models were ensembled: rf, kernelpls, svmRadial, lasso, knn, rpart, bagEarthGCV
+They were weighted:
+-0.0301 -0.4389 0.4473 0.7253 0.066 0.4456 -0.0379 -0.191
+The resulting RMSE is: 0.7677
+The fit for each individual model on the RMSE is:
+      method      RMSE    RMSESD
+          rf 0.9389438 0.2156183
+   kernelpls 0.7842068 0.1239863
+   svmRadial 0.8016045 0.1429486
+       lasso 0.9542475 0.1423419
+         knn 0.8466594 0.1468682
+       rpart 1.2596263 0.2136318
+ bagEarthGCV 0.9509955 0.2132654
+> model_preds <- lapply(model_list, predict, newdata=Xtest)
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> ens_preds <- predict(greedy_ensemble, newdata=Xtest)
+> model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(glm_ensemble, newdata=Xtest)
+> model_preds$glmE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(gbm_ensemble, newdata=Xtest)
+> model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+> print(model_preds)
+            rf kernelpls svmRadial    lasso       knn     rpart bagEarthGCV  greedyE     glmE      gbmE
+RMSE 0.9813692  1.048233  1.038616 1.144592 0.9040527 0.9595734   0.9919127 1.019822 1.019822 0.9700945
+> print(sprintf('No information rate: RMSE=%f', postResample(mean(ytrain), ytest)[1]))
+[1] "No information rate: RMSE=0.959573"
+```
+As usual, DTI does quite well during training, but test data prediction is crap.
+
+## inatt3 outcomes
+Just to have a better comparison to the results above, we'll restrict ourselves to kids < 12 y.o. Also, note that caretEnsemble has not been implemented for multiclass problems. So, we'll need to just use caretList to make running the multiple models easier, but stop there.
+
+```{r}
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+keep_me = merged$age <= 12
+X = X[keep_me, ]
+y = merged$inatt3_named
+y = factor(y, levels=c('low', 'medium', 'high'))
+y = y[keep_me]
+
+myseed = 1234
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+# in voxel analysis it's actually more costly to do the correlation in the entire set of variables
+# then to run the for loop, so let's first reduce the variables to only the univariate ones
+pvals = sapply(Xtrain, function(d) summary(aov(lm(d ~ ytrain)))[[1]][[5]][1])
+Xtrain = Xtrain[, which(pvals <= .05)]
+print(dim(Xtrain))
+
+# now we can remove correlated and non-informative variables
+nzv = nearZeroVar(Xtrain)
+print(nzv)
+if (length(nzv) > 0) {
+  Xtrain = Xtrain[, -nzv]
+}
+correlations = cor(Xtrain, use='na.or.complete')
+# # library(corrplot)
+# # corrplot(correlations, order = "hclust")
+highCorr = findCorrelation(correlations, cutoff=.75)
+print(length(highCorr))
+if (length(highCorr) > 0) {
+  Xtrain = Xtrain[, -highCorr]
+}
+print(dim(Xtrain))
+
+keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
+Xtest = Xtest[, keep_me]
+
+tuneLength=10
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         savePredictions="final")
+
+library(caretEnsemble)
+model_list <- caretList(
+  Xtrain, ytrain,
+  tuneLength=10,
+  trControl=fullCtrl,
+  methodList=c('rf', 'kernelpls', 'svmRadial', 'lasso', 'knn', 'rpart', 'bagEarthGCV', 'LogitBoost', 'lda', 'nb')
+  )
+
+model_perf = data.frame(lapply(model_list, function(d) getTrainPerf(d)[1]))
+names(model_perf) = names(model_list)
+model_preds <- lapply(model_list, predict, newdata=Xtest)
+model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+model_preds <- data.frame(model_preds)
+names(model_preds) = names(model_list)
+print(model_perf)
+print(model_preds)
+print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+```
+
+## HI3 outcomes
+
+Here we do something similar, except that the initial preparation of variables is slightly different:
+
+```{r}
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+keep_me = merged$age <= 12
+X = X[keep_me, ]
+y = merged$HI3_named
+y = factor(y)
+y = y[keep_me]
+```
+
+Now we can do some wrapping feature selection to see if it does better than filtering. Note that we'll need to train the functions by themselves and then make a list, otherwise it won't work for ensembles:
+
+```{r}
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+y = vector()
+keep_me = vector()
+target_col = which(colnames(gf)=='SX_inatt')
+for (s in merged$MRN) {
+  if ((gf_base[gf_base$MRN==s,]$age <= 12) && (gf_base[gf_base$MRN==s, target_col] >= 2)) {
+    idx = gf$MRN==s
+    sx_slope = lm(gf[idx, target_col] ~ gf[idx, ]$age)$coefficients[2]
+    keep_me = c(keep_me, which(merged$MRN == s))
+    y = c(y, sx_slope)
+  }
+}
+X = X[keep_me, ]
+
+myseed = 1234
+
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+print(dim(Xtrain))
+
+varSeq = 1:ncol(X)
+ctrl <- rfeControl(method = "repeatedcv",
+                   saveDetails = TRUE,
+                   index = index,
+                   returnResamp = "final")
+ctrl$functions <- rfFuncs
+set.seed(myseed)
+rfRFE <- rfe(Xtrain, ytrain,
+             sizes = varSeq,
+             rfeControl = ctrl,
+             summaryFunction = defaultSummary)
+rfRFE
+
+```
+
+
+
+

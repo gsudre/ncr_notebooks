@@ -52,6 +52,10 @@ y = merged$DX_BASELINE
 y[y != 'NV'] = 'ADHD'
 y = factor(y)
 
+# because I have so many variables, let's go ahead and take out anything that has a NAN in it
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
 # let's work with residuals
 get_needed_residuals = function(y, fm_str, cutoff) {
   fm = as.formula(fm_str)
@@ -120,3 +124,6 @@ Xtest = Xtest[, keep_me]
 Trying to run some of this in the cluster because the matrix is HUGE.
 
 But even after removing anything not significant, I still have 132956 variables, and R complains it cannot allocate a vector of size 131.7Gb...  let me try cutting the p-value even deeper.
+
+OK, using p < .01 helped. Now, does it do any better in baseline prediction?
+
