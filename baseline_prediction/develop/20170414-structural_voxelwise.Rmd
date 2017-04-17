@@ -292,7 +292,7 @@ model_list <- caretList(
   Xtrain, ytrain,
   tuneLength=10,
   trControl=fullCtrl,
-  methodList=c('rf', 'kernelpls', 'svmRadial', 'lasso', 'knn', 'rpart', 'bagEarthGCV', 'LogitBoost', 'lda', 'nb')
+  methodList=c('rf', 'kernelpls', 'svmRadial', 'knn', 'rpart', 'bagEarthGCV', 'LogitBoost', 'lda', 'nb')
   )
 
 model_perf = data.frame(lapply(model_list, function(d) getTrainPerf(d)[1]))
