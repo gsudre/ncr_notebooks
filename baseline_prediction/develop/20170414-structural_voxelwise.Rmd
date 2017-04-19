@@ -287,12 +287,15 @@ fullCtrl <- trainControl(method = "repeatedcv",
                          index = index,
                          savePredictions="final")
 
+library(doMC)
+registerDoMC(cores = 8)
+set.seed(myseed)
 library(caretEnsemble)
 model_list <- caretList(
   Xtrain, ytrain,
   tuneLength=10,
   trControl=fullCtrl,
-  methodList=c('rf', 'kernelpls', 'svmRadial', 'knn', 'rpart', 'bagEarthGCV', 'LogitBoost', 'lda', 'nb')
+  methodList=c('rf', 'enpls.fs', 'svmRadial', 'bagEarthGCV', 'LogitBoost', 'rpart', 'PenalizedLDA')
   )
 
 model_perf = data.frame(lapply(model_list, function(d) getTrainPerf(d)[1]))
@@ -306,9 +309,321 @@ print(model_preds)
 print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
 ```
 
+These results were surprisingly encouraging:
+
+```
+> print(model_perf)
+         rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb
+1 0.7945809 0.7851694 0.7246549 0.7530022 0.7504688   0.3470843  0.7932268 0.6444996 0.6470401
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb
+Accuracy 0.7021277 0.6382979 0.5531915 0.6595745 0.7659574  0.08510638  0.7659574 0.5531915 0.5319149
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.407216"
+> table(y)
+y
+   low medium   high 
+    98     57     86 
+> 
+```
+Several models do a decent job in accuracy, considering that the NIR is 40%. 
 
 
 ## HI3 outcomes
+Here we do something similar, except that the initial preparation of variables is slightly different:
+
+```{r}
+X = struct_base_vdata[, 2:ncol(struct_base_vdata)]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+keep_me = mstruct$age <= 12
+X = X[keep_me, ]
+y = mstruct$HI3_named
+y = factor(y)
+y = y[keep_me]
+```
+
+Another encouraging result using structural voxelwise data:
+
+```
+> print(model_perf)
+         rf kernelpls svmRadial      knn     rpart bagEarthGCV LogitBoost       lda        nb
+1 0.7457274 0.7661444 0.6984507 0.700865 0.6918691   0.4351484  0.7387319 0.6520702 0.6341741
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb
+Accuracy 0.6808511 0.6382979 0.5957447 0.6808511 0.6808511   0.1489362  0.6046512 0.5319149 0.4680851
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.515464"
+```
+
+But what happens if we reduce out outcome categories to only the two affected ones?
+
+## inatt2 outcome
+```{r}
+X = struct_base_vdata[, 2:ncol(struct_base_vdata)]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+keep_me = mstruct$age <= 12
+X = X[keep_me, ]
+y = mstruct$inatt3_named
+y = factor(y, levels=c('low', 'medium', 'high'))
+y = y[keep_me]
+keep_me = y!='low'
+y = y[keep_me]
+y = factor(y, levels=c('medium', 'high'))
+X = X[keep_me, ]
+
+myseed = 1234
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+# in voxel analysis it's actually more costly to do the correlation in the entire set of variables
+# then to run the for loop, so let's first reduce the variables to only the univariate ones
+pvals = sapply(Xtrain, function(d) t.test(d ~ ytrain)$p.value)
+Xtrain = Xtrain[, which(pvals <= .05)]
+print(dim(Xtrain))
+
+# now we can remove correlated and non-informative variables
+nzv = nearZeroVar(Xtrain)
+print(nzv)
+if (length(nzv) > 0) {
+  Xtrain = Xtrain[, -nzv]
+}
+correlations = cor(Xtrain, use='na.or.complete')
+# # library(corrplot)
+# # corrplot(correlations, order = "hclust")
+highCorr = findCorrelation(correlations, cutoff=.75)
+print(length(highCorr))
+if (length(highCorr) > 0) {
+  Xtrain = Xtrain[, -highCorr]
+}
+print(dim(Xtrain))
+
+keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
+Xtest = Xtest[, keep_me]
+
+tuneLength=10
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         savePredictions="final",
+                         classProbs=TRUE)
+
+library(caretEnsemble)
+model_list <- caretList(
+  Xtrain, ytrain,
+  tuneLength=10,
+  trControl=fullCtrl,
+  methodList=c('rf', 'kernelpls', 'svmRadial', 'knn', 'rpart', 'bagEarthGCV', 'LogitBoost', 'lda', 'nb')
+  )
+
+greedy_ensemble <- caretEnsemble(
+  model_list, 
+  trControl=trainControl(
+    number=2
+    ))
+
+glm_ensemble <- caretStack(
+  model_list,
+  method="glm",
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    savePredictions="final"
+  )
+)
+
+gbm_ensemble <- caretStack(
+  model_list,
+  method="gbm",
+  verbose=FALSE,
+  tuneLength=10,
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    savePredictions="final"
+  )
+)
+summary(greedy_ensemble)
+model_preds <- lapply(model_list, predict, newdata=Xtest)
+model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+model_preds <- data.frame(model_preds)
+ens_preds <- predict(greedy_ensemble, newdata=Xtest)
+model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+ens_preds <- predict(glm_ensemble, newdata=Xtest)
+model_preds$glmE <- postResample(ens_preds, ytest)[1]
+ens_preds <- predict(gbm_ensemble, newdata=Xtest)
+model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+print(model_preds)
+print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+```
+
+They all seem to be overfitting a bit, and not generalizing properly. That might be corrected by proper tuning though.
+```
+> summary(greedy_ensemble)
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb 
+They were weighted: 
+7.8904 4.7246 -14.6275 -6.7668 -7.1479 -1.5642 8.0152 -0.3458 0.165 1.0568
+The resulting Accuracy is: 0.8554
+The fit for each individual model on the Accuracy is: 
+      method  Accuracy AccuracySD
+          rf 0.7754809 0.08130569
+   kernelpls 0.8452569 0.06780754
+   svmRadial 0.8401054 0.05442764
+         knn 0.6708169 0.08804529
+       rpart 0.6671739 0.10296501
+ bagEarthGCV 0.7383399 0.09046128
+  LogitBoost 0.7534651 0.08417242
+         lda 0.7083399 0.09853644
+          nb 0.8000988 0.06662096
+> model_preds <- lapply(model_list, predict, newdata=Xtest)
+There were 26 warnings (use warnings() to see them)
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> ens_preds <- predict(greedy_ensemble, newdata=Xtest)
+There were 26 warnings (use warnings() to see them)
+> model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(glm_ensemble, newdata=Xtest)
+There were 26 warnings (use warnings() to see them)
+> model_preds$glmE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(gbm_ensemble, newdata=Xtest)
+There were 26 warnings (use warnings() to see them)
+> model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost lda        nb   greedyE      glmE      gbmE
+Accuracy 0.5714286 0.3928571 0.4285714 0.5714286 0.6428571   0.5357143  0.5714286 0.5 0.4285714 0.5357143 0.5357143 0.4642857
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.600000"
+```
+
+
+## HI2 outcome
+The code for HI is very similar, excpet that we crop a different factor out:
+
+```{r}
+X = struct_base_vdata[, 2:ncol(struct_base_vdata)]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+keep_me = mstruct$age <= 12
+X = X[keep_me, ]
+y = mstruct$HI3_named
+y = y[keep_me]
+keep_me = y!='never_affected'
+y = y[keep_me]
+y = factor(y, levels=c('rapid_improvers', 'severe'))
+X = X[keep_me, ]
+```
+
+A bit better, but still overfitting:
+
+```
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb 
+They were weighted: 
+4.2686 -0.2711 -0.9866 -3.1022 -2.7313 0.3677 -2.5084 0.5117 0.2848 0.2944
+The resulting Accuracy is: 0.7416
+The fit for each individual model on the Accuracy is: 
+      method  Accuracy AccuracySD
+          rf 0.7231930 0.06444095
+   kernelpls 0.7297544 0.07831165
+   svmRadial 0.7640117 0.06180321
+         knn 0.7836608 0.07425497
+       rpart 0.5718596 0.10532386
+ bagEarthGCV 0.7167602 0.11037959
+  LogitBoost 0.6463392 0.09114580
+         lda 0.5385146 0.10446649
+          nb 0.6929006 0.08862582
+> model_preds <- lapply(model_list, predict, newdata=Xtest)
+There were 19 warnings (use warnings() to see them)
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> ens_preds <- predict(greedy_ensemble, newdata=Xtest)
+There were 19 warnings (use warnings() to see them)
+> model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(glm_ensemble, newdata=Xtest)
+There were 19 warnings (use warnings() to see them)
+> model_preds$glmE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(gbm_ensemble, newdata=Xtest)
+There were 19 warnings (use warnings() to see them)
+> model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb   greedyE      glmE      gbmE
+Accuracy 0.6363636 0.5909091 0.6363636 0.4090909 0.6363636   0.6363636  0.5909091 0.6363636 0.5454545 0.3636364 0.3636364 0.5909091
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.617021"
+> 
+```
+
+# Built-in feature selection 
+Let's play a bit with algorithms that have built-in feature selection. We'll go with the 3-case inatt because it had some interesting results (with structural data), and we can see how well they survive:
+
+## inatt3
+```{r}
+X = struct_base_vdata[, 2:ncol(struct_base_vdata)]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+keep_me = mstruct$age <= 12
+X = X[keep_me, ]
+y = mstruct$inatt3_named
+y = factor(y, levels=c('low', 'medium', 'high'))
+y = y[keep_me]
+
+myseed = 1234
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+tuneLength=10
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         savePredictions="final")
+
+# here we should be able to burn through our CPUs without running out of memory if we stick to 8 core machines.
+# I'm at 47Gb memory in struct and 8 cores, so I guess I could go to 16in 100Gb of ram. DTI is only at 7
+library(doMC)
+registerDoMC(cores = 8)
+library(caretEnsemble)
+model_list <- caretList(
+  Xtrain, ytrain,
+  tuneLength=10,
+  trControl=fullCtrl,
+  methodList=c('rf', 'svmRadial', 'bagEarthGCV', 'LogitBoost', 'rpart', 'PenalizedLDA')
+  )
+
+model_perf = data.frame(lapply(model_list, function(d) getTrainPerf(d)[1]))
+names(model_perf) = names(model_list)
+model_preds <- lapply(model_list, predict, newdata=Xtest)
+model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+model_preds <- data.frame(model_preds)
+names(model_preds) = names(model_list)
+print(model_perf)
+print(model_preds)
+print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+```
+
+Machines not running for enough time (36h). Gotta fire up individual machines per model and do it in batch mode.
+
+## HI3
+
+
+
 
 
 
