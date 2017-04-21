@@ -329,8 +329,7 @@ Still nothing... maybe single voxel would help?
 ```{r}
 source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
 tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
-dti_vdata = read.csv('~/data/baseline_prediction/dti/dti_fa_voxels.csv',
-                     nrow=nrow(tract_data), colClasses='numeric')
+load('~/data/baseline_prediction/dti/fa_voxelwise.RData')
 gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
 gf = read.csv(gf_fname)
 gf_base = gf[gf$BASELINE=='BASELINE', ]
@@ -338,7 +337,7 @@ my_ids = intersect(gf_base$MRN, tract_data$MRN)
 merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
 rm_me = abs(merged$dateX.minus.dateY.months) > 12
 merged = merged[!rm_me, ]
-dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+dti_base_vdata = merge(merged$maskid, fa_data, by.x=1, by.y=1, all.y=F, all.x=T)
 ```
 
 Now we have to do some filtering, as we have way too many variables in the voxel analysis:
@@ -935,7 +934,7 @@ Accuracy 0.4210526 0.3947368   0.2894737  0.4117647 0.4473684    0.4473684
 
 ## HI3
 
-Not much ehre either:
+Not much here either:
 ```
 > print(model_perf)
          rf svmRadial bagEarthGCV LogitBoost     rpart PenalizedLDA
@@ -947,6 +946,284 @@ Accuracy 0.5789474 0.5526316   0.4736842  0.4722222 0.5526316    0.5526316
 [1] "No information rate: Accuracy=0.537500"
 ```
 Maybe a combination of RD and AD would do better?
+
+# AD
+
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+load('~/data/baseline_prediction/dti/ad_voxelwise.RData')
+dti_vdata = cbind(tract_data$maskid, ad_data)
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+gf_base = gf[gf$BASELINE=='BASELINE', ]
+my_ids = intersect(gf_base$MRN, tract_data$MRN)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+merged = merged[!rm_me, ]
+dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+```
+
+## inatt3
+
+First we do the univariate filtering:
+
+```{r}
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+keep_me = merged$age <= 12
+X = X[keep_me, ]
+y = merged$inatt3_named
+y = factor(y, levels=c('low', 'medium', 'high'))
+y = y[keep_me]
+
+myseed = 1234
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+# in voxel analysis it's actually more costly to do the correlation in the entire set of variables
+# then to run the for loop, so let's first reduce the variables to only the univariate ones
+pvals = sapply(Xtrain, function(d) summary(aov(lm(d ~ ytrain)))[[1]][[5]][1])
+Xtrain = Xtrain[, which(pvals <= .05)]
+print(dim(Xtrain))
+
+# now we can remove correlated and non-informative variables
+nzv = nearZeroVar(Xtrain)
+print(nzv)
+if (length(nzv) > 0) {
+  Xtrain = Xtrain[, -nzv]
+}
+correlations = cor(Xtrain, use='na.or.complete')
+# # library(corrplot)
+# # corrplot(correlations, order = "hclust")
+highCorr = findCorrelation(correlations, cutoff=.75)
+print(length(highCorr))
+if (length(highCorr) > 0) {
+  Xtrain = Xtrain[, -highCorr]
+}
+print(dim(Xtrain))
+
+keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
+Xtest = Xtest[, keep_me]
+
+tuneLength=10
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         savePredictions="final")
+
+library(caretEnsemble)
+library(doMC)
+registerDoMC(cores = 8)
+model_list <- caretList(
+  Xtrain, ytrain,
+  tuneLength=10,
+  trControl=fullCtrl,
+  methodList=c('rf', 'kernelpls', 'svmRadial', 'knn', 'rpart', 'bagEarthGCV', 'LogitBoost', 'lda', 'nb')
+  )
+
+model_perf = data.frame(lapply(model_list, function(d) getTrainPerf(d)[1]))
+names(model_perf) = names(model_list)
+model_preds <- lapply(model_list, predict, newdata=Xtest)
+model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+model_preds <- data.frame(model_preds)
+names(model_preds) = names(model_list)
+print(model_perf)
+print(model_preds)
+print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+```
+
+```
+> print(model_perf)
+         rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb
+1 0.6473583 0.9002713 0.8875342 0.7701967 0.4311058   0.3637606  0.7094752 0.8301637 0.7849145
+> print(model_preds)
+          rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb
+Accuracy 0.5       0.5       0.5 0.3684211 0.4473684   0.3421053  0.4571429 0.4473684 0.4210526
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.437500"
+```
+It's really quite poor, similar to FA. There's a nice overfit in training, but it would need to be properly tuned to better fit the test set.
+
+Now we try everything:
+
+```{r}
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+keep_me = merged$age <= 12
+X = X[keep_me, ]
+y = merged$inatt3_named
+y = factor(y, levels=c('low', 'medium', 'high'))
+y = y[keep_me]
+
+myseed = 1234
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+tuneLength=10
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         savePredictions="final")
+
+library(caretEnsemble)
+library(doMC)
+registerDoMC(cores = 8)
+model_list <- caretList(
+  Xtrain, ytrain,
+  tuneLength=10,
+  trControl=fullCtrl,
+  methodList=c('rf', 'svmRadial', 'bagEarthGCV', 'LogitBoost', 'rpart', 'PenalizedLDA')
+  )
+
+model_perf = data.frame(lapply(model_list, function(d) getTrainPerf(d)[1]))
+names(model_perf) = names(model_list)
+model_preds <- lapply(model_list, predict, newdata=Xtest)
+model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+model_preds <- data.frame(model_preds)
+names(model_preds) = names(model_list)
+print(model_perf)
+print(model_preds)
+print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+```
+
+## HI3
+Same as above, but using HI3:
+
+```{r}
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+keep_me = merged$age <= 12
+X = X[keep_me, ]
+y = merged$HI3_named
+y = factor(y)
+y = y[keep_me]
+```
+
+Filtered results:
+```
+> print(model_perf)
+         rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb
+1 0.6473583 0.9002713 0.8875342 0.7701967 0.4311058   0.3637606  0.7094752 0.8301637 0.7849145
+> print(model_preds)
+          rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb
+Accuracy 0.5       0.5       0.5 0.3684211 0.4473684   0.3421053  0.4571429 0.4473684 0.4210526
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.437500"
+```
+Same as before.
+
+Unfiltered results:
+```
+> print(model_perf)
+         rf svmRadial bagEarthGCV LogitBoost     rpart PenalizedLDA
+1 0.4803776 0.4673326   0.3943569   0.456534 0.4362268    0.4477639
+> print(model_preds)
+                rf svmRadial bagEarthGCV LogitBoost     rpart PenalizedLDA
+Accuracy 0.4210526 0.4473684   0.3947368  0.4545455 0.4473684    0.4736842
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.437500"
+```
+Not much better...
+
+# RD
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+load('~/data/baseline_prediction/dti/rd_voxelwise.RData')
+dti_vdata = cbind(tract_data$maskid, rd_data)
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+gf_base = gf[gf$BASELINE=='BASELINE', ]
+my_ids = intersect(gf_base$MRN, tract_data$MRN)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+merged = merged[!rm_me, ]
+dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+```
+## inatt3
+Filtered results:
+```
+> print(model_perf)
+         rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost
+1 0.5436901 0.7111022  0.681085 0.5451698 0.3874621   0.3862696   0.528638
+        lda        nb
+1 0.6424768 0.6057173
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV
+Accuracy 0.4210526 0.4210526 0.4210526 0.3947368 0.1842105   0.2631579
+         LogitBoost       lda        nb
+Accuracy  0.3513514 0.3947368 0.4210526
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.437500"
+```
+Same as with AD and FA. Poor generalization results.
+
+Unfiltered results:
+```
+> print(model_perf)
+         rf svmRadial bagEarthGCV LogitBoost     rpart PenalizedLDA
+1 0.4813245 0.4601405   0.3951927  0.4256468 0.4760423    0.4376711
+> print(model_preds)
+                rf svmRadial bagEarthGCV LogitBoost     rpart PenalizedLDA
+Accuracy 0.4210526 0.4210526   0.3157895  0.3888889 0.3684211    0.4473684
+[1] "No information rate: Accuracy=0.437500"
+```
+DTI results clearly not great. Here, we're not even training well.
+
+
+## HI3
+Filtered results:
+```
+> print(model_perf)
+         rf kernelpls svmRadial      knn     rpart bagEarthGCV LogitBoost
+1 0.5447837 0.7111022  0.681085 0.544741 0.3874621   0.3868854   0.528638
+        lda        nb
+1 0.6424768 0.6057173
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV
+Accuracy 0.4210526 0.4210526 0.4210526 0.4210526 0.1842105   0.3421053
+         LogitBoost       lda        nb
+Accuracy  0.3513514 0.3947368 0.4210526
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.437500"
+```
+For hi, not even training is that good.
+
+Unfiltered results:
+```
+> print(model_perf)
+         rf svmRadial bagEarthGCV LogitBoost     rpart PenalizedLDA
+1 0.4813245 0.4601405   0.3951927  0.4256468 0.4760423    0.4376711
+> print(model_preds)
+                rf svmRadial bagEarthGCV LogitBoost     rpart PenalizedLDA
+Accuracy 0.4210526 0.4210526   0.3157895  0.3888889 0.3684211    0.4473684
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.437500"
+```
+Unfiltered results are not any better
+
+
 
 Now we can do some wrapping feature selection to see if it does better than filtering. Note that we'll need to train the functions by themselves and then make a list, otherwise it won't work for ensembles:
 
