@@ -315,26 +315,19 @@ print(model_perf)
 print(model_preds)
 print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
 ```
-NEED TO REDO ALL THESE RESULTS, BECAUSE THERE WAS A TRASH COLUMN IN THE DATA MATRIX THAT WAS TAKING ALL THE IMPORTANCE. NOT SURE WHY THE RESULTS WERE GOOD, BUT THERE YOU GO. EVERYTHING ABOVE THIS NOTE HAS ALREADY BEEN RE-RUN.
-
-These results were surprisingly encouraging:
 
 ```
 > print(model_perf)
-         rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb
-1 0.7945809 0.7851694 0.7246549 0.7530022 0.7504688   0.3470843  0.7932268 0.6444996 0.6470401
+         rf kernelpls svmRadial bagEarthGCV LogitBoost     rpart PenalizedLDA
+1 0.5515133 0.6618796 0.6063994   0.3562068  0.5836952 0.4047192    0.5747372
 > print(model_preds)
-                rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb
-Accuracy 0.7021277 0.6382979 0.5531915 0.6595745 0.7659574  0.08510638  0.7659574 0.5531915 0.5319149
+                rf kernelpls svmRadial bagEarthGCV LogitBoost     rpart PenalizedLDA
+Accuracy 0.4468085 0.3617021 0.4042553   0.3404255  0.3181818 0.3191489    0.3617021
 > print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
 [1] "No information rate: Accuracy=0.407216"
-> table(y)
-y
-   low medium   high 
-    98     57     86 
-> 
+
 ```
-Several models do a decent job in accuracy, considering that the NIR is 40%. 
+rf does a bit better than chance, but not by much :(
 
 
 ## HI3 outcomes
@@ -711,6 +704,17 @@ Unfiltered:
 
 ## HI
 Filtered:
+```
+> print(model_perf)
+         rf kernelpls svmRadial bagEarthGCV LogitBoost     rpart PenalizedLDA
+1 0.5727989 0.6165965 0.6126208   0.4593018  0.5530024 0.5250229    0.5814197
+> print(model_preds)
+                rf kernelpls svmRadial bagEarthGCV LogitBoost     rpart PenalizedLDA
+Accuracy 0.5531915 0.4255319 0.5531915   0.3191489  0.4615385 0.4042553    0.5744681
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.515464"
+```
+We do slightly better than chance using filtered area. Nothing to write home about though.
 
 Unfiltered:
 
@@ -719,13 +723,13 @@ The issue with the volume analysis is that not all scans had that measure, so we
 ```{r}
 source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
 struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
-load('~/data/baseline_prediction/struct_thickness.rData')
+load('~/data/baseline_prediction/struct_volume.rData')
 # the first column of lh and rh is an index variable
-vdata = cbind(struct_data$Mask.ID...Scan,
-              lh_thickness[,2:ncol(lh_thickness)],
-              rh_thickness[,2:ncol(rh_thickness)])
-rm(lh_thickness)
-rm(rh_thickness)
+vdata = cbind(volume_ids,
+              lh_volume[,2:ncol(lh_volume)],
+              rh_volume[,2:ncol(rh_volume)])
+rm(lh_volume)
+rm(rh_volume)
 gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
 gf = read.csv(gf_fname)
 gf_base = gf[gf$BASELINE=='BASELINE', ]
