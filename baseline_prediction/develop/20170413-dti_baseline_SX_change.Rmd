@@ -1105,6 +1105,20 @@ print(model_preds)
 print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
 ```
 
+```
+> print(model_perf)
+         rf svmRadial bagEarthGCV LogitBoost     rpart PenalizedLDA
+1 0.4803776 0.4673326   0.3943569   0.456534 0.4362268    0.4477639
+> print(model_preds)
+                rf svmRadial bagEarthGCV LogitBoost     rpart PenalizedLDA
+Accuracy 0.4210526 0.4473684   0.3947368  0.4545455 0.4473684    0.4736842
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.437500"
+>
+```
+
+Not much better :(
+
 ## HI3
 Same as above, but using HI3:
 

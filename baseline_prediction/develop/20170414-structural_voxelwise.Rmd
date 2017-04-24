@@ -701,7 +701,34 @@ rm(vdata)
 Filtered:
 
 Unfiltered:
+```
+[1] "training"
+  LogitBoost
+1  0.3966386
+[1] "testing"
+         LogitBoost
+Accuracy  0.4186047
+[1] "No information rate: Accuracy=0.407216"
 
+[1] "training"
+        rf
+1 0.454847
+[1] "testing"
+                rf
+Accuracy 0.5319149
+[1] "No information rate: Accuracy=0.407216"
+
+[1] "training"
+  svmRadial
+1 0.4394881
+[1] "testing"
+         svmRadial
+Accuracy 0.5106383
+[1] "No information rate: Accuracy=0.407216"
+```
+Some minor results, but nothign great.
+
+~
 ## HI
 Filtered:
 ```
@@ -717,6 +744,32 @@ Accuracy 0.5531915 0.4255319 0.5531915   0.3191489  0.4615385 0.4042553    0.574
 We do slightly better than chance using filtered area. Nothing to write home about though.
 
 Unfiltered:
+```
+[1] "training"
+  LogitBoost
+1   0.449043
+[1] "testing"
+         LogitBoost
+Accuracy        0.5
+[1] "No information rate: Accuracy=0.515464"
+
+[1] "training"
+         rf
+1 0.5157314
+[1] "testing"
+                rf
+Accuracy 0.5319149
+[1] "No information rate: Accuracy=0.515464"
+
+[1] "training"
+  svmRadial
+1 0.5156545
+[1] "testing"
+         svmRadial
+Accuracy 0.5319149
+[1] "No information rate: Accuracy=0.515464"
+
+```
 
 # Volume
 The issue with the volume analysis is that not all scans had that measure, so we need to load it a bit differently:
@@ -737,7 +790,13 @@ my_ids = intersect(gf_base$MRN, struct_data$MRN)
 mstruct = mergeOnClosestDate(gf_base, struct_data, my_ids)
 rm_me = abs(mstruct$dateX.minus.dateY.months) > 12
 mstruct = mstruct[!rm_me, ]
-struct_base_vdata = merge(mstruct$Mask.ID...Scan, vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+keep_me = c()
+for (i in 1:nrow(vdata)) {
+  if (vdata[i, 1] %in% mstruct$Mask.ID...Scan) {
+    keep_me = c(keep_me, i)
+  }
+}
+struct_base_vdata = vdata[keep_me, ]
 rm(vdata)
 ```
 
