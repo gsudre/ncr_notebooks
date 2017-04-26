@@ -81,11 +81,15 @@ get_baseline_scans = function(data, min_time_diff=0) {
 }
 
 # returns metrics for different models
-eval_model = function(fit, data, labels) {
+eval_model = function(fit, data, labels, lev=levels(labels)) {
   preds = predict(fit, newdata=data)
   probs = predict(fit, newdata=data, type="prob")
   ts = data.frame(obs=labels, pred=preds, probs)
-  res = multiClassSummary(ts, lev=levels(ts$obs))
+  if (length(lev) == 2) {
+    res = twoClassSummary(ts, lev=lev)
+  } else {
+    res = multiClassSummary(ts, lev=lev)
+  }
   return(res)
 }
 

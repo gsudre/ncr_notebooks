@@ -3,7 +3,7 @@ title: "Voxelwise baseline"
 output: html_notebook
 ---
 
-In both DTI and structural, let's use the voxelwise data to classify diagnostic at baseline. As usual, we start with the univariate filters, and then try eveyrthing.
+In both DTI and structural, let's use the voxelwise data to classify diagnostic at baseline. As usual, we start with the univariate filters, and then try everything.
 
 # Thickness
 ```{r}
@@ -240,6 +240,11 @@ print(dim(Xtrain))
 keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
 Xtest = Xtest[, keep_me]
 
+pp <- preProcess(Xtrain, method = c('BoxCox', 'center', 'scale', 'pca'), thresh=.9)
+filtXtrain<- predict(pp, Xtrain)
+filtXtest <- predict(pp, Xtest)
+print(dim(filtXtrain))
+
 tuneLength=10
 set.seed(myseed)
 index <- createMultiFolds(ytrain, k = 5, times = 5)
@@ -248,12 +253,11 @@ set.seed(myseed)
 fullCtrl <- trainControl(method = "repeatedcv",
                          index = index,
                          savePredictions="final",
-                         classProbs=TRUE,
-                         preProcOptions = c("center", 'scale', 'pca'))
+                         classProbs=TRUE)
 
 library(caretEnsemble)
 model_list <- caretList(
-  Xtrain, ytrain,
+  filtXtrain, ytrain,
   tuneLength=10,
   trControl=fullCtrl,
   methodList=c('rf', 'kernelpls', 'svmRadial', 'knn', 'rpart', 'bagEarthGCV', 'LogitBoost', 'lda', 'nb')
@@ -287,17 +291,220 @@ gbm_ensemble <- caretStack(
   )
 )
 summary(greedy_ensemble)
-model_preds <- lapply(model_list, predict, newdata=Xtest)
+model_preds <- lapply(model_list, predict, newdata=filtXtest)
 model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
 model_preds <- data.frame(model_preds)
-ens_preds <- predict(greedy_ensemble, newdata=Xtest)
+ens_preds <- predict(greedy_ensemble, newdata=filtXtest)
 model_preds$greedyE <- postResample(ens_preds, ytest)[1]
-ens_preds <- predict(glm_ensemble, newdata=Xtest)
+ens_preds <- predict(glm_ensemble, newdata=filtXtest)
 model_preds$glmE <- postResample(ens_preds, ytest)[1]
-ens_preds <- predict(gbm_ensemble, newdata=Xtest)
+ens_preds <- predict(gbm_ensemble, newdata=filtXtest)
 model_preds$gbmE <- postResample(ens_preds, ytest)[1]
 print(model_preds)
 print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+```
+```
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb 
+They were weighted: 
+6.8634 2.4965 -11.4843 1.3208 -4.1785 -0.0033 0.0916 -0.34 0.2371 -0.7375
+The resulting Accuracy is: 0.7765
+The fit for each individual model on the Accuracy is: 
+      method  Accuracy AccuracySD
+          rf 0.7123617 0.05304788
+   kernelpls 0.7873954 0.05814756
+   svmRadial 0.7132254 0.06884493
+         knn 0.7421862 0.06110772
+       rpart 0.6486910 0.06432352
+ bagEarthGCV 0.7258570 0.06752318
+  LogitBoost 0.6785155 0.07260379
+         lda 0.6934953 0.06589098
+          nb 0.6400810 0.08224580
+> model_preds <- lapply(model_list, predict, newdata=filtXtest)
+There were 47 warnings (use warnings() to see them)
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> ens_preds <- predict(greedy_ensemble, newdata=filtXtest)
+There were 47 warnings (use warnings() to see them)
+> model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(glm_ensemble, newdata=filtXtest)
+There were 47 warnings (use warnings() to see them)
+> model_preds$glmE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(gbm_ensemble, newdata=filtXtest)
+There were 47 warnings (use warnings() to see them)
+> model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb   greedyE      glmE      gbmE
+Accuracy 0.5957447 0.5531915 0.6595745 0.5531915 0.5957447   0.5531915  0.5319149 0.5531915 0.5319149 0.3617021 0.3617021 0.4255319
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.567010"
+```
+A bit of overfitting again, and we do get 66% using svmRadial, as well as a few other significant results using rf/rpart. This is the best result so far using voxelwise data and different combinations of filtering. If we optimize on ROC would it be better? We could also play with the training to reduce overfitting and hopefully make it generalize better. Another option would be to better combine the classifiers. 
+
+Also, note that we went from 17K significant features to 69 after PCA.
+
+```{r}
+X = struct_base_vdata[, 2:ncol(struct_base_vdata)]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+keep_me = mstruct$age <= 12
+X = X[keep_me, ]
+y = mstruct$DX_BASELINE
+y[y!='NV'] = 'ADHD'
+y = factor(y, levels=c('NV', 'ADHD'))
+y = y[keep_me]
+
+myseed = 1234
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+# pvals = sapply(Xtrain, function(d) t.test(d ~ ytrain)$p.value)
+library(parallel)
+cl <- makeCluster(8)
+pvals = parSapply(cl, Xtrain, function(d, ytrain) t.test(d ~ ytrain)$p.value, ytrain)
+Xtrain = Xtrain[, which(pvals <= .05)]
+print(dim(Xtrain))
+
+keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
+Xtest = Xtest[, keep_me]
+
+pp <- preProcess(Xtrain, method = c('BoxCox', 'center', 'scale', 'pca'), thresh=.9)
+filtXtrain<- predict(pp, Xtrain)
+filtXtest <- predict(pp, Xtest)
+print(dim(filtXtrain))
+
+tuneLength=10
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         savePredictions="final",
+                         classProbs=TRUE,
+                         summaryFunction=twoClassSummary)
+
+library(caretEnsemble)
+model_list <- caretList(
+  filtXtrain, ytrain,
+  tuneLength=10,
+  trControl=fullCtrl,
+  metric='ROC',
+  methodList=c('rf', 'kernelpls', 'svmRadial', 'knn', 'rpart', 'bagEarthGCV', 'LogitBoost', 'lda', 'nb')
+  )
+
+greedy_ensemble <- caretEnsemble(
+  model_list,
+  metric='ROC',
+  trControl=trainControl(
+    number=2,
+    summaryFunction=twoClassSummary,
+    classProbs=TRUE
+    ))
+
+glm_ensemble <- caretStack(
+  model_list,
+  method="glm",
+  metric='ROC',
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    summaryFunction=twoClassSummary,
+    classProbs=TRUE,
+    savePredictions="final"
+  )
+)
+
+gbm_ensemble <- caretStack(
+  model_list,
+  method="gbm",
+  verbose=FALSE,
+  tuneLength=10,
+  metric='ROC',
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    summaryFunction=twoClassSummary,
+    classProbs=TRUE,
+    savePredictions="final"
+  )
+)
+# ROC stats
+library("caTools")
+summary(greedy_ensemble)
+model_preds <- lapply(model_list, predict, newdata=filtXtest, type='prob')
+model_preds <- lapply(model_preds, function(x) x[,"ADHD"])
+model_preds <- data.frame(model_preds)
+ens_preds <- predict(greedy_ensemble, newdata=filtXtest, type='prob')
+model_preds$greedyE <- ens_preds
+ens_preds <- predict(glm_ensemble, newdata=filtXtest, type='prob')
+model_preds$glmE <- ens_preds
+ens_preds <- predict(gbm_ensemble, newdata=filtXtest, type='prob')
+model_preds$gbmE <- ens_preds
+caTools::colAUC(model_preds, ytest)
+# sensitivity stats
+model_preds <- lapply(model_list, function(d, x, y) eval_model(d, x, y)['Sensitivity'], filtXtest, ytest)
+model_preds <- data.frame(model_preds)
+model_preds$greedyE <- eval_model(greedy_ensemble, filtXtest, ytest)['Sensitivity']
+model_preds$glmE <- eval_model(glm_ensemble, filtXtest, ytest)['Sensitivity']
+model_preds$gbmE <- eval_model(gbm_ensemble, filtXtest, ytest)['Sensitivity']
+print(model_preds)
+# specificity stats
+model_preds <- lapply(model_list, function(d, x, y) eval_model(d, x, y)['Specificity'], filtXtest, ytest)
+model_preds <- data.frame(model_preds)
+model_preds$greedyE <- eval_model(greedy_ensemble, filtXtest, ytest)['Specificity']
+model_preds$glmE <- eval_model(glm_ensemble, filtXtest, ytest)['Specificity']
+model_preds$gbmE <- eval_model(gbm_ensemble, filtXtest, ytest)['Specificity']
+print(model_preds)
+# Accuracy stats
+model_preds <- lapply(model_list, predict, newdata=filtXtest)
+model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+model_preds <- data.frame(model_preds)
+ens_preds <- predict(greedy_ensemble, newdata=filtXtest)
+model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+ens_preds <- predict(glm_ensemble, newdata=filtXtest)
+model_preds$glmE <- postResample(ens_preds, ytest)[1]
+ens_preds <- predict(gbm_ensemble, newdata=filtXtest)
+model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+print(model_preds)
+print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+```
+```
+> summary(greedy_ensemble)
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb 
+They were weighted: 
+6.7149 0.9395 -9.4134 0.0274 -3.4725 0.1651 -0.6676 -0.1617 -0.2554 0.2048
+The resulting ROC is: 0.8577
+The fit for each individual model on the ROC is: 
+      method       ROC      ROCSD
+          rf 0.7754579 0.05064466
+   kernelpls 0.8677139 0.04949212
+   svmRadial 0.7618249 0.07148749
+         knn 0.8298663 0.04794779
+       rpart 0.6554646 0.10360554
+ bagEarthGCV 0.7940040 0.07217948
+  LogitBoost 0.7330749 0.05363766
+         lda 0.7476537 0.07488212
+          nb 0.6735829 0.07535734
+> caTools::colAUC(model_preds, ytest)
+                   rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb greedyE glmE      gbmE
+NV vs. ADHD 0.6111111 0.6685185 0.6259259 0.6824074 0.5768519   0.6092593  0.5712963 0.6685185 0.5907407     0.7  0.7 0.6685185
+> print(model_preds)
+             rf kernelpls svmRadial  knn rpart bagEarthGCV LogitBoost  lda   nb greedyE glmE gbmE
+Sensitivity 0.2      0.35       0.4 0.65  0.45         0.4        0.4 0.35 0.55     0.4  0.4 0.35
+> print(model_preds)
+                   rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb   greedyE      glmE      gbmE
+Specificity 0.7777778 0.7407407 0.8148148 0.4814815 0.7037037   0.7407407  0.7037037 0.7037037 0.5185185 0.3333333 0.3333333 0.3333333
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb   greedyE      glmE      gbmE
+Accuracy 0.5319149 0.5744681 0.6382979 0.5531915 0.5957447   0.5957447  0.5744681 0.5531915 0.5319149 0.3617021 0.3617021 0.3404255
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.567010"
+
 ```
 
 ## Builtin feature selection
@@ -369,7 +576,44 @@ Accuracy 0.6808511 0.5957447 0.6170213 0.5957447 0.6595745   0.6382979  0.574468
 > print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
 [1] "No information rate: Accuracy=0.567010"
 ```
-Here we get somewhat decent results with rf and rpart. I wonder if they would complement each other. 
+Here we get somewhat decent results with rf and rpart. I wonder if they would complement each other. If we do PCA, we go from 69K significant variables at .05 to 73. 
+```
+> summary(greedy_ensemble)
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb 
+They were weighted: 
+3.9461 1.5273 -12.4434 1.7709 -0.5249 0.0968 0.8886 0.1227 0.9059 0.204
+The resulting Accuracy is: 0.6122
+The fit for each individual model on the Accuracy is: 
+      method  Accuracy AccuracySD
+          rf 0.5566802 0.06638913
+   kernelpls 0.6403239 0.05016658
+   svmRadial 0.5660189 0.02439334
+         knn 0.6371660 0.07639957
+       rpart 0.6104993 0.04552918
+ bagEarthGCV 0.5680972 0.08381546
+  LogitBoost 0.5103104 0.07369730
+         lda 0.4855601 0.06313611
+          nb 0.4948988 0.08321329
+> model_preds <- lapply(model_list, predict, newdata=filtXtest)
+There were 47 warnings (use warnings() to see them)
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> ens_preds <- predict(greedy_ensemble, newdata=filtXtest)
+There were 47 warnings (use warnings() to see them)
+> model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(glm_ensemble, newdata=filtXtest)
+There were 47 warnings (use warnings() to see them)
+> model_preds$glmE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(gbm_ensemble, newdata=filtXtest)
+There were 47 warnings (use warnings() to see them)
+> model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb   greedyE      glmE      gbmE
+Accuracy 0.6808511 0.5957447 0.4255319 0.7021277 0.5744681   0.6595745  0.6382979 0.6595745 0.6170213 0.3617021 0.3617021 0.3829787
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.567010"
+```
+We seem to generalize better using PCA. rf and knn seem to do particularly well.
 
 ## Builtin feature selection
 
@@ -444,22 +688,853 @@ Accuracy 0.5319149 0.5319149 0.5106383 0.4255319 0.4255319   0.5319149  0.531914
 ```
 Not great... lda seems to have a nice generalization, but you wouldn't pick it out of training.
 
+PCA takes us from 89K variables to 103.
+
+```
+> summary(greedy_ensemble)
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb 
+They were weighted: 
+5.7292 6.0259 -15.8784 -3.5669 -0.0506 -0.1954 1.4039 0.052 0.4595 0.7945
+The resulting Accuracy is: 0.6984
+The fit for each individual model on the Accuracy is: 
+      method  Accuracy AccuracySD
+          rf 0.5468556 0.02674489
+   kernelpls 0.6326316 0.07722953
+   svmRadial 0.6020513 0.05456565
+         knn 0.5771660 0.07581487
+       rpart 0.5802699 0.05699641
+ bagEarthGCV 0.5271795 0.06233948
+  LogitBoost 0.5104453 0.08552396
+         lda 0.4368421 0.06097659
+          nb 0.4205668 0.07336499
+> model_preds <- lapply(model_list, predict, newdata=filtXtest)
+There were 47 warnings (use warnings() to see them)
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> ens_preds <- predict(greedy_ensemble, newdata=filtXtest)
+There were 47 warnings (use warnings() to see them)
+> model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(glm_ensemble, newdata=filtXtest)
+There were 47 warnings (use warnings() to see them)
+> model_preds$glmE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(gbm_ensemble, newdata=filtXtest)
+There were 47 warnings (use warnings() to see them)
+> model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb   greedyE      glmE      gbmE
+Accuracy 0.5744681 0.5319149 0.5319149 0.4042553 0.4680851   0.5106383  0.4680851 0.4893617 0.5531915 0.4893617 0.4893617 0.4468085
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.572917"
+```
+Volume doesn't seem to be getting much out of PCA either. It seems like not a good data domain, maybe stick to area and thickness?
+
 ## Builtin feature selection
 
 # DTI, FA
-
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+load('~/data/baseline_prediction/dti/fa_voxelwise.RData')
+dti_vdata = cbind(tract_data$maskid, fa_data)
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+gf_base = gf[gf$BASELINE=='BASELINE', ]
+my_ids = intersect(gf_base$MRN, tract_data$MRN)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+merged = merged[!rm_me, ]
+dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+```
 ## Univariate filtering
+```{r}
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+keep_me = merged$age <= 12
+X = X[keep_me, ]
+y = merged$DX_BASELINE
+y[y!='NV'] = 'ADHD'
+y = factor(y, levels=c('NV', 'ADHD'))
+y = y[keep_me]
+
+myseed = 1234
+default_preproc = c("center", 'scale')
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+# in voxel analysis it's actually more costly to do the correlation in the entire set of variables
+# then to run the for loop, so let's first reduce the variables to only the univariate ones
+pvals = sapply(Xtrain, function(d) t.test(d ~ ytrain)$p.value)
+Xtrain = Xtrain[, which(pvals <= .05)]
+print(dim(Xtrain))
+
+# now we can remove correlated and non-informative variables
+nzv = nearZeroVar(Xtrain)
+print(nzv)
+if (length(nzv) > 0) {
+  Xtrain = Xtrain[, -nzv]
+}
+correlations = cor(Xtrain, use='na.or.complete')
+# # library(corrplot)
+# # corrplot(correlations, order = "hclust")
+highCorr = findCorrelation(correlations, cutoff=.75)
+print(length(highCorr))
+if (length(highCorr) > 0) {
+  Xtrain = Xtrain[, -highCorr]
+}
+print(dim(Xtrain))
+
+keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
+Xtest = Xtest[, keep_me]
+
+tuneLength=10
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         savePredictions="final",
+                         classProbs=TRUE,
+                         preProcOptions = c("center", 'scale'))
+
+library(caretEnsemble)
+model_list <- caretList(
+  Xtrain, ytrain,
+  tuneLength=10,
+  trControl=fullCtrl,
+  methodList=c('rf', 'kernelpls', 'svmRadial', 'knn', 'rpart', 'bagEarthGCV', 'LogitBoost', 'lda', 'nb')
+  )
+
+greedy_ensemble <- caretEnsemble(
+  model_list, 
+  trControl=trainControl(
+    number=2
+    ))
+
+glm_ensemble <- caretStack(
+  model_list,
+  method="glm",
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    savePredictions="final"
+  )
+)
+
+gbm_ensemble <- caretStack(
+  model_list,
+  method="gbm",
+  verbose=FALSE,
+  tuneLength=10,
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    savePredictions="final"
+  )
+)
+summary(greedy_ensemble)
+model_preds <- lapply(model_list, predict, newdata=Xtest)
+model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+model_preds <- data.frame(model_preds)
+ens_preds <- predict(greedy_ensemble, newdata=Xtest)
+model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+ens_preds <- predict(glm_ensemble, newdata=Xtest)
+model_preds$glmE <- postResample(ens_preds, ytest)[1]
+ens_preds <- predict(gbm_ensemble, newdata=Xtest)
+model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+print(model_preds)
+print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+```
+
+```
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb
+They were weighted:
+9.0871 15.894 -18.6064 -6.3478 -3.2751 -0.6511 2.1062 0.7845 -2.7625 -1.5392
+The resulting Accuracy is: 0.91
+The fit for each individual model on the Accuracy is:
+      method  Accuracy AccuracySD
+          rf 0.7683871 0.08216307
+   kernelpls 0.9067339 0.04242475
+   svmRadial 0.8901613 0.05725777
+         knn 0.8274597 0.07139588
+       rpart 0.5621774 0.08488504
+ bagEarthGCV 0.7508871 0.08149768
+  LogitBoost 0.7227823 0.08307771
+         lda 0.8376210 0.04961405
+          nb 0.7670161 0.07758786
+> model_preds <- lapply(model_list, predict, newdata=Xtest)
+Warning messages:
+1: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 3
+2: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 4
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> ens_preds <- predict(greedy_ensemble, newdata=Xtest)
+Warning messages:
+1: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 3
+2: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 4
+> model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(glm_ensemble, newdata=Xtest)
+Warning messages:
+1: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 3
+2: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 4
+> model_preds$glmE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(gbm_ensemble, newdata=Xtest)
+Warning messages:
+1: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 3
+2: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 4
+> model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV
+Accuracy 0.5641026 0.5897436 0.6153846 0.5384615 0.5897436   0.6153846
+         LogitBoost       lda        nb   greedyE      glmE      gbmE
+Accuracy  0.5641026 0.5641026 0.5897436 0.6666667 0.6666667 0.4102564
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.534591"
+> 
+```
+As usual, DTI quite overfits it, so there's gotta be a way to fix this a bit. Maybe the PCA solution? 
+
+```{r}
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+keep_me = merged$age <= 12
+X = X[keep_me, ]
+y = merged$DX_BASELINE
+y[y!='NV'] = 'ADHD'
+y = factor(y, levels=c('NV', 'ADHD'))
+y = y[keep_me]
+
+myseed = 1234
+default_preproc = c("center", 'scale')
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+# in voxel analysis it's actually more costly to do the correlation in the entire set of variables
+# then to run the for loop, so let's first reduce the variables to only the univariate ones
+pvals = sapply(Xtrain, function(d) t.test(d ~ ytrain)$p.value)
+Xtrain = Xtrain[, which(pvals <= .05)]
+print(dim(Xtrain))
+
+keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
+Xtest = Xtest[, keep_me]
+
+pp <- preProcess(Xtrain, method = c('BoxCox', 'center', 'scale', 'pca'), thresh=.9)
+filtXtrain<- predict(pp, Xtrain)
+filtXtest <- predict(pp, Xtest)
+print(dim(filtXtrain))
+
+tuneLength=10
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         savePredictions="final",
+                         classProbs=TRUE)
+
+library(caretEnsemble)
+model_list <- caretList(
+  filtXtrain, ytrain,
+  tuneLength=10,
+  trControl=fullCtrl,
+  methodList=c('rf', 'kernelpls', 'svmRadial', 'knn', 'rpart', 'bagEarthGCV', 'LogitBoost', 'lda', 'nb')
+  )
+
+greedy_ensemble <- caretEnsemble(
+  model_list, 
+  trControl=trainControl(
+    number=2
+    ))
+
+glm_ensemble <- caretStack(
+  model_list,
+  method="glm",
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    savePredictions="final"
+  )
+)
+
+gbm_ensemble <- caretStack(
+  model_list,
+  method="gbm",
+  verbose=FALSE,
+  tuneLength=10,
+  trControl=trainControl(
+    method="boot",
+    number=10,
+    savePredictions="final"
+  )
+)
+summary(greedy_ensemble)
+model_preds <- lapply(model_list, predict, newdata=filtXtest)
+model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+model_preds <- data.frame(model_preds)
+ens_preds <- predict(greedy_ensemble, newdata=filtXtest)
+model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+ens_preds <- predict(glm_ensemble, newdata=filtXtest)
+model_preds$glmE <- postResample(ens_preds, ytest)[1]
+ens_preds <- predict(gbm_ensemble, newdata=filtXtest)
+model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+print(model_preds)
+print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+```
+Using PCA we go from 1251 good variables at .05 to 106. 
+```
+> summary(greedy_ensemble)
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb
+They were weighted:
+9.4559 4.7429 -23.8689 5.5002 -1.3188 -1.9296 -0.5221 -0.3011 -0.2076 -0.498
+The resulting Accuracy is: 0.8636
+The fit for each individual model on the Accuracy is:
+      method  Accuracy AccuracySD
+          rf 0.7281855 0.08362475
+   kernelpls 0.8639516 0.05336912
+   svmRadial 0.7082258 0.06965322
+         knn 0.7533468 0.07695189
+       rpart 0.7356855 0.08848171
+ bagEarthGCV 0.7381452 0.07494294
+  LogitBoost 0.6995161 0.07033789
+         lda 0.6765323 0.08063745
+          nb 0.6375806 0.08854109
+> model_preds <- lapply(model_list, predict, newdata=filtXtest)
+Error in predict.randomForest(modelFit, newdata) :
+  NA/NaN/Inf in foreign function call (arg 7)
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> ens_preds <- predict(greedy_ensemble, newdata=filtXtest)
+Error in predict.randomForest(modelFit, newdata, type = "prob") :
+  NA/NaN/Inf in foreign function call (arg 7)
+> model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(glm_ensemble, newdata=filtXtest)
+Error in predict.randomForest(modelFit, newdata, type = "prob") :
+  NA/NaN/Inf in foreign function call (arg 7)
+> model_preds$glmE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(gbm_ensemble, newdata=filtXtest)
+Error in predict.randomForest(modelFit, newdata, type = "prob") :
+  NA/NaN/Inf in foreign function call (arg 7)
+> model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV
+Accuracy 0.5128205 0.7435897 0.7179487 0.5897436 0.5128205   0.6410256
+         LogitBoost       lda        nb   greedyE      glmE      gbmE
+Accuracy  0.4358974 0.7179487 0.7435897 0.3333333 0.3333333 0.3333333
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.534591"
+```
+Now we overfit a bit less, and generalize better, especially using PLS, SVM, lda, and nb.
+
+```{r}
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+
+keep_me = merged$age <= 12
+X = X[keep_me, ]
+y = merged$DX_BASELINE
+y[y!='NV'] = 'ADHD'
+# twoClassSummary uses the first level as the case of interest (https://topepo.github.io/caret/measuring-performance.html#measures-for-class-probabilities)
+y = factor(y, levels=c('ADHD', 'NV'))
+y = y[keep_me]
+
+myseed = 1234
+set.seed(myseed)
+split <- createDataPartition(y, p = .8, list = FALSE)
+Xtrain <- X[ split, ]
+ytrain <- y[ split ]
+Xtest  <- X[-split, ]
+ytest = y[-split]
+
+library(parallel)
+cl <- makeCluster(8)
+pvals = parSapply(cl, Xtrain, function(d, ytrain) t.test(d ~ ytrain)$p.value, ytrain)
+Xtrain = Xtrain[, which(pvals <= .05)]
+print(dim(Xtrain))
+
+keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
+Xtest = Xtest[, keep_me]
+
+pp <- preProcess(Xtrain, method = c('BoxCox', 'center', 'scale', 'pca'), thresh=.9)
+filtXtrain<- predict(pp, Xtrain)
+filtXtest <- predict(pp, Xtest)
+print(dim(filtXtrain))
+
+tuneLength=10
+set.seed(myseed)
+index <- createMultiFolds(ytrain, k = 5, times = 5)
+
+set.seed(myseed)
+fullCtrl <- trainControl(method = "repeatedcv",
+                         index = index,
+                         savePredictions="final",
+                         classProbs=TRUE,
+                         summaryFunction=twoClassSummary)
+
+library(caretEnsemble)
+model_list <- caretList(
+  filtXtrain, ytrain,
+  tuneLength=10,
+  trControl=fullCtrl,
+  metric='ROC',
+  methodList=c('rf', 'kernelpls', 'svmRadial', 'knn', 'rpart', 'bagEarthGCV', 'LogitBoost', 'lda', 'nb')
+  )
+
+greedy_ensemble <- caretEnsemble(
+  model_list,
+  metric='ROC',
+  trControl=trainControl(
+    number=2,
+    summaryFunction=twoClassSummary,
+    classProbs=TRUE
+    ))
+# ROC stats
+summary(greedy_ensemble)
+model_preds <- lapply(model_list, function(d, x, y) eval_model(d, x, y, c('ADHD', 'NV'))['ROC'], filtXtest, ytest)
+model_preds <- data.frame(model_preds)
+print(model_preds)
+# sensitivity stats
+model_preds <- lapply(model_list, function(d, x, y) eval_model(d, x, y, c('ADHD', 'NV'))['Sens'], filtXtest, ytest)
+model_preds <- data.frame(model_preds)
+print(model_preds)
+# specificity stats
+model_preds <- lapply(model_list, function(d, x, y) eval_model(d, x, y, c('ADHD', 'NV'))['Spec'], filtXtest, ytest)
+model_preds <- data.frame(model_preds)
+print(model_preds)
+# Accuracy stats
+model_preds <- lapply(model_list, predict, newdata=filtXtest)
+model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+model_preds <- data.frame(model_preds)
+print(model_preds)
+print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+```
+
 
 ## Builtin feature selection
 
 # DTI, AD
-
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+load('~/data/baseline_prediction/dti/ad_voxelwise.RData')
+dti_vdata = cbind(tract_data$maskid, ad_data)
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+gf_base = gf[gf$BASELINE=='BASELINE', ]
+my_ids = intersect(gf_base$MRN, tract_data$MRN)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+merged = merged[!rm_me, ]
+dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+```
 ## Univariate filtering
+```
+> summary(greedy_ensemble)
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb
+They were weighted:
+8.6561 -4.3758 -2.639 -5.1809 -0.7389 1.9485 3.9931 0.1585 -4.5103 -3.5427
+The resulting Accuracy is: 0.9809
+The fit for each individual model on the Accuracy is:
+      method  Accuracy AccuracySD
+          rf 0.9118952 0.04355628
+   kernelpls 0.9647177 0.02286922
+   svmRadial 0.9785081 0.02194079
+         knn 0.9218952 0.04563197
+       rpart 0.5407258 0.09300408
+ bagEarthGCV 0.7998387 0.07169557
+  LogitBoost 0.7297177 0.07402089
+         lda 0.9470565 0.03638601
+          nb 0.9583871 0.02846707
+> model_preds <- lapply(model_list, predict, newdata=Xtest)
+Warning messages:
+1: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 3
+2: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 4
+3: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 10
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> ens_preds <- predict(greedy_ensemble, newdata=Xtest)
+Warning messages:
+1: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 3
+2: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 4
+3: In FUN(X[[i]], ...) :
+> model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV
+Accuracy 0.6666667 0.7179487 0.7692308 0.6410256 0.5128205   0.6153846
+         LogitBoost       lda        nb   greedyE      glmE      gbmE
+Accuracy  0.5128205 0.5897436 0.7948718 0.2631579 0.2631579 0.1794872
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.534591"
+```
+Same as above using FA. Now, if we do the PCA filtering we go from 779 to 107 variables:
+```
+> summary(greedy_ensemble)
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb 
+They were weighted: 
+33.9237 10.6624 -59.2815 13.215 -13.9299 -1.1419 -17.842 -1.1993 -0.4465 5.7821
+The resulting Accuracy is: 0.9663
+The fit for each individual model on the Accuracy is: 
+      method  Accuracy AccuracySD
+          rf 0.8917742 0.06544653
+   kernelpls 0.9734677 0.02703468
+   svmRadial 0.8077016 0.08561641
+         knn 0.9483871 0.03119711
+       rpart 0.8640323 0.05894184
+ bagEarthGCV 0.9458065 0.05053601
+  LogitBoost 0.8829435 0.05432049
+         lda 0.7798790 0.08292205
+          nb 0.7630645 0.07872777
+> model_preds <- lapply(model_list, predict, newdata=filtXtest)
+There were 39 warnings (use warnings() to see them)
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> ens_preds <- predict(greedy_ensemble, newdata=filtXtest)
+There were 39 warnings (use warnings() to see them)
+> model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(glm_ensemble, newdata=filtXtest)
+There were 39 warnings (use warnings() to see them)
+> model_preds$glmE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(gbm_ensemble, newdata=filtXtest)
+There were 39 warnings (use warnings() to see them)
+> model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV
+Accuracy 0.5128205 0.7435897 0.7179487 0.5897436 0.5128205   0.6410256
+         LogitBoost       lda        nb   greedyE      glmE      gbmE
+Accuracy  0.4358974 0.7179487 0.7435897 0.4871795 0.4871795 0.3333333
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.534591"
+> 
+```
+We actually did a bit better without the PCA. I wonder how well we can do if we maximize ROC, as Philip said we need a minimum specificity and sensitivity of .8. 
+
+```
+> summary(greedy_ensemble)
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb
+They were weighted:
+27.7555 8.1241 -45.6206 3.8284 -11.6159 3.6612 -16.2007 -0.8119 -0.7285 5.9777
+The resulting ROC is: 0.9958
+The fit for each individual model on the ROC is:
+      method       ROC      ROCSD
+          rf 0.9578319 0.03582593
+   kernelpls 0.9972885 0.00496868
+   svmRadial 0.8864426 0.06590619
+         knn 0.9909020 0.01060298
+       rpart 0.8761569 0.06858575
+ bagEarthGCV 0.9881232 0.01456740
+  LogitBoost 0.9531709 0.03269765
+         lda 0.8476583 0.06942739
+          nb 0.8609636 0.06279993
+> caTools::colAUC(model_preds, ytest)
+                   rf kernelpls svmRadial       knn     rpart bagEarthGCV
+NV vs. ADHD 0.7063492 0.6772487 0.8359788 0.7010582 0.6150794   0.7645503
+            LogitBoost       lda        nb   greedyE      glmE      gbmE
+NV vs. ADHD  0.5291005 0.7804233 0.7857143 0.6481481 0.6481481 0.6785714
+> print(model_preds)
+                   rf kernelpls svmRadial       knn rpart bagEarthGCV
+Sensitivity 0.6111111 0.7222222 0.7777778 0.6111111   0.5   0.7777778
+            LogitBoost       lda        nb   greedyE      glmE      gbmE
+Sensitivity        0.5 0.7777778 0.5555556 0.1666667 0.1666667 0.2222222
+> print(model_preds)
+                   rf kernelpls svmRadial       knn     rpart bagEarthGCV
+Specificity 0.4761905 0.5238095 0.7619048 0.7142857 0.8095238   0.5714286
+            LogitBoost       lda        nb   greedyE      glmE      gbmE
+Specificity  0.3809524 0.6666667 0.9047619 0.7142857 0.7142857 0.6666667
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV
+Accuracy 0.5384615 0.6153846 0.7692308 0.6666667 0.6666667   0.6666667
+         LogitBoost       lda        nb   greedyE      glmE      gbmE
+Accuracy  0.4358974 0.7179487 0.7435897 0.4615385 0.4615385 0.4615385
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.534591"
+> 
+```
+Now, these are some results I can start getting behind. AUC of svmRadial is great and both spe/sen are around .76. Just to be clear, sensitivity here means the 
+
+Who is case/control?
+Does it get better by combining different classifiers?
+Does it get better by splitting the data differently?
+Does it make sense in the brain?
 
 ## Builtin feature selection
 
 # DTI, RD
-
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+load('~/data/baseline_prediction/dti/rd_voxelwise.RData')
+dti_vdata = cbind(tract_data$maskid, rd_data)
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+gf_base = gf[gf$BASELINE=='BASELINE', ]
+my_ids = intersect(gf_base$MRN, tract_data$MRN)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+merged = merged[!rm_me, ]
+dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+```
 ## Univariate filtering
+```
+> summary(greedy_ensemble)
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb 
+They were weighted: 
+2.4879 4.7091 0.057 -5.0921 -1.1918 0.3064 -2.4179 -0.7845 0.223 -0.2291
+The resulting Accuracy is: 0.774
+The fit for each individual model on the Accuracy is: 
+      method  Accuracy AccuracySD
+          rf 0.6912903 0.09172569
+   kernelpls 0.7520968 0.07845270
+   svmRadial 0.7820565 0.07748010
+         knn 0.7083065 0.06797393
+       rpart 0.5534677 0.09228310
+ bagEarthGCV 0.7156855 0.06382030
+  LogitBoost 0.7193145 0.08451830
+         lda 0.7331452 0.07237941
+          nb 0.7026613 0.10019450
+> model_preds <- lapply(model_list, predict, newdata=Xtest)
+Warning messages:
+1: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 4
+2: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 10
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> ens_preds <- predict(greedy_ensemble, newdata=Xtest)
+Warning messages:
+1: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 4
+2: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 10
+> model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(glm_ensemble, newdata=Xtest)
+Warning messages:
+1: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 4
+2: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 10
+> model_preds$glmE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(gbm_ensemble, newdata=Xtest)
+Warning messages:
+1: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 4
+2: In FUN(X[[i]], ...) :
+  Numerical 0 probability for all classes with observation 10
+> model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV
+Accuracy 0.4871795 0.6410256 0.6410256 0.5641026 0.4871795   0.5641026
+         LogitBoost       lda        nb greedyE glmE      gbmE
+Accuracy  0.5384615 0.5384615 0.5641026     0.4  0.4 0.2820513
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.534591"
+```
+The usual overfitting at training using DTI, but some promising generalization especially using pls and svm. 
+
+Using PCA we go from 1463 good variables at .05 to 103. 
+```
+> summary(greedy_ensemble)
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb
+They were weighted:
+1.4781 9.6553 -6.981 1.9453 -4.6269 -0.493 -0.2592 -0.4696 0.2538 -0.7587
+The resulting Accuracy is: 0.7224
+The fit for each individual model on the Accuracy is:
+      method  Accuracy AccuracySD
+          rf 0.5912903 0.07777795
+   kernelpls 0.6829435 0.06233932
+   svmRadial 0.5699597 0.07606213
+         knn 0.6802419 0.06363794
+       rpart 0.5772984 0.08387947
+ bagEarthGCV 0.5849194 0.09143766
+  LogitBoost 0.5700806 0.07214890
+         lda 0.5459677 0.11486481
+          nb 0.5563710 0.08551479
+> model_preds <- lapply(model_list, predict, newdata=filtXtest)
+There were 39 warnings (use warnings() to see them)
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> ens_preds <- predict(greedy_ensemble, newdata=filtXtest)
+There were 39 warnings (use warnings() to see them)
+> model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(glm_ensemble, newdata=filtXtest)
+There were 39 warnings (use warnings() to see them)
+> model_preds$glmE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(gbm_ensemble, newdata=filtXtest)
+There were 39 warnings (use warnings() to see them)
+> model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV
+Accuracy 0.5384615 0.5384615 0.5384615 0.5384615 0.4615385   0.5384615
+         LogitBoost       lda        nb   greedyE      glmE      gbmE
+Accuracy  0.5897436 0.5128205 0.6666667 0.4615385 0.4615385 0.4102564
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.534591"
+```
+Not so great using PCA... nb seems to generalize well, but that's it. What if we maximize on ROC?
+```
+ summary(greedy_ensemble)
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb
+They were weighted:
+1.3912 8.4347 -7.3294 2.6925 -4.8392 -0.4117 1.1121 -0.53 0.2287 -0.877
+The resulting ROC is: 0.8009
+The fit for each individual model on the ROC is:
+      method       ROC      ROCSD
+          rf 0.5948571 0.11182422
+   kernelpls 0.7371204 0.06890890
+   svmRadial 0.5985882 0.11092995
+         knn 0.7362633 0.06899080
+       rpart 0.5723922 0.10366512
+ bagEarthGCV 0.6047843 0.10182824
+  LogitBoost 0.5743978 0.08241626
+         lda 0.5661457 0.11210587
+          nb 0.5613669 0.09264763
+> caTools::colAUC(model_preds, ytest)
+                   rf kernelpls svmRadial      knn    rpart bagEarthGCV
+NV vs. ADHD 0.5661376 0.5873016 0.6481481 0.510582 0.510582   0.6084656
+            LogitBoost      lda        nb   greedyE      glmE      gbmE
+NV vs. ADHD  0.6044974 0.542328 0.6931217 0.5343915 0.5343915 0.5687831
+> print(model_preds)
+                   rf kernelpls svmRadial       knn     rpart bagEarthGCV
+Sensitivity 0.4444444 0.5555556 0.5555556 0.7777778 0.8333333   0.6666667
+            LogitBoost       lda        nb   greedyE      glmE      gbmE
+Sensitivity  0.4444444 0.5555556 0.8333333 0.1666667 0.1666667 0.3333333
+> print(model_preds)
+                   rf kernelpls svmRadial       knn     rpart bagEarthGCV
+Specificity 0.5714286 0.5238095 0.5714286 0.3333333 0.2380952   0.4285714
+            LogitBoost       lda        nb   greedyE      glmE      gbmE
+Specificity  0.7142857 0.4761905 0.5238095 0.8571429 0.8571429 0.5238095
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV
+Accuracy 0.5128205 0.5384615 0.5641026 0.5384615 0.5128205   0.5384615
+         LogitBoost       lda        nb   greedyE      glmE      gbmE
+Accuracy  0.5897436 0.5128205 0.6666667 0.5384615 0.5384615 0.4358974
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.534591"
+```
+Again, not as good as AD. 
 
 ## Builtin feature selection
+
+# Paul Taylor
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+load('~/data/baseline_prediction/dti_paul_taylor.RData')
+vdata = d2
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+gf_base = gf[gf$BASELINE=='BASELINE', ]
+my_ids = intersect(gf_base$MRN, tract_data$MRN)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+merged = merged[!rm_me, ]
+keep_me = c()
+keep_merged = c()
+for (i in 1:nrow(vdata)) {
+  if (as.numeric(vdata[i, 1]) %in% merged$maskid) {
+    keep_me = c(keep_me, i)
+    keep_merged = c(keep_merged, which(merged$maskid == as.numeric(vdata[i, 1])))
+  }
+}
+d3 = vdata[keep_me, ]
+d4 = as.numeric(d3)
+dim(d4) = dim(d3)
+dti_base_vdata = as.data.frame(d4)
+merged = merged[keep_merged, ]
+rm(vdata)
+```
+## Univariate results
+```
+> summary(greedy_ensemble)
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb 
+They were weighted: 
+-2.6839 2.7934 1.6551 5.4386 -1.3808 -0.7312 -3.0114 0.2099 -0.0228 0.4851
+The resulting Accuracy is: 0.7657
+The fit for each individual model on the Accuracy is: 
+      method  Accuracy AccuracySD
+          rf 0.7201505 0.06174660
+   kernelpls 0.6482151 0.07759082
+   svmRadial 0.7620457 0.05734014
+         knn 0.6058495 0.07901383
+       rpart 0.5619167 0.07235335
+ bagEarthGCV 0.6812419 0.07885924
+  LogitBoost 0.6466640 0.07862463
+         lda 0.5672072 0.08036925
+          nb 0.7322688 0.05107080
+> model_preds <- lapply(model_list, predict, newdata=Xtest)
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> ens_preds <- predict(greedy_ensemble, newdata=Xtest)
+> model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(glm_ensemble, newdata=Xtest)
+> model_preds$glmE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(gbm_ensemble, newdata=Xtest)
+> model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb   greedyE      glmE      gbmE
+Accuracy 0.6756757 0.5945946 0.6756757 0.5945946 0.5135135   0.6756757  0.5945946 0.5945946 0.6756757 0.6486486 0.6486486 0.5945946
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.535948"
+```
+PCA goes from 608 to 57 good dimensions.
+```
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb 
+They were weighted: 
+-5.0617 -3.0908 13.3651 -2.5649 -2.4325 1.8528 0.5258 0.2763 0.4326 1.7652
+The resulting Accuracy is: 0.7953
+The fit for each individual model on the Accuracy is: 
+      method  Accuracy AccuracySD
+          rf 0.7466344 0.06284589
+   kernelpls 0.8101048 0.06470884
+   svmRadial 0.7605457 0.05503513
+         knn 0.6732473 0.07007386
+       rpart 0.6891129 0.06621917
+ bagEarthGCV 0.7490511 0.06689793
+  LogitBoost 0.7042258 0.06900986
+         lda 0.7707849 0.07560172
+          nb 0.7175215 0.08299757
+> model_preds <- lapply(model_list, predict, newdata=filtXtest)
+There were 37 warnings (use warnings() to see them)
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> ens_preds <- predict(greedy_ensemble, newdata=filtXtest)
+There were 37 warnings (use warnings() to see them)
+> model_preds$greedyE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(glm_ensemble, newdata=filtXtest)
+There were 37 warnings (use warnings() to see them)
+> model_preds$glmE <- postResample(ens_preds, ytest)[1]
+> ens_preds <- predict(gbm_ensemble, newdata=filtXtest)
+There were 37 warnings (use warnings() to see them)
+> model_preds$gbmE <- postResample(ens_preds, ytest)[1]
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb   greedyE      glmE      gbmE
+Accuracy 0.7027027 0.6756757 0.5405405 0.6216216 0.7027027   0.6486486  0.5405405 0.6216216 0.6756757 0.6756757 0.6756757 0.6756757
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.535948"
+```
+We did better with our usual DTI data. 70% is OK, but we're getting close to 74% above.

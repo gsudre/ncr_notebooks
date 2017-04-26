@@ -99,6 +99,7 @@ for (i in 1:nrow(vdata)) {
   }
 }
 struct_data = struct_data[keep_me, ]
+gf_base = gf[gf$BASELINE=='BASELINE', ]
 ```
 
 ## Univariate filters
