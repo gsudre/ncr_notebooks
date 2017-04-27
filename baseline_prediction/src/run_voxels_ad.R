@@ -97,6 +97,8 @@ fullCtrl <- trainControl(method = "boot",
                          classProbs=TRUE,
                          summaryFunction=twoClassSummary)
 
+require(doMC)
+registerDoMC(cores=8)
 library(caretEnsemble)
 model_list <- caretList(
   filtXtrain, ytrain,
