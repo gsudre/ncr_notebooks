@@ -610,6 +610,45 @@ Accuracy 0.6808511 0.5957447 0.4255319 0.7021277 0.5744681   0.6595745  0.638297
 ```
 We seem to generalize better using PCA. rf and knn seem to do particularly well.
 
+Now we maximize ROC:
+
+```
+> summary(greedy_ensemble)
+The following models were ensembled: rf, kernelpls, svmRadial, knn, rpart, bagEarthGCV, LogitBoost, lda, nb
+They were weighted:
+-6.1109 -2.0507 14.4233 2.4266 -3.0207 0.2936 0.9023 0.0807 -0.6581 -0.1477
+The resulting ROC is: 0.7274
+The fit for each individual model on the ROC is:
+      method       ROC      ROCSD
+          rf 0.5724164 0.07905669
+   kernelpls 0.6849131 0.08403059
+   svmRadial 0.5693783 0.08495018
+         knn 0.5812333 0.08027294
+       rpart 0.5681918 0.07871363
+ bagEarthGCV 0.5878142 0.07052336
+  LogitBoost 0.5501805 0.09513673
+         lda 0.4377473 0.09412740
+          nb 0.5006283 0.08961860
+> print(model_preds)
+           rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb
+ROC 0.5509259 0.4740741 0.3962963 0.4972222 0.5305556   0.4685185  0.4842593 0.4962963 0.4037037
+> print(model_preds)
+            rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb
+Sens 0.8148148 0.5925926 0.8518519 0.7037037 0.7777778   0.7407407  0.4814815 0.4074074 0.6666667
+> print(model_preds)
+      rf kernelpls svmRadial  knn rpart bagEarthGCV LogitBoost  lda   nb
+Spec 0.2       0.3      0.05 0.45  0.35         0.2       0.45 0.65 0.25
+> print(model_preds)
+                rf kernelpls svmRadial       knn     rpart bagEarthGCV LogitBoost       lda        nb
+Accuracy 0.5531915 0.4680851 0.5106383 0.5957447 0.5957447   0.5106383  0.4680851 0.5106383 0.4893617
+[1] "No information rate: Accuracy=0.567010"
+> print(model_preds)  
+                      rf kernelpls svmRadial       knn    rpart bagEarthGCV LogitBoost       lda        nb
+AccuracyPValue 0.5613819  0.946897 0.8490277 0.3314565 0.444329   0.8490277   0.946897 0.8490277 0.9072319
+```
+
+Yep, area is not great.
+
 ## Builtin feature selection
 
 # Volume
@@ -1361,11 +1400,6 @@ AccuracyPValue  0.4379397 0.1301001 0.07304316
 Now, these are some results I can start getting behind. AUC of svmRadial is good and both spe/sen are decent. PLS is not doing badly either. 
 
 Just to be clear, sensitivity here reflects the "interesting case", which is the first factor, ADHD. Specificity relates to the non-case, NV, being called a NV. In other words, sensitivity is the ability of a test to correctly identify those with ADHD (true positive rate), whereas specificity is the ability of the test to correctly identify the NVs (true negative rate).
-
-Does it get better by using smaller p-values?
-Does it get better by combining different classifiers?
-Does it get better by splitting the data differently?
-Does it make sense in the brain?
 
 ## Builtin feature selection
 

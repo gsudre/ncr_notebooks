@@ -67,8 +67,9 @@ ytest = y[-split]
 # in voxel analysis it's actually more costly to do the correlation in the entire set of variables
 # then to run the for loop, so let's first reduce the variables to only the univariate ones
 library(parallel)
-cl <- makeCluster(8)
+cl <- makeCluster(32)
 pvals = parSapply(cl, Xtrain, function(d, ytrain) summary(aov(lm(d ~ ytrain)))[[1]][[5]][1], ytrain)
+stopClister(cl)
 Xtrain = Xtrain[, which(pvals <= .05)]
 print(dim(Xtrain))
 
@@ -89,6 +90,8 @@ fullCtrl <- trainControl(method = "repeatedcv",
                          index = index,
                          savePredictions="final")
 
+require(doMC)
+registerDoMC(cores=32)
 library(caretEnsemble)
 # some of these models don't use class probabilities, so we can't do ROC
 model_list <- caretList(
