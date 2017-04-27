@@ -1,13 +1,14 @@
 args = commandArgs(trailingOnly=TRUE)
-if (length(args) != 2) {
-  stop("Arguments: seed[-1] root_fname", call.=FALSE)
+if (length(args) != 3) {
+  stop("Arguments: seed[-1] pct_var root_fname", call.=FALSE)
 } else {
   if (args[1] == '-1') {
     myseed = as.integer((as.double(Sys.time())*1000+Sys.getpid()) %% 2^31)
   } else {
     myseed = as.integer(args[1])
   }
-  root_fname = args[2]
+  pct_var = as.numeric(args[2])
+  root_fname = args[3]
 }
 
 ###########
@@ -65,7 +66,7 @@ X_resid = as.data.frame(X_resid)
 
 myseed = 1234
 set.seed(myseed)
-split <- createDataPartition(y, p = .8, list = FALSE)
+split <- createDataPartition(y, p = .7, list = FALSE)
 Xtrain <- X_resid[ split, ]
 ytrain <- y[ split ]
 Xtest  <- X_resid[-split, ]
@@ -81,7 +82,7 @@ print(dim(Xtrain))
 keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
 Xtest = Xtest[, keep_me]
 
-pp <- preProcess(Xtrain, method = c('BoxCox', 'center', 'scale', 'pca'), thresh=.9)
+pp <- preProcess(Xtrain, method = c('BoxCox', 'center', 'scale', 'pca'), thresh=pct_var)
 filtXtrain<- predict(pp, Xtrain)
 filtXtest <- predict(pp, Xtest)
 print(dim(filtXtrain))
@@ -143,4 +144,4 @@ print(model_preds)
 sink()
 
 fname = sprintf('%s_%d.RData', root_fname, myseed)
-save(model_list, seed, pp, file=fname)
+save(model_list, myseed, pp, file=fname)
