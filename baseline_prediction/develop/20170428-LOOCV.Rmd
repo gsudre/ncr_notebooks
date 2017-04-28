@@ -73,10 +73,10 @@ print(dim(filtX))
 
 tuneLength=10
 set.seed(myseed)
-index <- createResample(ytrain, times=20)
+index <- createMultiFolds(ytrain, k = 10, times = 10)
 
 set.seed(myseed)
-fullCtrl <- trainControl(method = "boot",
+fullCtrl <- trainControl(method = "repeatedcv",
                          index = index,
                          savePredictions="final",
                          classProbs=TRUE,
@@ -112,20 +112,26 @@ resamps = resamples(model_list)
 bwplot(resamps, layout = c(3, 1))
 difValues <- diff(resamps)
 dotplot(difValues)
+mcor = modelCor(resamps)
+library(corrplot)
+corrplot(mcor, order = "hclust", method='color', cl.lim=c(min(mcor), max(mcor)))
 ```
 
-Now, say we do a LOOCV. How well do we predict the left out subject?
+Now, say we do a LOOCV. How well do we predict the left out subject? It also makes sense to use the top 3 models that aren't too correlated, just so we can have some sort of voting scheme in case the probabilities are too close to call.
 
 ```{r}
+myseed=1234
+njobs=6
+tuneLength=10
 preds = c()
-for (s in 1:10) { #length(y)) {
+for (s in 1:1) {#length(y)) {
   print(sprintf('LO %d / %d', s, length(y)))
   Xtrain <- X_resid[ -s, ]
   ytrain <- y[ -s ]
   Xtest  <- X_resid[s, ]
   
   library(parallel)
-  cl <- makeCluster(6)
+  cl <- makeCluster(njobs)
   pvals = parSapply(cl, Xtrain, function(d, ytrain) t.test(d ~ ytrain)$p.value, ytrain)
   stopCluster(cl)
   Xtrain = Xtrain[, which(pvals <= .05)]
@@ -136,9 +142,8 @@ for (s in 1:10) { #length(y)) {
   filtXtrain<- predict(pp, Xtrain)
   filtXtest <- predict(pp, Xtest)
   
-  tuneLength=10
   set.seed(myseed)
-  index <- createResample(ytrain, times=20)
+  index <- createMultiFolds(ytrain, k = 10, times = 10)
   
   set.seed(myseed)
   fullCtrl <- trainControl(method = "boot",
@@ -148,16 +153,19 @@ for (s in 1:10) { #length(y)) {
                            summaryFunction=twoClassSummary)
   
   require(doMC)
-  registerDoMC(cores=7)
+  registerDoMC(cores=njobs)
   library(caretEnsemble)
   model_list <- caretList(
     filtXtrain, ytrain,
-    tuneLength=10,
+    tuneLength=tuneLength,
     trControl=fullCtrl,
     metric='ROC',
-    methodList=c('kernelpls')
+    methodList=c('kernelpls', 'bagEarthGCV', 'knn')
   )
-  preds = rbind(preds, predict(model_list[[1]], newdata=filtXtest, type='prob'))
+  preds = lapply(model_list, predict, newdata=filtXtest, type='prob')
+  print(do.call(rbind, preds))
 }
 ```
+
+But this is taking too long. So, lets farm it in a subject level.
 

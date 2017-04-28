@@ -76,10 +76,10 @@ filtXtrain<- predict(pp, Xtrain)
 filtXtest <- predict(pp, Xtest)
 
 set.seed(myseed)
-index <- createResample(ytrain, times=20)
+index <- createMultiFolds(ytrain, k = 10, times = 10)
 
 set.seed(myseed)
-fullCtrl <- trainControl(method = "boot",
+fullCtrl <- trainControl(method = "repeatedcv",
                        index = index,
                        savePredictions="final",
                        classProbs=TRUE,
@@ -93,9 +93,9 @@ filtXtrain, ytrain,
 tuneLength=10,
 trControl=fullCtrl,
 metric='ROC',
-methodList=c('kernelpls')
+methodList=c('kernelpls', 'bagEarthGCV', 'knn')
 )
-
-print(predict(model_list[[1]], newdata=filtXtest, type='prob'))
+preds = lapply(model_list, predict, newdata=filtXtest, type='prob')
+print(do.call(rbind, preds))
 
 sink()
