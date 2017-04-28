@@ -58,7 +58,7 @@ X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ merged$age_at_scan + I(mer
 stopCluster(cl)
 X_resid = as.data.frame(X_resid)
 
-print(sprintf('LO %d / %d', s, length(y)))
+print(sprintf('LO %d / %d (%s)', s, length(y), y[s]))
 Xtrain <- X_resid[ -s, ]
 ytrain <- y[ -s ]
 Xtest  <- X_resid[s, ]

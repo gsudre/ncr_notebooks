@@ -85,7 +85,7 @@ fullCtrl <- trainControl(method = "repeatedcv",
 require(doMC)
 registerDoMC(cores=6)
 library(caretEnsemble)
-model_list <- caretList(
+full_model_list <- caretList(
   filtX, y,
   tuneLength=10,
   trControl=fullCtrl,
@@ -94,7 +94,7 @@ model_list <- caretList(
   )
 
 greedy_ensemble <- caretEnsemble(
-  model_list,
+  full_model_list,
   metric='ROC',
   trControl=trainControl(
     number=2,
@@ -108,7 +108,7 @@ summary(greedy_ensemble)
 Using the entire data, it's clear that PLS is doing the best:
 
 ```{r}
-resamps = resamples(model_list)
+resamps = resamples(full_model_list)
 bwplot(resamps, layout = c(3, 1))
 difValues <- diff(resamps)
 dotplot(difValues)
