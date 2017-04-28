@@ -64,7 +64,6 @@ X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ merged$age_at_scan + I(mer
 stopCluster(cl)
 X_resid = as.data.frame(X_resid)
 
-myseed = 1234
 set.seed(myseed)
 split <- createDataPartition(y, p = .7, list = FALSE)
 Xtrain <- X_resid[ split, ]
