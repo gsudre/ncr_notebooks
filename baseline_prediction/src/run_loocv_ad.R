@@ -71,14 +71,13 @@ Xtrain = Xtrain[, which(pvals <= .05)]
 keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
 Xtest = Xtest[, keep_me]
 
-pp <- preProcess(Xtrain, method = c('BoxCox', 'center', 'scale', 'pca'), thresh=.9)
+pp <- preProcess(Xtrain, method = c('BoxCox', 'center', 'scale', 'pca'), thresh=.6)
 filtXtrain<- predict(pp, Xtrain)
 filtXtest <- predict(pp, Xtest)
 
 set.seed(myseed)
 index <- createMultiFolds(ytrain, k = 10, times = 10)
 
-set.seed(myseed)
 fullCtrl <- trainControl(method = "repeatedcv",
                        index = index,
                        savePredictions="final",
@@ -88,6 +87,8 @@ fullCtrl <- trainControl(method = "repeatedcv",
 require(doMC)
 registerDoMC(cores=njobs)
 library(caretEnsemble)
+
+set.seed(myseed)
 model_list <- caretList(
 filtXtrain, ytrain,
 tuneLength=10,
