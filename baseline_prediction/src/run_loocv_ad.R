@@ -76,7 +76,7 @@ filtXtrain<- predict(pp, Xtrain)
 filtXtest <- predict(pp, Xtest)
 
 set.seed(myseed)
-index <- createMultiFolds(ytrain, k = 10, times = 10)
+index <- createMultiFolds(ytrain, k = 5, times = 20)
 
 fullCtrl <- trainControl(method = "repeatedcv",
                        index = index,
@@ -96,6 +96,18 @@ trControl=fullCtrl,
 metric='ROC',
 methodList=c('kernelpls', 'bagEarthGCV', 'knn')
 )
+
+greedy_ensemble <- caretEnsemble(
+  model_list,
+  metric='ROC',
+  trControl=trainControl(
+    number=2,
+    summaryFunction=twoClassSummary,
+    classProbs=TRUE
+    ))
+# ROC stats
+print(summary(greedy_ensemble))
+
 preds = lapply(model_list, predict, newdata=filtXtest, type='prob')
 print(do.call(rbind, preds))
 

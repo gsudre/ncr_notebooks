@@ -56,12 +56,39 @@ y = y[keep_me]
 
 The actual decoding:
 ```{r}
+get_needed_residuals = function(y, fm_str, cutoff, merged) {
+  fm = as.formula(fm_str)
+  fit = lm(fm)
+  # selecting which covariates to use
+  fm = "y ~ "
+  for (r in 2:dim(summary(fit)$coefficients)[1]) {
+    if (summary(fit)$coefficients[r, 4] < cutoff) {
+      cname = rownames(summary(fit)$coefficients)[r]
+      cname = gsub("SEXMale", "SEX", cname)
+      fm = sprintf('%s + %s', fm, cname)
+    }
+  }
+  # don't do anything if no variables were significant
+  if (fm == 'y ~ ') {
+    return(y)
+  } else {
+    opt_fit = lm(as.formula(fm))
+    return(opt_fit$residuals)
+  }
+}
+
+library(parallel)
+cl <- makeCluster(32)
+X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ merged$age_at_scan + I(merged$age_at_scan^2) + merged$SEX', .1, merged[keep_me, ])
+stopCluster(cl)
+X_resid = as.data.frame(X_resid)
+
 myseed = 1234
 set.seed(myseed)
 split <- createDataPartition(y, p = .8, list = FALSE)
-Xtrain <- X[ split, ]
+Xtrain <- X_resid[ split, ]
 ytrain <- y[ split ]
-Xtest  <- X[-split, ]
+Xtest  <- X_resid[-split, ]
 ytest = y[-split]
 
 # in voxel analysis it's actually more costly to do the correlation in the entire set of variables
@@ -69,12 +96,12 @@ ytest = y[-split]
 library(parallel)
 cl <- makeCluster(32)
 pvals = parSapply(cl, Xtrain, function(d, ytrain) summary(aov(lm(d ~ ytrain)))[[1]][[5]][1], ytrain)
-stopClister(cl)
 Xtrain = Xtrain[, which(pvals <= .05)]
 print(dim(Xtrain))
 
 keep_me = parSapply(cl, colnames(Xtrain), function(d, namesXtest) which(namesXtest == d), colnames(Xtest))
 Xtest = Xtest[, keep_me]
+stopCluster(cl)
 
 pp <- preProcess(Xtrain, method = c('BoxCox', 'center', 'scale', 'pca'), thresh=.9)
 filtXtrain<- predict(pp, Xtrain)
@@ -85,20 +112,35 @@ tuneLength=10
 set.seed(myseed)
 index <- createMultiFolds(ytrain, k = 5, times = 5)
 
-set.seed(myseed)
 fullCtrl <- trainControl(method = "repeatedcv",
                          index = index,
                          savePredictions="final")
 
+adaptControl <- trainControl(method = "adaptive_cv",
+                             number = 10, repeats = 10,
+                             adaptive = list(min = 5, alpha = 0.05, 
+                                             method = "gls", complete = TRUE),
+                             classProbs = TRUE,
+                             search = "random")
 require(doMC)
 registerDoMC(cores=32)
+set.seed(myseed)
+onAdapt <- train(filtXtrain, ytrain,
+                  method = "svmRadial", 
+                  trControl = adaptControl,
+                  metric = "ROC",
+                  tuneLength = 15)
+
 library(caretEnsemble)
 # some of these models don't use class probabilities, so we can't do ROC
 model_list <- caretList(
   filtXtrain, ytrain,
-  tuneLength=10,
-  trControl=fullCtrl,
-  methodList=c('rpartScore', 'ordinalNet', 'svmRadial')
+  tuneLength=15,
+  trControl=adaptCtrl,
+  methodList=c('rpartScore', 'svmRadial')
+  # tuneList=list(on=caretModelSpec(method='ordinalNet', tuneGrid=expand.grid(alpha = seq(0.1, 1, length = 15),
+  #                                                                           criteria = "aic",
+  #                                                                           link = c("logit", "probit", "cloglog", "cauchit"))))
   )
 
 model_perf = data.frame(lapply(model_list, function(d) getTrainPerf(d)[1]))
@@ -127,6 +169,23 @@ model_preds <- lapply(model_preds, function(d) confusionMatrix(d, ref=ytest)$ove
 model_preds <- data.frame(model_preds)
 print(model_preds)
 ```
+
+This was taking so much time that I wasn't sure whether it's worth to continue it. Even with a 32 multicore, it was taking several days for a single seed. Let me play a bit with adaptive control, though. It might help the speed.
+
+But it turns out that even with the biggest single computer I can get, and using adaptive CV, it still doesn't complete. It's probably buggy. Let's go ahead and evaluate the 2 other algorithms we can play with. 
+
+I can tell you that neither svmRadial nor rpartScore get affected by the outcome being ordinal. No change in training performance whatsoever. 
+
+```
+> postResample(predict(model_list[[1]], filtXtest), ytest)
+  Accuracy      Kappa 
+ 0.3333333 -0.0400000 
+> postResample(predict(model_list[[2]], filtXtest), ytest)
+  Accuracy      Kappa 
+0.35897436 0.01215805 
+```
+
+Still overfitting though.
 
 
 # DTI, AD

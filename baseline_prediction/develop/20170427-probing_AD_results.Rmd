@@ -648,6 +648,26 @@ colnames(spe) = c('junk', 'rf', 'kernelpls', 'svmRadial', 'knn', 'rpart', 'bagEa
 boxplot(spe[,2:ncol(spe)], las=2)
 title('Specificity')
 ```
+```{r}
+par(mfrow=c(2,2))
+acc = read.table('~/tmp/acc_varp6.txt')
+colnames(acc) = c('junk', 'rf', 'kernelpls', 'svmRadial', 'knn', 'rpart', 'bagEarthGCV', 'LogitBoost', 'lda', 'nb')
+boxplot(acc[,2:ncol(acc)], las=2)
+abline(h=.54, col='red')
+title('Accuracy')
+roc = read.table('~/tmp/roc_varp6.txt')
+colnames(roc) = c('junk', 'rf', 'kernelpls', 'svmRadial', 'knn', 'rpart', 'bagEarthGCV', 'LogitBoost', 'lda', 'nb')
+boxplot(roc[,2:ncol(roc)], las=2)
+title('ROC')
+sen = read.table('~/tmp/sen_varp6.txt')
+colnames(sen) = c('junk', 'rf', 'kernelpls', 'svmRadial', 'knn', 'rpart', 'bagEarthGCV', 'LogitBoost', 'lda', 'nb')
+boxplot(sen[,2:ncol(sen)], las=2)
+title('Sensitivity')
+spe = read.table('~/tmp/spe_varp6.txt')
+colnames(spe) = c('junk', 'rf', 'kernelpls', 'svmRadial', 'knn', 'rpart', 'bagEarthGCV', 'LogitBoost', 'lda', 'nb')
+boxplot(spe[,2:ncol(spe)], las=2)
+title('Specificity')
+```
 
 # How much variance to explain
 Philip was wondering how much variance do I need to explain in PCA. HE said I should be able to get by with 50 or 60. Let's go down in increments.
