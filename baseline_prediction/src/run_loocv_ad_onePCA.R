@@ -1,7 +1,7 @@
 args = commandArgs(trailingOnly=TRUE)
 s = as.integer(args[1])
 root_fname = args[2]
-njobs = 8
+njobs = 6
 tuneLength=10
 myseed = 1234
 ###########
@@ -58,13 +58,12 @@ X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ merged$age_at_scan + I(mer
 stopCluster(cl)
 X_resid = as.data.frame(X_resid)
 
-pp <- preProcess(X_resid, method = c('BoxCox', 'center', 'scale', 'pca'), thresh=.9)
-filtX <- predict(pp, X_resid)
-
+# we need to do the univariate filter first otherwise we will be doing pca
+# on garbage
 print(sprintf('LO %d / %d (%s)', s, length(y), y[s]))
-Xtrain <- filtX[ -s, ]
+Xtrain <- X_resid[ -s, ]
 ytrain <- y[ -s ]
-Xtest  <- filtX[s, ]
+Xtest  <- X_resid[s, ]
 
 library(parallel)
 cl <- makeCluster(njobs)
@@ -73,6 +72,11 @@ stopCluster(cl)
 Xtrain = Xtrain[, which(pvals <= .05)]
 keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
 Xtest = Xtest[, keep_me]
+
+pp <- preProcess(rbind(Xtrain, Xtest),
+                 method = c('BoxCox', 'center', 'scale', 'pca'), thresh=.9)
+filtXtrain <- predict(pp, Xtrain)
+filtXtest <- predict(pp, Xtest)
 
 set.seed(myseed)
 index <- createMultiFolds(ytrain, k = 10, times = 10)
@@ -88,7 +92,7 @@ library(caretEnsemble)
 
 set.seed(myseed)
 model_list <- caretList(
-Xtrain, ytrain,
+filtXtrain, ytrain,
 tuneLength=10,
 trControl=fullCtrl,
 metric='Accuracy',
@@ -105,7 +109,7 @@ greedy_ensemble <- caretEnsemble(
 # ROC stats
 print(summary(greedy_ensemble))
 
-preds = lapply(model_list, predict, newdata=Xtest, type='prob')
+preds = lapply(model_list, predict, newdata=filtXtest, type='prob')
 print(do.call(rbind, preds))
 
 sink()
