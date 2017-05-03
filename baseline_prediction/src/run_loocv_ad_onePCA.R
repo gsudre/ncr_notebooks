@@ -1,7 +1,7 @@
 args = commandArgs(trailingOnly=TRUE)
 s = as.integer(args[1])
 root_fname = args[2]
-njobs = 6
+njobs = 8
 tuneLength=10
 myseed = 1234
 ###########
