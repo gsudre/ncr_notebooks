@@ -915,3 +915,6 @@ ijk[, 4] = brain
 write.table(ijk, row.names=F, col.names=F, file='~/tmp/brain.txt')
 # cat brain.txt | 3dUndump -master ~/data/dtitk/analysis/mean_fa_skeleton_mask.nii.gz -datum float -prefix brain.nii -overwrite -
 ```
+
+# Reduce bias
+Talking to Philip, we would want to report different seeds. So, we need to make sure we have a decent looking error (bias + variance). 
