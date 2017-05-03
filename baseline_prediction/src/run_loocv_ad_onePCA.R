@@ -74,7 +74,7 @@ keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
 Xtest = Xtest[, keep_me]
 
 pp <- preProcess(rbind(Xtrain, Xtest),
-                 method = c('BoxCox', 'center', 'scale', 'pca'), thresh=.9)
+                 method = c('BoxCox', 'center', 'scale', 'pca'), thresh=.6)
 filtXtrain <- predict(pp, Xtrain)
 filtXtest <- predict(pp, Xtest)
 
