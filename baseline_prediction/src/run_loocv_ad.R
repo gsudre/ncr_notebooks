@@ -95,7 +95,7 @@ filtXtrain, ytrain,
 tuneLength=10,
 trControl=fullCtrl,
 metric='ROC',
-methodList=c('kernelpls', 'bagEarthGCV', 'knn', 'svmRadial', 'xgbTree')
+methodList=c('kernelpls', 'bagEarthGCV', 'knn', 'svmRadial')
 )
 
 greedy_ensemble <- caretEnsemble(
