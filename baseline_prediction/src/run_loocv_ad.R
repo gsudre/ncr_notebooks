@@ -71,15 +71,16 @@ Xtrain = Xtrain[, which(pvals <= .05)]
 keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
 Xtest = Xtest[, keep_me]
 
-pp <- preProcess(Xtrain, method = c('BoxCox', 'center', 'scale', 'pca'), thresh=.6)
+pp <- preProcess(Xtrain, method = c('BoxCox', 'center', 'scale', 'pca'), pcaComp=5)
 filtXtrain<- predict(pp, Xtrain)
 filtXtest <- predict(pp, Xtest)
 
 set.seed(myseed)
-index <- createMultiFolds(ytrain, k = 5, times = 20)
+index <- createResample(ytrain, times = 100)
 
-fullCtrl <- trainControl(method = "repeatedcv",
+fullCtrl <- trainControl(method = "boot",
                        index = index,
+                       number = 100,
                        savePredictions="final",
                        classProbs=TRUE,
                        summaryFunction=twoClassSummary)
@@ -94,7 +95,7 @@ filtXtrain, ytrain,
 tuneLength=10,
 trControl=fullCtrl,
 metric='ROC',
-methodList=c('kernelpls', 'bagEarthGCV', 'knn')
+methodList=c('kernelpls', 'bagEarthGCV', 'knn', 'svmRadial', 'xgbTree')
 )
 
 greedy_ensemble <- caretEnsemble(
