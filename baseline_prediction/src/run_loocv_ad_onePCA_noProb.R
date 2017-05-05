@@ -52,67 +52,50 @@ y = merged$DX_BASELINE
 y[y!='NV'] = 'ADHD'
 y = factor(y, levels=c('ADHD', 'NV'))
 y = y[keep_me]
+library(parallel)
+cl <- makeCluster(njobs)
+X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ merged$age_at_scan + I(merged$age_at_scan^2) + merged$SEX', .1, merged[keep_me, ])
+stopCluster(cl)
+X_resid = as.data.frame(X_resid)
 
-X = cbind(merged[keep_me, c('age_at_scan', 'SEX')], X)
-
-Xtrain <- X[ -s, ]
+# we need to do the univariate filter first otherwise we will be doing pca
+# on garbage
+print(sprintf('LO %d / %d (%s)', s, length(y), y[s]))
+Xtrain <- X_resid[ -s, ]
 ytrain <- y[ -s ]
-Xtest  <- X[s, ]
-
-pp <- preProcess(Xtrain, method = c('BoxCox', 'center', 'scale'))
-filtXtrain <- predict(pp, Xtrain)
-filtXtest <- predict(pp, Xtest)
+Xtest  <- X_resid[s, ]
 
 library(parallel)
 cl <- makeCluster(njobs)
-pvals = parSapply(cl, filtXtrain,
-                  function(d, ytrain) kruskal.test(d ~ ytrain)$p.value, ytrain)
+pvals = parSapply(cl, Xtrain, function(d, ytrain) t.test(d ~ ytrain)$p.value, ytrain)
 stopCluster(cl)
-filtXtrain = filtXtrain[, which(pvals <= .05)]
-keep_me = sapply(colnames(filtXtrain), function(d) which(colnames(filtXtest) == d))
-filtXtest = filtXtest[, keep_me]
+Xtrain = Xtrain[, which(pvals <= .05)]
+keep_me = sapply(colnames(Xtrain), function(d) which(colnames(Xtest) == d))
+Xtest = Xtest[, keep_me]
 
-pp <- preProcess(filtXtrain, method = c('pca'))
-filtXtrain <- predict(pp, filtXtrain)
-filtXtest <- predict(pp, filtXtest)
-
-print(sprintf('LO %d / %d (%s)', s, length(y), y[s]))
+pp <- preProcess(rbind(Xtrain, Xtest),
+                 method = c('BoxCox', 'center', 'scale', 'pca'), thresh=.6)
+filtXtrain <- predict(pp, Xtrain)
+filtXtest <- predict(pp, Xtest)
 
 set.seed(myseed)
-index <- createResample(ytrain, times = 200)
+index <- createMultiFolds(ytrain, k = 10, times = 10)
+
+fullCtrl <- trainControl(method = "repeatedcv",
+                       index = index,
+                       savePredictions="final")
 
 require(doMC)
 registerDoMC(cores=njobs)
 set.seed(myseed)
-fullCtrl <- trainControl(method = "boot",
-                       number=200,
-                       index = index,
-                       savePredictions="all",
-                       classProbs=TRUE,
-                       returnResamp = 'all',
-                       indexFinal=createResample(ytrain, times=1)[[1]])
+mymod = train(filtXtrain, ytrain,
+                tuneLength=10,
+                trControl=fullCtrl,
+                metric='Accuracy',
+                method='kernelpls')
 
-library(caretEnsemble)
-set.seed(myseed)
-model_list <- caretList(
-    filtXtrain, ytrain,
-    tuneLength=tuneLength,
-    trControl=fullCtrl,
-    metric='Accuracy',
-    methodList=c('kernelpls', 'bagEarthGCV', 'knn', 'svmRadial')
-)
+summary(mymod)
 
-greedy_ensemble <- caretEnsemble(
-  model_list,
-  metric='Accuracy',
-  trControl=trainControl(
-    number=2,
-    classProbs=TRUE
-    ))
-# ROC stats
-print(summary(greedy_ensemble))
-
-preds = lapply(model_list, predict, newdata=filtXtest, type='prob')
-print(do.call(rbind, preds))
+print(predict(predict(mymod, newdata=filtXtest, type='prob')))
 
 sink()
