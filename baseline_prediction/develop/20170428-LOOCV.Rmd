@@ -394,7 +394,7 @@ X = cbind(merged[keep_me, c('age_at_scan', 'SEX')], X)
 ```{r}
 njobs=6
 preds = c()
-for (s in 1:10) {
+for (s in 1:198) {
   Xtrain <- X[ -s, ]
   ytrain <- y[ -s ]
   Xtest  <- X[s, ]
@@ -440,7 +440,7 @@ for (s in 1:10) {
                 metric='Accuracy',
                 method='kernelpls')
   
-  print(mymod)
+  # print(mymod)
   print(sprintf('LO %d / %d (%s)', s, length(y), y[s]))
   preds = c(preds, predict(mymod, newdata=filtXtest))
   print(preds)
