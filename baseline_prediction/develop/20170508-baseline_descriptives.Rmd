@@ -8,7 +8,7 @@ As the first stage for the baseline paper, let's do the predictives to show what
 * DX_baseline
 * SX_baseline
 * Latent class
-* Annualized symptom change (possibly adjusted for baseline SX)
+* Annualized symptom change (possibly adjusted for baseline SX: Phili says dimensional outcome (final-initial/initial symptoms)/age diff)
 
 And we can do that for every possible dataset we have. Shouldn't be that bad, as most of the scripts are done already. 
 
@@ -41,6 +41,7 @@ nvVSadhd_test = function(pheno, df, fm_str) {
       fm = sprintf('%s + y', fm)
     } else { fm = 'pheno ~ y' }
     
+    print(fm)
     y = as.character(df$DX_BASELINE)
     y[y != 'NV'] = 'ADHD'
     y = factor(y, levels=c('ADHD', 'NV'))
@@ -300,7 +301,31 @@ stopCluster(cl)
 ```
 
 # Structural ROIs
+```{r}
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+gf_base = gf[gf$BASELINE=='BASELINE', ]
+struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
+rm_me = (struct_data$mprage_score > 2)
+struct_data = struct_data[!rm_me, ]
+my_ids = intersect(gf_base$MRN, struct_data$MRN)
+merged = mergeOnClosestDate(gf_base, struct_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+merged = merged[!rm_me, ]
+X = merged[, 33:302]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+keep_me = merged$age <= 12
+X = X[keep_me, ]
+merged = merged[keep_me, ]
+print(sprintf('Freesurfer ROIs: %d datapoints, %d phenotypes', nrow(X), ncol(X)))
 
+cl <- makeCluster(6)
+res = parSapply(cl, X, nvVSadhd_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
+res2 = parSapply(cl, X, outcome_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
+stopCluster(cl)
+write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/freesurfer_rois.csv')
+```
 # Structural voxelwise
 
 ## Area
@@ -344,7 +369,7 @@ res2 = rbind(res2, p.adjust(res2[2,], method='fdr'))
 res2 = rbind(res2, p.adjust(res2[4,], method='fdr'))
 rownames(res2)[5] = 'inattOutcome_pval_FDR'
 rownames(res2)[6] = 'hiOutcome_pval_FDR'
-write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/volume.csv', row.names=F)
+write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/thickness.csv', row.names=F)
 ```
 ## Thickness
 ```{r}
@@ -528,6 +553,6 @@ X = merged[, keep_me]
 print(sprintf('Geospatial: %d datapoints, %d phenotypes', nrow(X), ncol(X)))
 res = sapply(X, nvVSadhd_test, merged, 'pheno ~ df$age + df$SEX + I(df$age^2)')
 res2 = sapply(X, outcome_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)')
-write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/geospatial.csv')
+# write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/geospatial.csv')
 ```
 # Resting state
