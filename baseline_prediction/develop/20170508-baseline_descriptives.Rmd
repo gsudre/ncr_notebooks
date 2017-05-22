@@ -556,3 +556,17 @@ res2 = sapply(X, outcome_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)
 # write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/geospatial.csv')
 ```
 # Resting state
+
+# Polygenic risk score
+```{r}
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+gf_base = gf[gf$BASELINE=='BASELINE', ]
+prs_data = read.csv('~/data/baseline_prediction/stripped/PRS.csv')
+merged = merge(gf_base, prs_data, by='MRN')
+X = merged[, 29:79]
+print(sprintf('PRS: %d datapoints, %d phenotypes', nrow(X), ncol(X)))
+res = sapply(X, nvVSadhd_test, merged, 'pheno ~ df$age + df$SEX + I(df$age^2)')
+res2 = sapply(X, outcome_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)')
+# write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/geospatial.csv')
+```
