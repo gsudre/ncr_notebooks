@@ -109,40 +109,120 @@ outcome_test = function(pheno, df, fm_str) {
   return(res)
 }
 
-symptom_test = function(pheno, df, fm_str, mycoef) {
-  fm = as.formula(fm_str)
-  
-  y = df$SX_inatt
-  tstat <- summary(lm(fm))$coefficients[mycoef, 3]
-  pval <- summary(lm(fm))$coefficients[mycoef, 4]
-  
-  y = df$SX_HI
-  tstat2 <- summary(lm(fm))$coefficients[mycoef, 3]
-  pval2 <- summary(lm(fm))$coefficients[mycoef, 4]
-  
-  res = c(tstat, pval, tstat2, pval2)
-  names(res) = c('inattOutcome_tstat', 'inattOutcome_pval', 'hiOutcome_tstat', 'hiOutcome_pval')
+symptom_test = function(pheno, df, fm_str) {
+  library(compute.es)
+  library(lsr)
+  # some struct variables are bad
+  if (sum(pheno, na.rm=T) == 0) {
+    tstat = NA
+    pval = NA
+    d = NA
+  } else {
+    if (! is.na(fm_str)) {
+      cutoff = .1
+      fm = as.formula(fm_str)
+      
+      fit = lm(fm)
+      # selecting which covariates to use
+      fm = "pheno ~ "
+      # we do this before we add the y variable
+      for (r in 2:nrow(summary(fit)$coefficients)) {
+        if (summary(fit)$coefficients[r, 4] < cutoff) {
+          cname = rownames(summary(fit)$coefficients)[r]
+          cname = gsub("SEXMale", "SEX", cname)
+          fm = sprintf('%s + %s', fm, cname)
+        }
+      }
+      fm = sprintf('%s + y', fm)
+    } else { fm = 'pheno ~ y' }
+    
+    y = df$SX_inatt
+    opt_fit = lm(as.formula(fm))
+    mycoef = which(rownames(summary(opt_fit)$coefficients) == 'y')
+    tstat <- summary(opt_fit)$coefficients[mycoef, 3]
+    pval <- summary(opt_fit)$coefficients[mycoef, 4]
+    d = res(cor.test(y, pheno)$estimate, n=length(pheno), verbose=F)$d
+    
+    y = df$SX_HI
+    opt_fit = lm(as.formula(fm))
+    mycoef = which(rownames(summary(opt_fit)$coefficients) == 'y')
+    tstat2 <- summary(opt_fit)$coefficients[mycoef, 3]
+    pval2 <- summary(opt_fit)$coefficients[mycoef, 4]
+    d2 = res(cor.test(y, pheno)$estimate, n=length(pheno), verbose=F)$d
+    
+    res = c(tstat, pval, d, tstat2, pval2, d2)
+    names(res) = c('inattSX_tstat', 'inattSX_pval', 'inattSX_d',
+                   'hiSX_tstat', 'hiSX_pval', 'hiSX_d')
+  }
   return(res)
 }
 
-# get_SX_slope = function (df) {
-#   inatt = c()
-#   hi = c()
-#   mrns = c()
-#   for (s in unique(df$MRN)) {
-#     idx = df$MRN==s
-#     # proceed if we have more than one observation in the data
-#     if (sum(idx) >= 2) {
-#       inatt = c(inatt, lm(SX_inatt ~ age_at_scan, data=df[idx,])$coefficients[2,1])
-#       hi = c(hi, lm(SX_HI ~ age_at_scan, data=df[idx,])$coefficients[2, 1])
-#       mrns = c(mrns, s)
-#     }
-#   }
-#   res = cbind(inatt, hi)
-#   colnames(res) = c('inatt', 'hi')
-#   rownames(res) = mrns
-#   return(res)
-# }
+get_SX_slope = function (df, ids) {
+  inatt = c()
+  hi = c()
+  mrns = c()
+  for (s in ids) {
+    idx = df$MRN==s
+    # proceed if we have more than one observation in the data
+    if (sum(idx) >= 2) {
+      inatt = c(inatt, lm(SX_inatt ~ age, data=df[idx,])$coefficients[[2]])
+      hi = c(hi, lm(SX_HI ~ age, data=df[idx,])$coefficients[[2]])
+      mrns = c(mrns, s)
+    }
+  }
+  res = cbind(inatt, hi)
+  colnames(res) = c('inatt', 'hi')
+  rownames(res) = mrns
+  return(res)
+}
+
+sx_slope_test = function(pheno, df, fm_str, slopes) {
+  library(compute.es)
+  library(lsr)
+  # some struct variables are bad
+  if (sum(pheno, na.rm=T) == 0) {
+    tstat = NA
+    pval = NA
+    d = NA
+  } else {
+    if (! is.na(fm_str)) {
+      cutoff = .1
+      fm = as.formula(fm_str)
+      
+      fit = lm(fm)
+      # selecting which covariates to use
+      fm = "pheno ~ "
+      # we do this before we add the y variable
+      for (r in 2:nrow(summary(fit)$coefficients)) {
+        if (summary(fit)$coefficients[r, 4] < cutoff) {
+          cname = rownames(summary(fit)$coefficients)[r]
+          cname = gsub("SEXMale", "SEX", cname)
+          fm = sprintf('%s + %s', fm, cname)
+        }
+      }
+      fm = sprintf('%s + y', fm)
+    } else { fm = 'pheno ~ y' }
+    
+    y = slopes[,'inatt']
+    opt_fit = lm(as.formula(fm))
+    mycoef = which(rownames(summary(opt_fit)$coefficients) == 'y')
+    tstat <- summary(opt_fit)$coefficients[mycoef, 3]
+    pval <- summary(opt_fit)$coefficients[mycoef, 4]
+    d = res(cor.test(y, pheno)$estimate, n=length(pheno), verbose=F)$d
+    
+    y = slopes[,'hi']
+    opt_fit = lm(as.formula(fm))
+    mycoef = which(rownames(summary(opt_fit)$coefficients) == 'y')
+    tstat2 <- summary(opt_fit)$coefficients[mycoef, 3]
+    pval2 <- summary(opt_fit)$coefficients[mycoef, 4]
+    d2 = res(cor.test(y, pheno)$estimate, n=length(pheno), verbose=F)$d
+    
+    res = c(tstat, pval, d, tstat2, pval2, d2)
+    names(res) = c('inattSlope_tstat', 'inattSlope_pval', 'inattSlope_d',
+                   'hiSlope_tstat', 'hiSlope_pval', 'hiSlope_d')
+  }
+  return(res)
+}
 ```
 
 # DTI
@@ -564,3 +644,22 @@ res2 = sapply(X, outcome_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)
 # write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/geospatial.csv')
 ```
 # Resting state
+
+# Polygenic risk score
+```{r}
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+gf_base = gf[gf$BASELINE=='BASELINE', ]
+prs_data = read.csv('~/data/baseline_prediction/stripped/PRS.csv')
+# we don't need the extra BASELINE column
+prs_data = prs_data[, -3]
+merged = merge(gf_base, prs_data, by='MRN')
+X = merged[, 29:ncol(merged)]
+print(sprintf('PRS: %d datapoints, %d phenotypes', nrow(X), ncol(X)))
+res = sapply(X, nvVSadhd_test, merged, 'pheno ~ df$age + df$SEX + I(df$age^2)')
+res2 = sapply(X, outcome_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)')
+res3 = sapply(X, symptom_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)')
+slopes = get_SX_slope(gf, merged$MRN)
+res4 = sapply(X, sx_slope_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)', slopes)
+write.csv(cbind(t(res), t(res2), t(res3), t(res4)), file='~/data/baseline_prediction/descriptives/prs.csv')
+```
