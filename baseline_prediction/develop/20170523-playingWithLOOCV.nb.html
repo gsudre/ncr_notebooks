@@ -179,7 +179,7 @@ $(document).ready(function () {
 <p>So, let’s create different 315 x features matrices (actually, 290, after restricting for age &lt;= 12), just using residuals as usual. Then, we can merge them together if we are going to just throw everything in, or keep them separate for the voting scheme or unsupervised learning.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZ2V0X25lZWRlZF9yZXNpZHVhbHMgPSBmdW5jdGlvbih5LCBmbV9zdHIsIGN1dG9mZiwgZGYpIHtcbiAgZm0gPSBhcy5mb3JtdWxhKGZtX3N0cilcbiAgZml0ID0gbG0oZm0pXG4gICMgc2VsZWN0aW5nIHdoaWNoIGNvdmFyaWF0ZXMgdG8gdXNlXG4gIGZtID0gXCJ5IH4gXCJcbiAgZm9yIChyIGluIDI6ZGltKHN1bW1hcnkoZml0KSRjb2VmZmljaWVudHMpWzFdKSB7XG4gICAgaWYgKHN1bW1hcnkoZml0KSRjb2VmZmljaWVudHNbciwgNF0gPCBjdXRvZmYpIHtcbiAgICAgIGNuYW1lID0gcm93bmFtZXMoc3VtbWFyeShmaXQpJGNvZWZmaWNpZW50cylbcl1cbiAgICAgIGNuYW1lID0gZ3N1YihcIlNFWE1hbGVcIiwgXCJTRVhcIiwgY25hbWUpXG4gICAgICBmbSA9IHNwcmludGYoJyVzICsgJXMnLCBmbSwgY25hbWUpXG4gICAgfVxuICB9XG4gICMgZG9uJ3QgZG8gYW55dGhpbmcgaWYgbm8gdmFyaWFibGVzIHdlcmUgc2lnbmlmaWNhbnRcbiAgaWYgKGZtICE9ICd5IH4gJykge1xuICAgIGlkeCA9ICFpcy5uYSh5KVxuICAgIG9wdF9maXQgPSBsbShhcy5mb3JtdWxhKGZtKSlcbiAgICB5W2lkeF0gPSBvcHRfZml0JHJlc2lkdWFsc1xuICB9XG4gIHJldHVybih5KVxufVxuc291cmNlKCd+L25jcl9ub3RlYm9va3MvYmFzZWxpbmVfcHJlZGljdGlvbi9zcmMvYXV4X2Z1bmN0aW9ucy5SJylcbmdmX2ZuYW1lID0gJ34vZGF0YS9iYXNlbGluZV9wcmVkaWN0aW9uL3N0cmlwcGVkL2NsaW5pY2FsLmNzdidcbmdmID0gcmVhZC5jc3YoZ2ZfZm5hbWUpXG5nZl9iYXNlID0gZ2ZbZ2YkQkFTRUxJTkU9PSdCQVNFTElORScgJiBnZiRhZ2UgPD0gMTIsIF1cbm15X2lkcyA9IHVuaXF1ZShnZl9iYXNlJE1STilcbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZ2V0X25lZWRlZF9yZXNpZHVhbHMgPSBmdW5jdGlvbih5LCBmbV9zdHIsIGN1dG9mZiwgZGYpIHtcbiAgZm0gPSBhcy5mb3JtdWxhKGZtX3N0cilcbiAgZml0ID0gbG0oZm0pXG4gICMgc2VsZWN0aW5nIHdoaWNoIGNvdmFyaWF0ZXMgdG8gdXNlXG4gIGZtID0gXCJ5IH4gXCJcbiAgZm9yIChyIGluIDI6ZGltKHN1bW1hcnkoZml0KSRjb2VmZmljaWVudHMpWzFdKSB7XG4gICAgaWYgKHN1bW1hcnkoZml0KSRjb2VmZmljaWVudHNbciwgNF0gPCBjdXRvZmYpIHtcbiAgICAgIGNuYW1lID0gcm93bmFtZXMoc3VtbWFyeShmaXQpJGNvZWZmaWNpZW50cylbcl1cbiAgICAgIGNuYW1lID0gZ3N1YihcIlNFWE1hbGVcIiwgXCJTRVhcIiwgY25hbWUpXG4gICAgICBmbSA9IHNwcmludGYoJyVzICsgJXMnLCBmbSwgY25hbWUpXG4gICAgfVxuICB9XG4gICMgZG9uJ3QgZG8gYW55dGhpbmcgaWYgbm8gdmFyaWFibGVzIHdlcmUgc2lnbmlmaWNhbnRcbiAgaWYgKGZtICE9ICd5IH4gJykge1xuICAgIGlkeCA9ICFpcy5uYSh5KVxuICAgIG9wdF9maXQgPSBsbShhcy5mb3JtdWxhKGZtKSlcbiAgICB5W2lkeF0gPSBvcHRfZml0JHJlc2lkdWFsc1xuICB9XG4gIHJldHVybih5KVxufVxuc291cmNlKCd+L25jcl9ub3RlYm9va3MvYmFzZWxpbmVfcHJlZGljdGlvbi9zcmMvYXV4X2Z1bmN0aW9ucy5SJylcbmBgYCJ9 -->
 <pre class="r"><code>get_needed_residuals = function(y, fm_str, cutoff, df) {
   fm = as.formula(fm_str)
   fit = lm(fm)
@@ -200,8 +200,15 @@ $(document).ready(function () {
   }
   return(y)
 }
-source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
-gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiTG9hZGluZyByZXF1aXJlZCBwYWNrYWdlOiBsYXR0aWNlXG5Mb2FkaW5nIHJlcXVpcmVkIHBhY2thZ2U6IGdncGxvdDJcbnBhY2thZ2Ug4oCYZ2dwbG90MuKAmSB3YXMgYnVpbHQgdW5kZXIgUiB2ZXJzaW9uIDMuMi41Tm90ZTogdGhlIHNwZWNpZmljYXRpb24gZm9yIFMzIGNsYXNzIOKAnGZhbWlseeKAnSBpbiBwYWNrYWdlIOKAmE1hdHJpeE1vZGVsc+KAmSBzZWVtcyBlcXVpdmFsZW50IHRvIG9uZSBmcm9tIHBhY2thZ2Ug4oCYbG1lNOKAmTogbm90IHR1cm5pbmcgb24gZHVwbGljYXRlIGNsYXNzIGRlZmluaXRpb25zIGZvciB0aGlzIGNsYXNzLlxuIn0= -->
+<pre><code>Loading required package: lattice
+Loading required package: ggplot2
+package ‘ggplot2’ was built under R version 3.2.5Note: the specification for S3 class “family” in package ‘MatrixModels’ seems equivalent to one from package ‘lme4’: not turning on duplicate class definitions for this class.</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZ2ZfZm5hbWUgPSAnfi9kYXRhL2Jhc2VsaW5lX3ByZWRpY3Rpb24vc3RyaXBwZWQvY2xpbmljYWwuY3N2J1xuZ2YgPSByZWFkLmNzdihnZl9mbmFtZSlcbmdmX2Jhc2UgPSBnZltnZiRCQVNFTElORT09J0JBU0VMSU5FJyAmIGdmJGFnZSA8PSAxMiwgXVxubXlfaWRzID0gdW5pcXVlKGdmX2Jhc2UkTVJOKVxuYGBgIn0= -->
+<pre class="r"><code>gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
 gf = read.csv(gf_fname)
 gf_base = gf[gf$BASELINE=='BASELINE' &amp; gf$age &lt;= 12, ]
 my_ids = unique(gf_base$MRN)</code></pre>

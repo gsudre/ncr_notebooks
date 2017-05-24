@@ -29,10 +29,9 @@ colnames(prs_df)[1] = 'NSB_GENOTYPE_INDEX'
 dups = duplicated(prs_df$NSB_GENOTYPE_INDEX)
 prs_df = prs_df[!dups, ]
 
-# merge NSB to MRNs to clip to only baseline prediction project
-mrns = read.csv('~/data/baseline_prediction/stripped/genotype_wave.csv')
-mrns = mrns[!is.na(mrns$NSB_GENOTYPE_INDEX), ]
+# merge NSB to MRNs
+mrns = read.csv('~/data/baseline_prediction/prs/nsb_and_mrn.csv')
 
-m = merge(mrns, prs_df)
-
+m = merge(mrns, prs_df, by.x='NSB', by.y='NSB_GENOTYPE_INDEX')
+ 
 write.csv(m, file='~/data/baseline_prediction/stripped/PRS.csv', row.names=F)
