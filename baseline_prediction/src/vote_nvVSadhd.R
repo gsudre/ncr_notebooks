@@ -7,7 +7,7 @@ myseed = 1234
 tuneLength = 10
 cpuDiff = 0
 out_fname = sprintf('/data/NCR_SBRB/loocv/nvVSadhd_%s/s%03d.log', model, s)
-# sink(out_fname, append=FALSE, split=TRUE)
+sink(out_fname, append=FALSE, split=TRUE)
 source('~/ncr_notebooks/baseline_prediction/src/load_voting_data.R')
 dsets = c('prs', 'geospatial', 'neuropsych', 'struct_rois', 'dti_tracts',
           'brain_fa', 'brain_ad', 'brain_rd')#,
@@ -118,4 +118,4 @@ myseed
 tuneLength
 ntimes
 preds
-# sink()
+sink()

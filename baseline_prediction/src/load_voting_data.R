@@ -27,6 +27,7 @@ my_ids = unique(gf_base$MRN)
 
 ncpus <- detectBatchCPUs()
 
+print('Loading DTI tracts')
 tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
 rm_me = (tract_data$fa_avg < .4 | tract_data$ad_avg < 1.18 | tract_data$rd_avg > .65 | tract_data$rd_avg < .5 |
            tract_data$norm.trans > .45 | tract_data$norm.rot > .008 | tract_data$goodSlices < 45 | tract_data$goodSlices > 70)
@@ -46,6 +47,7 @@ X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$
 stopCluster(cl)
 dti_tracts = as.data.frame(X_resid)
 
+print('Loading structural ROIs')
 struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
 rm_me = (struct_data$mprage_score > 2)
 struct_data = struct_data[!rm_me, ]
@@ -58,6 +60,7 @@ X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$
 stopCluster(cl)
 struct_rois = as.data.frame(X_resid)
 
+print('Loading neuropsych')
 beery_data = read.csv('~/data/baseline_prediction/stripped/beeryVMI.csv')
 mbeery = mergeOnClosestDate(gf_base, beery_data, my_ids, y.date='record.date.collected', y.id='Medical.Record...MRN')
 rm_me = abs(mbeery$dateX.minus.dateY.months) > 12
@@ -97,6 +100,7 @@ X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$
 stopCluster(cl)
 neuropsych = as.data.frame(X_resid)
 
+print('Loading GeoSpatial')
 geo_data = read.csv('~/data/baseline_prediction/stripped/geospatial.csv')
 merged = merge(gf_base, geo_data, by='MRN')
 # some variables are not being read as numeric...
@@ -115,6 +119,7 @@ X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$
 stopCluster(cl)
 geospatial = as.data.frame(X_resid)
 
+print('Loading PRS')
 prs_data = read.csv('~/data/baseline_prediction/stripped/PRS.csv')
 # we don't need the extra BASELINE column
 prs_data = prs_data[, -3]
@@ -126,6 +131,7 @@ X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$
 stopCluster(cl)
 prs = as.data.frame(X_resid)
 
+print('Loading DTI voxels')
 tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
 load('~/data/baseline_prediction/dti/ad_voxelwise.RData')
 dti_vdata = cbind(tract_data$maskid, ad_data)
@@ -167,3 +173,5 @@ cl <- makeCluster(ncpus)
 X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
 stopCluster(cl)
 brain_rd = as.data.frame(X_resid)
+
+# print('Loading structural voxels')

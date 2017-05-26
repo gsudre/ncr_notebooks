@@ -389,8 +389,58 @@ cl <- makeCluster(4)
 X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
 stopCluster(cl)
 brain_ad = as.data.frame(X_resid)
+
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+load('~/data/baseline_prediction/dti/fa_voxelwise.RData')
+dti_vdata = cbind(tract_data$maskid, fa_data)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+X[which(rm_me), ] = NA
+library(parallel)
+cl <- makeCluster(4)
+X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
+stopCluster(cl)
+brain_fa = as.data.frame(X_resid)
+
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+load('~/data/baseline_prediction/dti/rd_voxelwise.RData')
+dti_vdata = cbind(tract_data$maskid, rd_data)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+X[which(rm_me), ] = NA
+library(parallel)
+cl <- makeCluster(4)
+X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
+stopCluster(cl)
+brain_rd = as.data.frame(X_resid)
 ```
 
+That was for DTI, now we do the same for structural:
 
+```{r}
+struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
+load('~/data/baseline_prediction/struct_area.rData')
+# the first column of lh and rh is an index variable
+vdata = cbind(struct_data$Mask.ID...Scan,
+              lh_area[,2:ncol(lh_area)],
+              rh_area[,2:ncol(rh_area)])
+rm(lh_area)
+rm(rh_area)
+mstruct = mergeOnClosestDate(gf_base, struct_data, my_ids)
+struct_base_vdata = merge(mstruct$Mask.ID...Scan, vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+rm_me = abs(mstruct$dateX.minus.dateY.months) > 12
+rm(vdata)
+X = struct_base_vdata[, 2:ncol(struct_base_vdata)]
+X[which(rm_me), ] = NA
+library(parallel)
+cl <- makeCluster(4)
+X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
+stopCluster(cl)
+brain_area = as.data.frame(X_resid)
+```
 
 
