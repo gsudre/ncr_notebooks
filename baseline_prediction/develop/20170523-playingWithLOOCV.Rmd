@@ -286,9 +286,85 @@ mean_vote[mean_vote < .5] = 2
 print(mean(mean_vote==as.numeric(y), na.rm=T))
 ```
 
-LET'S FOCUS ON CLASSIFIERS THAT CAN HANDLE 3 CLASSES
+LET'S FOCUS ON CLASSIFIERS THAT CAN HANDLE 3 CLASSES, and alo robust to outliers
 CHANGE CODE TO DO SUBJECTS INDEPENDENTLY SAVING TO A LOG FILE
 ADD 3 GROUP CLASSIFICATION
 ADD SYMPTOM SLOPE WITHIN ADHD PREDICTION
 ADD BASELINE SX PREDICTION
 ADD VOXEL VARIABLES
+
+I want to try a series of models that do some sort of feature selection themselves (whether it's stepwise through a wrapper or implicit), timing them, and checking whether they deal with multiple classes. We can run them for 3 different subjects to get an average + sd for time running.
+
+```{r}
+ntimes = 50
+model = 'logreg'
+myseed = 1234
+tuneLength = 10
+cpuDiff = 0
+dsets = c('prs', 'geospatial', 'neuropsych', 'struct_rois', 'dti_tracts')
+
+vote_hiOutcome = function(X, s, uni=T, pca=T, do_rfe=F) {
+  y = gf_base$HI3_named
+  y = factor(y)
+  
+  Xtrain <- X[ -s, ]
+  ytrain <- y[ -s ]
+  Xtest  <- X[s, ]
+  
+  # remove training examples that are all NaN. Note that this will never happen for testing!
+  rm_me = rowSums(is.na(Xtrain)) == ncol(Xtrain)
+  Xtrain = Xtrain[!rm_me,]
+  ytrain = ytrain[!rm_me]
+  
+  if (pca) {
+    pp <- preProcess(Xtrain, method = c('pca'), thresh=.9)
+    Xtrain<- predict(pp, Xtrain)
+    Xtest <- predict(pp, Xtest)
+  }
+  
+  set.seed(myseed)
+  fullCtrl <- trainControl(method = "boot",
+                           number = ntimes,
+                           savePredictions="final",
+                           classProbs=TRUE,
+                           summaryFunction=multiClassSummary,
+                           allowParallel=T)
+  set.seed(myseed)
+  mymod = train(Xtrain, ytrain,
+                tuneLength=tuneLength,
+                trControl=fullCtrl,
+                metric='Mean_ROC',
+                method=model,
+                preProcess = c('medianImpute'))
+  return(predict(mymod, newdata=Xtest)) 
+}
+
+nsubjs = nrow(gf_base)
+preds = matrix(nrow=nsubjs, ncol=length(dsets))
+colnames(preds) = dsets
+rownames(preds) = gf_base$MRN
+library(doMC)
+ncpus <- detectBatchCPUs()
+njobs <- ncpus - cpuDiff
+registerDoMC(njobs)
+
+# get a vote for each dset if the participant has data in the domain
+for (s in 1:2){#nsubjs) {
+  print(sprintf('LOOCV %d / %d', s, nsubjs))
+  for (dset in dsets) {
+    eval(parse(text=sprintf('nfeats = ncol(%s)', dset)))
+    eval(parse(text=sprintf('na_feats = sum(is.na(%s[s, ]))', dset)))
+    if (na_feats < nfeats) {
+      eval(parse(text=sprintf('X = %s', dset)))
+      if (dset %in% c('brain_fa', 'brain_ad', 'brain_rd',
+                      'brain_thickness', 'brain_volume', 'brain_area',
+                      'struct_rois')) {
+        pca = T
+      } else {
+        pca = F
+      }
+      preds[s, dset] = vote_hiOutcome(X, s, pca=pca)[[1]]
+    }
+  }
+}
+```
