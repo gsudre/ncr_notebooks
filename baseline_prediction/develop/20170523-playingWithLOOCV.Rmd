@@ -292,6 +292,10 @@ ADD 3 GROUP CLASSIFICATION
 ADD SYMPTOM SLOPE WITHIN ADHD PREDICTION
 ADD BASELINE SX PREDICTION
 ADD VOXEL VARIABLES
+IMPROVE EACH INDIVIDUAL VOTER BY TRYING DIFFERENT PRS AND BRAIN VOXEL?
+MAYBE VOTE ACROSS CLASSIFIERS?
+DO ANOTHER CV TO WEIGHT THE DIFFERENT MODALITIES? OR WEIGHT BASED ON TRAINING? SAME ACROSS CLASSIFIERS?
+FOR THE 3 CLASSES, HOW ABOUT CLASSIFY 2, THEN THE SUBCLASS?
 
 I want to try a series of models that do some sort of feature selection themselves (whether it's stepwise through a wrapper or implicit), timing them, and checking whether they deal with multiple classes. We can run them for 3 different subjects to get an average + sd for time running.
 
@@ -368,3 +372,25 @@ for (s in 1:2){#nsubjs) {
   }
 }
 ```
+
+Now we load the brain variables into the same structure of 290 rows as the other variables:
+
+```{r}
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+load('~/data/baseline_prediction/dti/ad_voxelwise.RData')
+dti_vdata = cbind(tract_data$maskid, ad_data)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+X[which(rm_me), ] = NA
+library(parallel)
+cl <- makeCluster(4)
+X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
+stopCluster(cl)
+brain_ad = as.data.frame(X_resid)
+```
+
+
+
+

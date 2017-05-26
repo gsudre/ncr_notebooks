@@ -1,5 +1,6 @@
 # Collects the polygenic risk scores from PROFILE files, created by PRSice
-res_dir = '~/data/baseline_prediction/prs/results/'
+suffix = '_filtered_noCleaning'
+res_dir = sprintf('~/data/baseline_prediction/prs/results%s/', suffix)
 
 # read in result files
 files = dir(path = res_dir, pattern = 'profile$')
@@ -33,5 +34,6 @@ prs_df = prs_df[!dups, ]
 mrns = read.csv('~/data/baseline_prediction/prs/nsb_and_mrn.csv')
 
 m = merge(mrns, prs_df, by.x='NSB', by.y='NSB_GENOTYPE_INDEX')
- 
-write.csv(m, file='~/data/baseline_prediction/stripped/PRS.csv', row.names=F)
+
+fname = sprintf('~/data/baseline_prediction/stripped/PRS%s.csv', suffix)
+write.csv(m, file=fname, row.names=F)

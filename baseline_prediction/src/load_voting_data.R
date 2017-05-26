@@ -25,6 +25,8 @@ gf = read.csv(gf_fname)
 gf_base = gf[gf$BASELINE=='BASELINE' & gf$age <= 12, ]
 my_ids = unique(gf_base$MRN)
 
+ncpus <- detectBatchCPUs()
+
 tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
 rm_me = (tract_data$fa_avg < .4 | tract_data$ad_avg < 1.18 | tract_data$rd_avg > .65 | tract_data$rd_avg < .5 |
            tract_data$norm.trans > .45 | tract_data$norm.rot > .008 | tract_data$goodSlices < 45 | tract_data$goodSlices > 70)
@@ -39,7 +41,7 @@ rm_me = abs(merged$dateX.minus.dateY.months) > 12
 X = merged[, phen_vars]
 X[which(rm_me), ] = NA
 library(parallel)
-cl <- makeCluster(4)
+cl <- makeCluster(ncpus)
 X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
 stopCluster(cl)
 dti_tracts = as.data.frame(X_resid)
@@ -51,7 +53,7 @@ merged = mergeOnClosestDate(gf_base, struct_data, my_ids)
 X = merged[, 32:301]
 rm_me = abs(merged$dateX.minus.dateY.months) > 12  | merged$age_at_scan > 12
 X[which(rm_me), ] = NA
-cl <- makeCluster(4)
+cl <- makeCluster(ncpus)
 X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
 stopCluster(cl)
 struct_rois = as.data.frame(X_resid)
@@ -90,7 +92,7 @@ mwj[which(rm_me),] = NA
 phen_vars = c('Raw.Score..VM', 'Raw.Score..DS', 'PS')
 keep_me = sapply(phen_vars, function(d) which(colnames(mwj) == d))
 X = cbind(X, mwj[, keep_me])
-cl <- makeCluster(4)
+cl <- makeCluster(ncpus)
 X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, gf_base)
 stopCluster(cl)
 neuropsych = as.data.frame(X_resid)
@@ -108,7 +110,7 @@ phen_vars = c('SES', 'Home_Type', 'Home_Price', 'Fam_Income', 'Pop_BPL', 'Fam_BP
               'physical_envronment')
 keep_me = sapply(phen_vars, function(d) which(colnames(merged) == d))
 X = merged[, keep_me]
-cl <- makeCluster(4)
+cl <- makeCluster(ncpus)
 X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
 stopCluster(cl)
 geospatial = as.data.frame(X_resid)
@@ -119,7 +121,49 @@ prs_data = prs_data[, -3]
 merged = merge(gf_base, prs_data, by='MRN', all.x = T)
 merged = merged[!duplicated(merged$MRN), ]
 X = merged[, 29:ncol(merged)]
-cl <- makeCluster(4)
+cl <- makeCluster(ncpus)
 X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
 stopCluster(cl)
 prs = as.data.frame(X_resid)
+
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+load('~/data/baseline_prediction/dti/ad_voxelwise.RData')
+dti_vdata = cbind(tract_data$maskid, ad_data)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+X[which(rm_me), ] = NA
+library(parallel)
+cl <- makeCluster(ncpus)
+X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
+stopCluster(cl)
+brain_ad = as.data.frame(X_resid)
+
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+load('~/data/baseline_prediction/dti/fa_voxelwise.RData')
+dti_vdata = cbind(tract_data$maskid, fa_data)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+X[which(rm_me), ] = NA
+library(parallel)
+cl <- makeCluster(ncpus)
+X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
+stopCluster(cl)
+brain_fa = as.data.frame(X_resid)
+
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+load('~/data/baseline_prediction/dti/rd_voxelwise.RData')
+dti_vdata = cbind(tract_data$maskid, rd_data)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+X[which(rm_me), ] = NA
+library(parallel)
+cl <- makeCluster(ncpus)
+X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
+stopCluster(cl)
+brain_rd = as.data.frame(X_resid)

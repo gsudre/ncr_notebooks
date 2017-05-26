@@ -7,9 +7,11 @@ myseed = 1234
 tuneLength = 10
 cpuDiff = 0
 out_fname = sprintf('/data/NCR_SBRB/loocv/nvVSadhd_%s/s%03d.log', model, s)
-sink(out_fname, append=FALSE, split=TRUE)
+# sink(out_fname, append=FALSE, split=TRUE)
 source('~/ncr_notebooks/baseline_prediction/src/load_voting_data.R')
-dsets = c('prs', 'geospatial', 'neuropsych', 'struct_rois', 'dti_tracts')
+dsets = c('prs', 'geospatial', 'neuropsych', 'struct_rois', 'dti_tracts',
+          'brain_fa', 'brain_ad', 'brain_rd')#,
+        #   'brain_thickness', 'brain_volume', 'brain_area')
 vote_nvVSadhd = function(X, s, uni=T, pca=T, do_rfe=F) {
   y = gf_base$DX_BASELINE
   y[y!='NV'] = 'ADHD'
@@ -26,7 +28,9 @@ vote_nvVSadhd = function(X, s, uni=T, pca=T, do_rfe=F) {
 
   # keep only good univariate variables
   if (uni > 0) {
-    pvals = sapply(Xtrain, function(d, ytrain) t.test(d ~ ytrain)$p.value, ytrain)
+      cl <- makeCluster(ncpus)
+      pvals = parSapply(cl, Xtrain, function(d, ytrain) t.test(d ~ ytrain)$p.value, ytrain)
+      stopCluster(cl)
     good_vars = which(pvals <= uni)
     if (length(good_vars) > 1) {
       Xtrain = Xtrain[, good_vars]
@@ -80,6 +84,7 @@ ncpus <- detectBatchCPUs()
 njobs <- ncpus - cpuDiff
 registerDoMC(njobs)
 
+ptm <- proc.time()
 # get a vote for each dset if the participant has data in the domain
 print(sprintf('LOOCV %d / %d', s, nsubjs))
 preds = c()
@@ -89,10 +94,9 @@ for (dset in dsets) {
     if (na_feats < nfeats) {
       eval(parse(text=sprintf('X = %s', dset)))
       if (dset %in% c('brain_fa', 'brain_ad', 'brain_rd',
-                      'brain_thickness', 'brain_volume', 'brain_area',
-                      'struct_rois')) {
-        uni = 0
-        pca = F
+                      'brain_thickness', 'brain_volume', 'brain_area')) {
+        uni = 0.05
+        pca = T
         do_rfe = F
       } else {
         uni = 0
@@ -107,10 +111,11 @@ for (dset in dsets) {
   }
   preds = c(preds, res)
 }
+print(proc.time() - ptm)
 dsets
 model
 myseed
 tuneLength
 ntimes
 preds
-sink()
+# sink()
