@@ -70,8 +70,11 @@ if (na_feats < nfeats) {
     pca = F
   }
   print(sprintf('evaluating %s', dset))
-  preds = c(preds, vote_hiOutcome(X, s, pca=pca)[[1]])
-}
+  res = vote_hiOutcome(X, s, pca=pca)[[1]]
+  } else {
+      res = NA
+  }
+  preds = c(preds, res)
 }
 dsets
 model
