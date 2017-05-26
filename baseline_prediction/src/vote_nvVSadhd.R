@@ -101,8 +101,11 @@ for (dset in dsets) {
       }
       print(sprintf('evaluating %s', dset))
       res = vote_nvVSadhd(X, s, uni=uni, pca=pca, do_rfe=do_rfe)['ADHD'][[1]]
-      preds = c(preds, res)
   }
+  else {
+      res = NA
+  }
+  preds = c(preds, res)
 }
 dsets
 model
