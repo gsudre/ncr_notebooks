@@ -1,10 +1,14 @@
-s=5
+args = commandArgs(trailingOnly=TRUE)
+s=as.numeric(args[1])
+model = args[2]
+
 ntimes = 50
-model = 'svmRadial'
 myseed = 1234
 tuneLength = 10
 cpuDiff = 0
-out_fname = sprintf('~/tmp/test_%s', model)
+out_fname = sprintf('/data/NCR_SBRB/loocv/nvVSadhd_%s/s%03d.log', model, s)
+sink(out_fname, append=FALSE, split=TRUE)
+source('~/ncr_notebooks/baseline_prediction/src/load_voting_data.R')
 dsets = c('prs', 'geospatial', 'neuropsych', 'struct_rois', 'dti_tracts')
 vote_nvVSadhd = function(X, s, uni=T, pca=T, do_rfe=F) {
   y = gf_base$DX_BASELINE
@@ -87,8 +91,8 @@ for (dset in dsets) {
       if (dset %in% c('brain_fa', 'brain_ad', 'brain_rd',
                       'brain_thickness', 'brain_volume', 'brain_area',
                       'struct_rois')) {
-        uni = .05
-        pca = T
+        uni = 0
+        pca = F
         do_rfe = F
       } else {
         uni = 0
@@ -100,7 +104,10 @@ for (dset in dsets) {
       preds = c(preds, res)
   }
 }
-print(preds)
-write(c(s, preds), file=sprintf('%s.preds', out_fname), append=T, ncolumns=(length(preds)+1))
-save(dsets, model, myseed, tuneLength, ntimes,
-     file=sprintf('%s.RData', out_fname))
+dsets
+model
+myseed
+tuneLength
+ntimes
+preds
+sink()
