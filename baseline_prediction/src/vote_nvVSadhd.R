@@ -6,6 +6,11 @@ ntimes = 50
 myseed = 1234
 tuneLength = 10
 cpuDiff = 0
+if (model %in% c('ranger')) {
+    allowParallel = FALSE
+} else {
+    allowParallel = TRUE
+}
 out_fname = sprintf('/data/NCR_SBRB/loocv/nvVSadhd_%s/s%03d.log', model, s)
 sink(out_fname, append=FALSE, split=TRUE)
 source('~/ncr_notebooks/baseline_prediction/src/load_voting_data.R')
@@ -66,7 +71,7 @@ vote_nvVSadhd = function(X, s, uni=T, pca=T, do_rfe=F) {
                              savePredictions="final",
                              classProbs=TRUE,
                              summaryFunction=twoClassSummary,
-                             allowParallel=T)
+                             allowParallel=allowParallel)
     set.seed(myseed)
     mymod = train(Xtrain, ytrain,
                   tuneLength=tuneLength,
