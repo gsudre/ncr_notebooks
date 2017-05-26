@@ -8,6 +8,9 @@ cpuDiff = 0
 dsets = c('prs', 'geospatial', 'neuropsych', 'struct_rois', 'dti_tracts')
 
 source('~/ncr_notebooks/baseline_prediction/src/load_voting_data.R')
+out_fname = sprintf('/data/NCR_SBRB/loocv/nvVSadhd_%s/s%03d.log', model, s)
+sink(out_fname, append=FALSE, split=TRUE)
+
 vote_hiOutcome = function(X, s, uni=T, pca=T, do_rfe=F) {
   y = gf_base$HI3_named
   y = factor(y)
@@ -70,5 +73,10 @@ if (na_feats < nfeats) {
   preds = c(preds, vote_hiOutcome(X, s, pca=pca)[[1]])
 }
 }
-print(preds)
-print(proc.time() - ptm)
+dsets
+model
+myseed
+tuneLength
+ntimes
+preds
+sink()
