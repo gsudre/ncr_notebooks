@@ -41,7 +41,6 @@ vote_hiOutcome = function(X, s, uni=T, pca=T, do_rfe=F) {
                 metric='Accuracy',
                 method=model,
                 preProcess = c('medianImpute'))
-    print(getTrainPerf(mymod))
   return(predict(mymod, newdata=Xtest))
 }
 
