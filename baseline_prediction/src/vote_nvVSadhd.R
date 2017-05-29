@@ -2,7 +2,7 @@ args = commandArgs(trailingOnly=TRUE)
 s=as.numeric(args[1])
 model = args[2]
 
-ntimes = 50
+ntimes = 200
 myseed = 1234
 tuneLength = 10
 cpuDiff = 0
@@ -14,8 +14,8 @@ if (model %in% c('ranger')) {
 out_fname = sprintf('/data/NCR_SBRB/loocv/nvVSadhd_%s/s%03d.log', model, s)
 sink(out_fname, append=FALSE, split=TRUE)
 source('~/ncr_notebooks/baseline_prediction/src/load_voting_data.R')
-dsets = c('prs', 'geospatial', 'neuropsych', 'struct_rois', 'dti_tracts',
-          'brain_fa', 'brain_ad', 'brain_rd')#,
+dsets = c('prs', 'geospatial', 'neuropsych', 'struct_rois', 'dti_tracts')#,
+          # 'brain_fa', 'brain_ad', 'brain_rd')#,
         #   'brain_thickness', 'brain_volume', 'brain_area')
 vote_nvVSadhd = function(X, s, uni=T, pca=T, do_rfe=F) {
   y = gf_base$DX_BASELINE
@@ -109,6 +109,9 @@ for (dset in dsets) {
         do_rfe = F
       }
       print(sprintf('evaluating %s', dset))
+      uni
+      pca
+      do_rfe
       res = vote_nvVSadhd(X, s, uni=uni, pca=pca, do_rfe=do_rfe)['ADHD'][[1]]
   }
   else {
