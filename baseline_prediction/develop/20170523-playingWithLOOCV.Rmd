@@ -296,6 +296,7 @@ IMPROVE EACH INDIVIDUAL VOTER BY TRYING DIFFERENT PRS AND BRAIN VOXEL?
 MAYBE VOTE ACROSS CLASSIFIERS?
 DO ANOTHER CV TO WEIGHT THE DIFFERENT MODALITIES? OR WEIGHT BASED ON TRAINING? SAME ACROSS CLASSIFIERS?
 FOR THE 3 CLASSES, HOW ABOUT CLASSIFY 2, THEN THE SUBCLASS?
+ISSUE: HAVING A HARD TIME REPLICATING THE 50 NTIMES RESULTS, EVEN SCORING ONLY THE NON-VOXEL STUFF. I'M RUNNING NOW WITH 200 NTIMES AND NO VOXELWISE TO SEE WHAT I GET
 
 I want to try a series of models that do some sort of feature selection themselves (whether it's stepwise through a wrapper or implicit), timing them, and checking whether they deal with multiple classes. We can run them for 3 different subjects to get an average + sd for time running.
 

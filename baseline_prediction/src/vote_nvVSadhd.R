@@ -100,6 +100,7 @@ for (dset in dsets) {
       eval(parse(text=sprintf('X = %s', dset)))
       if (dset %in% c('brain_fa', 'brain_ad', 'brain_rd',
                       'brain_thickness', 'brain_volume', 'brain_area')) {
+        print('Univariate filters + PCA')
         uni = 0.05
         pca = T
         do_rfe = F
