@@ -2,7 +2,7 @@ args = commandArgs(trailingOnly=TRUE)
 s=as.numeric(args[1])
 model = args[2]
 
-ntimes = 200
+ntimes = 50
 myseed = 1234
 tuneLength = 10
 cpuDiff = 0
@@ -18,7 +18,8 @@ dsets = c('prs', 'geospatial', 'neuropsych', 'struct_rois', 'dti_tracts')#,
           # 'brain_fa', 'brain_ad', 'brain_rd')#,
         #   'brain_thickness', 'brain_volume', 'brain_area')
 vote_nvVSadhd = function(X, s, uni=T, pca=T, do_rfe=F) {
-  y = gf_base$DX_BASELINE
+  # need to use it from merged instead of gf_base because unique() use dfor my_ids changes the order of MRNs!
+  y = merged$DX_BASELINE
   y[y!='NV'] = 'ADHD'
   y = factor(y, levels=c('ADHD', 'NV'))
 
