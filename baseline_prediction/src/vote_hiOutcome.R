@@ -12,7 +12,8 @@ out_fname = sprintf('/data/NCR_SBRB/loocv/hiOutcome_%s/s%03d.log', model, s)
 sink(out_fname, append=FALSE, split=TRUE)
 
 vote_hiOutcome = function(X, s, uni=T, pca=T, do_rfe=F) {
-  y = gf_base$HI3_named
+  # need to use it from merged instead of gf_base because unique() use dfor my_ids changes the order of MRNs!
+  y = merged$HI3_named
   y = factor(y)
 
   Xtrain <- X[ -s, ]
