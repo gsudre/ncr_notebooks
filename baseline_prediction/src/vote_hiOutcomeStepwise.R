@@ -8,7 +8,7 @@ cpuDiff = 0
 dsets = c('prs', 'geospatial', 'neuropsych', 'struct_rois', 'dti_tracts')
 
 source('~/ncr_notebooks/baseline_prediction/src/load_voting_data.R')
-out_fname = sprintf('/data/NCR_SBRB/loocv/hiOutcome_%s/s%03d.log', model, s)
+out_fname = sprintf('/data/NCR_SBRB/loocv/hiOutcomeStepwise_%s/s%03d.log', model, s)
 sink(out_fname, append=FALSE, split=TRUE)
 
 if (model %in% c('ranger')) {
