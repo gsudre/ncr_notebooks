@@ -59,21 +59,14 @@ print(sprintf('LOOCV %d / %d', s, nsubjs))
 ptm <- proc.time()
 preds = c()
 for (dset in dsets) {
-eval(parse(text=sprintf('nfeats = ncol(%s)', dset)))
-eval(parse(text=sprintf('na_feats = sum(is.na(%s[s, ]))', dset)))
-if (na_feats < nfeats) {
-  eval(parse(text=sprintf('X = %s', dset)))
-  if (dset %in% c('brain_fa', 'brain_ad', 'brain_rd',
-                  'brain_thickness', 'brain_volume', 'brain_area',
-                  'struct_rois')) {
-    pca = T
+  eval(parse(text=sprintf('nfeats = ncol(%s)', dset)))
+  eval(parse(text=sprintf('na_feats = sum(is.na(%s[s, ]))', dset)))
+  if (na_feats < nfeats) {
+    eval(parse(text=sprintf('X = %s', dset)))
+    print(sprintf('evaluating %s', dset))
+    res = vote_hiOutcome(X, s, pca=F)[[1]]
   } else {
-    pca = F
-  }
-  print(sprintf('evaluating %s', dset))
-  res = vote_hiOutcome(X, s, pca=pca)[[1]]
-  } else {
-      res = NA
+    res = NA
   }
   preds = c(preds, res)
 }
