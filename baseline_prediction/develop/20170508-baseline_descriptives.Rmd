@@ -20,6 +20,7 @@ For now, let's focus on the classes first (i.e. DX and outcome), which are a bit
 nvVSadhd_test = function(pheno, df, fm_str) {
   library(compute.es)
   library(lsr)
+  
   # some struct variables are bad
   if (sum(pheno, na.rm=T) == 0) {
     tstat = NA
@@ -662,4 +663,92 @@ res3 = sapply(X, symptom_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)
 slopes = get_SX_slope(gf, merged$MRN)
 res4 = sapply(X, sx_slope_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)', slopes)
 write.csv(cbind(t(res), t(res2), t(res3), t(res4)), file='~/data/baseline_prediction/descriptives/prs.csv')
+```
+
+# Main lobar structures
+```{r}
+gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
+gf = read.csv(gf_fname)
+gf_base = gf[gf$BASELINE=='BASELINE', ]
+struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
+rm_me = (struct_data$mprage_score > 2)
+struct_data = struct_data[!rm_me, ]
+my_ids = intersect(gf_base$MRN, struct_data$MRN)
+merged = mergeOnClosestDate(gf_base, struct_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+merged = merged[!rm_me, ]
+X = merged[, 33:302]
+rm_me = colSums(is.na(X)) > 0
+X = X[, !rm_me]
+keep_me = merged$age <= 12
+X = X[keep_me, ]
+merged = merged[keep_me, ]
+print(sprintf('Freesurfer ROIs: %d datapoints, %d phenotypes', nrow(X), ncol(X)))
+
+regional = read.csv('~/data/baseline_prediction/REGIONAL_ANALYSES_FREESURFER.csv')
+lobar_regions = unique(regional$lobar)
+# for each region, add or average the columns corresponding to the ROIs
+areaLobar_data = c()
+hdr = c()
+volumeLobar_data = c()
+thicknessLobar_data = c()
+aparcLobar_data = c()
+aparc_hdr = c()
+for (s in lobar_regions) {
+  if (s != "") {
+    idx = which(regional$lobar == s)
+    area = 0
+    volume = 0
+    thickness = 0
+    aparc = 0
+    for (i in idx) {
+      cnt = 0
+      roi_name = sub('_thickness', '', regional[i, 1])
+      if (length(grep('rh_|lh_', roi_name)) > 0) {
+        var_name = quote(sprintf('%s_area', roi_name))
+        area = area + X[, eval(var_name)]
+        var_name = quote(sprintf('%s_volume', roi_name))
+        volume = volume + X[, eval(var_name)]
+        var_name = quote(sprintf('%s_thickness', roi_name))
+        thickness = thickness + X[, eval(var_name)]
+        cnt = cnt + 1
+      }
+      else {
+        var_name = quote(roi_name)
+        aparc = aparc + X[, eval(var_name)]
+      }
+    }
+    if (sum(area) > 0) {
+      hdr = c(hdr, s)
+      areaLobar_data = cbind(areaLobar_data, area)
+      volumeLobar_data = cbind(volumeLobar_data, volume)
+      thicknessLobar_data = cbind(thicknessLobar_data, thickness / cnt)
+    }
+    else {
+      aparc_hdr = c(aparc_hdr, s)
+      aparcLobar_data = cbind(aparcLobar_data, aparc)
+    }
+  }
+}
+colnames(areaLobar_data) = hdr
+colnames(volumeLobar_data) = hdr
+colnames(thicknessLobar_data) = hdr
+colnames(aparcLobar_data) = aparc_hdr
+
+library(parallel)
+cl <- makeCluster(4)
+res = parSapply(cl,as.data.frame(areaLobar_data), nvVSadhd_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
+res2 = parSapply(cl, as.data.frame(areaLobar_data), outcome_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
+write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/lobar_area.csv')
+res = parSapply(cl, as.data.frame(volumeLobar_data), nvVSadhd_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
+res2 = parSapply(cl, as.data.frame(volumeLobar_data), outcome_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
+write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/lobar_volume.csv')
+res = parSapply(cl, as.data.frame(thicknessLobar_data), nvVSadhd_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
+res2 = parSapply(cl, as.data.frame(thicknessLobar_data), outcome_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
+write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/lobar_thickness.csv')
+res = parSapply(cl, as.data.frame(aparcLobar_data), nvVSadhd_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
+res2 = parSapply(cl, as.data.frame(aparcLobar_data), outcome_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
+stopCluster(cl)
+write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/lobar_aparc.csv')
+
 ```

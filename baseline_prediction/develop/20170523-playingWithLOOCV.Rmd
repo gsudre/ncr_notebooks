@@ -569,3 +569,87 @@ for (s in 1:2){#nsubjs) {
   }
 }
 ```
+
+Let's try something that uses the entire feature set and the Ada family:
+
+```{r}
+ntimes = 50
+model = 'AdaBag'
+myseed = 1234
+tuneLength = 10
+cpuDiff = 0
+dsets = c('prs', 'geospatial', 'neuropsych', 'struct_rois', 'dti_tracts')
+vote_nvVSadhdNA = function(X, s) {
+  y = merged$DX_BASELINE
+  y[y!='NV'] = 'ADHD'
+  y = factor(y, levels=c('ADHD', 'NV'))
+  
+  Xtrain <- X[ -s, ]
+  ytrain <- y[ -s ]
+  Xtest  <- X[s, ]
+  
+  # remove training examples that are all NaN. Note that this will never happen for testing!
+  rm_me = rowSums(is.na(Xtrain)) == ncol(Xtrain)
+  Xtrain = Xtrain[!rm_me,]
+  ytrain = ytrain[!rm_me]
+  
+  pp = preProcess(Xtrain, method=c('YeoJohnson', 'center', 'scale'))
+  Xtrain = predict(pp, Xtrain)
+  Xtest = predict(pp, Xtest)
+  nzv = nearZeroVar(Xtrain)
+  if (length(nzv) > 0) {
+    Xtrain = Xtrain[, -nzv]
+  }
+  correlations = cor(Xtrain, use='na.or.complete')
+  
+  highCorr = findCorrelation(correlations, cutoff=.75)
+  print(length(highCorr))
+  if (length(highCorr) > 0) {
+    Xtrain = Xtrain[, -highCorr]
+    Xtest = Xtest[, -highCorr]
+  }
+  print(dim(Xtrain))
+  
+  set.seed(myseed)
+  fullCtrl <- trainControl(method = "boot",
+                           number = ntimes,
+                           savePredictions="final",
+                           classProbs=TRUE,
+                           summaryFunction=twoClassSummary,
+                           allowParallel=T)
+  set.seed(myseed)
+  mymod = train(Xtrain, ytrain,
+                tuneLength=tuneLength,
+                trControl=fullCtrl,
+                metric='ROC',
+                method=model)
+  return(predict(mymod, newdata=Xtest, type='prob')) 
+}
+
+nsubjs = nrow(merged)
+preds = matrix(nrow=nsubjs, ncol=length(dsets)+1)
+colnames(preds) = c(dsets, 'all')
+rownames(preds) = merged$MRN
+library(doMC)
+ncpus <- detectBatchCPUs()
+njobs <- ncpus - cpuDiff
+registerDoMC(njobs)
+
+# get a vote for each dset if the participant has data in the domain
+for (s in 1:2){#nsubjs) {
+  print(sprintf('LOOCV %d / %d', s, nsubjs))
+  Xall = c()
+  for (dset in dsets) {
+    eval(parse(text=sprintf('nfeats = ncol(%s)', dset)))
+    eval(parse(text=sprintf('na_feats = sum(is.na(%s[s, ]))', dset)))
+    if (na_feats < nfeats) {
+      print(sprintf('evaluating %s', dset))
+      eval(parse(text=sprintf('X = %s', dset)))
+      preds[s, dset] = vote_nvVSadhdNA(X, s)['ADHD'][[1]]
+      Xall = cbind(Xall, X)
+    }
+    print('evaluating all')
+    preds[s, 'all'] = vote_nvVSadhdNA(Xall, s)['ADHD'][[1]]
+  }
+}
+```
