@@ -653,3 +653,96 @@ for (s in 1:2){#nsubjs) {
   }
 }
 ```
+Now we'll try to predict rate of symtom change:
+
+```{r}
+get_SX_slope = function (df, ids) {
+  inatt = c()
+  hi = c()
+  mrns = c()
+  for (s in ids) {
+    idx = df$MRN==s
+    # proceed if we have more than one observation in the data
+    if (sum(idx) >= 2) {
+      inatt = c(inatt, lm(SX_inatt ~ age, data=df[idx,])$coefficients[[2]])
+      hi = c(hi, lm(SX_HI ~ age, data=df[idx,])$coefficients[[2]])
+      mrns = c(mrns, s)
+    }
+  }
+  res = cbind(inatt, hi)
+  colnames(res) = c('inatt', 'hi')
+  rownames(res) = mrns
+  return(res)
+}
+
+ntimes = 50
+model = 'rf'
+myseed = 1234
+tuneLength = 10
+cpuDiff = 0
+dsets = c('prs', 'geospatial', 'neuropsych', 'struct_rois', 'dti_tracts')
+
+vote_slopeSX = function(X, y, s) {
+  if (model %in% c('ranger')) {
+    allowParallel = FALSE
+  } else {
+    allowParallel = TRUE
+  }
+  
+  Xtrain <- X[ -s, ]
+  ytrain <- y[ -s ]
+  Xtest  <- X[s, ]
+  
+  # remove training examples that are all NaN. Note that this will never happen for testing!
+  rm_me = rowSums(is.na(Xtrain)) == ncol(Xtrain)
+  Xtrain = Xtrain[!rm_me,]
+  ytrain = ytrain[!rm_me]
+  
+   
+  set.seed(myseed)
+  fullCtrl <- trainControl(method = "boot",
+                           number = ntimes,
+                           savePredictions="final",
+                           summaryFunction=defaultSummary,
+                           allowParallel=allowParallel)
+  set.seed(myseed)
+  mymod = train(Xtrain, ytrain,
+                tuneLength=tuneLength,
+                trControl=fullCtrl,
+                method=model,
+                preProcess = c('medianImpute'))
+    
+  pred = predict(mymod, newdata=Xtest)
+  return(pred)
+}
+
+nsubjs = nrow(gf_base)
+preds = matrix(nrow=nsubjs, ncol=length(dsets))
+colnames(preds) = dsets
+rownames(preds) = merged$MRN
+library(doMC)
+ncpus <- detectBatchCPUs()
+njobs <- ncpus - cpuDiff
+registerDoMC(njobs)
+slopes = get_SX_slope(gf, merged$MRN)
+means = colMeans(slopes)
+print('NIR inatt:')
+RMSE(means['inatt'], slopes[, 'inatt'])
+print('NIR hi:')
+RMSE(means['hi'], slopes[, 'hi'])
+
+# get a vote for each dset if the participant has data in the domain
+for (s in 1:2){#nsubjs) {
+  print(sprintf('LOOCV %d / %d', s, nsubjs))
+  for (dset in dsets) {
+    eval(parse(text=sprintf('nfeats = ncol(%s)', dset)))
+    eval(parse(text=sprintf('na_feats = sum(is.na(%s[s, ]))', dset)))
+    if (na_feats < nfeats) {
+      eval(parse(text=sprintf('X = %s', dset)))
+      preds[s, dset] = vote_slopeSX(X, slopes[,'hi'], s)
+    }
+  }
+}
+
+
+```

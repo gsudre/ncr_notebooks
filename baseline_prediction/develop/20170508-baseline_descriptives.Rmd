@@ -69,6 +69,10 @@ outcome_test = function(pheno, df, fm_str) {
     fstat2 = NA
     pval2 = NA
   } else {
+    # remove NAs
+    keep_me = !is.na(pheno)
+    pheno = pheno[keep_me]
+    df = df[keep_me, ]
     if (! is.na(fm_str)) {
       cutoff = .1
       # NOTE that in R, the covariates you want to remove in aov() should come first in the equation!
@@ -89,6 +93,7 @@ outcome_test = function(pheno, df, fm_str) {
     }
     else { fm = 'pheno ~ y' }
     
+    print(fm)
     y = df$inatt3_named
     opt_fit = aov(lm(as.formula(fm)))
     mycoef = nrow(summary(opt_fit)[[1]]) - 1 # last row is residuals
@@ -109,6 +114,56 @@ outcome_test = function(pheno, df, fm_str) {
                  'hiOutcome_Fstat', 'hiOutcome_pval', 'hiOutcome_es')
   return(res)
 }
+
+
+outcomePairwise_test = function(pheno, df, get_resid=T) {
+  library(lsr)
+  if (sum(pheno, na.rm = T) == 0) {
+    fstat = NA
+    pval = NA
+    fstat2 = NA
+    pval2 = NA
+  } else {
+    if (get_resid) {
+      pheno = get_needed_residuals(pheno, 'y ~ df$age + I(df$age^2) + df$SEX', .1, df)
+    }    
+    y = df$inatt3_named
+    fit = pairwise.t.test(pheno, y, p.adjust.method = 'none')
+    mypairs = list(c('low', 'high'), c('medium', 'high'), c('medium', 'low'))
+    ps = c()
+    ds = c()
+    pnames = c()
+    dnames = c()
+    for (pa in mypairs) {
+      myp = fit$p.value[pa[1], pa[2]]
+      ps = c(ps, myp)
+      ds = c(ds, pes(myp, table(y)[pa[1]], table(y)[pa[2]], verbose=FALSE)$d)
+      pnames = c(pnames, sprintf('inatt_%sVS%s_pval', pa[1], pa[2]))
+      dnames = c(dnames, sprintf('inatt_%sVS%s_es', pa[1], pa[2]))
+    }
+    
+    y = df$HI3_named
+    fit = pairwise.t.test(pheno, y, p.adjust.method = 'none')
+    mypairs = list(c('rapid_improvers', 'never_affected'), c('severe', 'never_affected'),
+                   c('severe', 'rapid_improvers'))
+    ps2 = c()
+    ds2 = c()
+    pnames2 = c()
+    dnames2 = c()
+    for (pa in mypairs) {
+      myp = fit$p.value[pa[1], pa[2]]
+      ps2 = c(ps2, myp)
+      ds2 = c(ds2, pes(myp, table(y)[pa[1]], table(y)[pa[2]], verbose=FALSE)$d)
+      pnames2 = c(pnames2, sprintf('HI_%sVS%s_pval', pa[1], pa[2]))
+      dnames2 = c(dnames2, sprintf('HI_%sVS%s_es', pa[1], pa[2]))
+    }
+  }
+  
+  res = c(ps, ds, ps2, ds2)
+  names(res) = c(pnames, dnames, pnames2, dnames2)
+  return(res)
+}
+
 
 symptom_test = function(pheno, df, fm_str) {
   library(compute.es)
@@ -243,8 +298,8 @@ rm_me = abs(merged$dateX.minus.dateY.months) > 12
 merged = merged[!rm_me, ]
 phen_vars = c(which(grepl("^FA_", colnames(merged))),
               which(grepl("^AD_", colnames(merged))),
-              which(grepl("^RD_", colnames(merged))),
-              which(grepl("^MO_", colnames(merged)))
+              which(grepl("^RD_", colnames(merged)))
+              # which(grepl("^MO_", colnames(merged)))
               )
 X = merged[, phen_vars]
 keep_me = merged$age <= 12
@@ -254,7 +309,12 @@ print(sprintf('DTI tracts: %d datapoints, %d phenotypes', nrow(X), ncol(X)))
 
 res = sapply(X, nvVSadhd_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
 res2 = sapply(X, outcome_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
-write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/dti_tracts.csv')
+res3 = sapply(X, symptom_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)')
+slopes = get_SX_slope(gf, merged$MRN)
+res4 = sapply(X, sx_slope_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)', slopes)
+res5 = sapply(X, outcomePairwise_test, merged)
+write.csv(cbind(t(res), t(res2), t(res3), t(res4), t(res5)),
+          file='~/data/baseline_prediction/descriptives/dti_tracts.csv')
 ```
 ## Voxel-based
 
@@ -583,6 +643,7 @@ mwj$dateX.minus.dateY.months = NULL
 
 res = nvVSadhd_test(miq$FSIQ, miq, NA)
 res2 = outcome_test(miq$FSIQ, miq, NA)
+res5 = outcomePairwise_test(miq$FSIQ, miq, F)
 
 phen_vars = c('N_of_omissions', 'N_commissions', 'hit_RT', 'hit_RT_SE', 'variability_of_SE', 'N_perservations',
               'hit_RT_block_change', 'hit_RT_SE_block_change', 'hit_RT_ISI_change', 'hit_RT_SE_ISI_change')
@@ -592,29 +653,37 @@ res = cbind(res, sapply(X, nvVSadhd_test, mcpt, 'pheno ~ df$age + df$SEX + I(df$
 colnames(res)[1] = 'FSIQ'
 res2 = cbind(res2, sapply(X, outcome_test, mcpt, 'pheno ~ df$age + df$SEX + I(df$age^2)'))
 colnames(res2)[1] = 'FSIQ'
+res5 = cbind(res5, sapply(X, outcomePairwise_test, mcpt))
+colnames(res5)[1] = 'FSIQ'
 
 phen_vars = c('Raw.score..DSF', 'Raw.score..DSB', 'Raw.score..SSF', 'Raw.score..SSB')
 keep_me = sapply(phen_vars, function(d) which(colnames(mwisc) == d))
 X = mwisc[, keep_me]
 res = cbind(res, sapply(X, nvVSadhd_test, mwisc, 'pheno ~ df$age + df$SEX + I(df$age^2)'))
 res2 = cbind(res2, sapply(X, outcome_test, mwisc, 'pheno ~ df$age + df$SEX + I(df$age^2)'))
+res5 = cbind(res5, sapply(X, outcomePairwise_test, mwisc))
 
 phen_vars = c('Raw.Score..VM', 'Raw.Score..DS')
 keep_me = sapply(phen_vars, function(d) which(colnames(mwj) == d))
 X = mwj[, keep_me]
 res = cbind(res, sapply(X, nvVSadhd_test, mwj, 'pheno ~ df$age + df$SEX + I(df$age^2)'))
 res2 = cbind(res2, sapply(X, outcome_test, mwj, 'pheno ~ df$age + df$SEX + I(df$age^2)'))
+res5 = cbind(res5, sapply(X, outcomePairwise_test, mwj))
 
 res = cbind(res, nvVSadhd_test(mwj$PS, mwj, NA))
 res2 = cbind(res2, outcome_test(mwj$PS, mwj, NA))
+res5 = cbind(res5, outcomePairwise_test(mwj$PS, mwj, F))
 colnames(res)[ncol(res)] = 'PS'
 colnames(res2)[ncol(res2)] = 'PS'
+colnames(res5)[ncol(res5)] = 'PS'
 res = cbind(res, nvVSadhd_test(mbeery$Standard.score, mbeery, NA))
 res2 = cbind(res2, outcome_test(mbeery$Standard.score, mbeery, NA))
+res5 = cbind(res5, outcomePairwise_test(mbeery$Standard.score, mbeery, F))
 colnames(res)[ncol(res)] = 'Beery_VM'
 colnames(res2)[ncol(res2)] = 'Beery_VM'
+colnames(res5)[ncol(res5)] = 'Beery_VM'
 
-write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/neuropsych.csv')
+write.csv(cbind(t(res), t(res2), t(res5)), file='~/data/baseline_prediction/descriptives/neuropsych.csv')
 ```
 
 
@@ -642,7 +711,12 @@ X = merged[, keep_me]
 print(sprintf('Geospatial: %d datapoints, %d phenotypes', nrow(X), ncol(X)))
 res = sapply(X, nvVSadhd_test, merged, 'pheno ~ df$age + df$SEX + I(df$age^2)')
 res2 = sapply(X, outcome_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)')
-# write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/geospatial.csv')
+res3 = sapply(X, symptom_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)')
+slopes = get_SX_slope(gf, merged$MRN)
+res4 = sapply(X, sx_slope_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)', slopes)
+res5 = sapply(X, outcomePairwise_test, merged)
+write.csv(cbind(t(res), t(res2), t(res3), t(res4), t(res5)),
+          file='~/data/baseline_prediction/descriptives/geospatial.csv')
 ```
 # Resting state
 
@@ -662,7 +736,9 @@ res2 = sapply(X, outcome_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)
 res3 = sapply(X, symptom_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)')
 slopes = get_SX_slope(gf, merged$MRN)
 res4 = sapply(X, sx_slope_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)', slopes)
-write.csv(cbind(t(res), t(res2), t(res3), t(res4)), file='~/data/baseline_prediction/descriptives/prs.csv')
+res5 = sapply(X, outcomePairwise_test, merged)
+write.csv(cbind(t(res), t(res2), t(res3), t(res4), t(res5)),
+          file='~/data/baseline_prediction/descriptives/prs.csv')
 ```
 
 # Main lobar structures
@@ -742,7 +818,12 @@ res2 = parSapply(cl, as.data.frame(areaLobar_data), outcome_test, merged, 'pheno
 write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/lobar_area.csv')
 res = parSapply(cl, as.data.frame(volumeLobar_data), nvVSadhd_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
 res2 = parSapply(cl, as.data.frame(volumeLobar_data), outcome_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
-write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/lobar_volume.csv')
+res3 = sapply(as.data.frame(volumeLobar_data), symptom_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)')
+slopes = get_SX_slope(gf, merged$MRN)
+res4 = sapply(as.data.frame(volumeLobar_data), sx_slope_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)', slopes)
+res5 = sapply(as.data.frame(volumeLobar_data), outcomePairwise_test, merged)
+write.csv(cbind(t(res), t(res2), t(res3), t(res4), t(res5)),
+          file='~/data/baseline_prediction/descriptives/lobar_volume.csv')
 res = parSapply(cl, as.data.frame(thicknessLobar_data), nvVSadhd_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
 res2 = parSapply(cl, as.data.frame(thicknessLobar_data), outcome_test, merged, 'pheno ~ df$age + I(df$age^2) + df$SEX')
 write.csv(cbind(t(res), t(res2)), file='~/data/baseline_prediction/descriptives/lobar_thickness.csv')
