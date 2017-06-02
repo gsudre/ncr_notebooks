@@ -7,8 +7,8 @@ myseed = 1234
 tuneLength = 10
 cpuDiff = 0
 
-# out_fname = sprintf('/data/NCR_SBRB/loocv/%s_sx_slope_%s/s%03d.log', mysx, model, s)
-out_fname = sprintf('~/tmp/s%03d.log', s)
+out_fname = sprintf('/data/NCR_SBRB/loocv/%s_sx_slope_%s/s%03d.log', mysx, model, s)
+# out_fname = sprintf('~/tmp/s%03d.log', s)
 sink(out_fname, append=FALSE, split=TRUE)
 
 get_SX_slope = function (df, ids) {
