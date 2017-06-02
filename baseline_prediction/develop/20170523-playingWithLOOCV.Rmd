@@ -676,7 +676,7 @@ get_SX_slope = function (df, ids) {
 }
 
 ntimes = 50
-model = 'rf'
+model = 'enet'
 myseed = 1234
 tuneLength = 10
 cpuDiff = 0
@@ -738,6 +738,7 @@ for (s in 1:2){#nsubjs) {
     eval(parse(text=sprintf('nfeats = ncol(%s)', dset)))
     eval(parse(text=sprintf('na_feats = sum(is.na(%s[s, ]))', dset)))
     if (na_feats < nfeats) {
+      print(sprintf('evaluating %s', dset))
       eval(parse(text=sprintf('X = %s', dset)))
       preds[s, dset] = vote_slopeSX(X, slopes[,'hi'], s)
     }
