@@ -1,11 +1,12 @@
 args = commandArgs(trailingOnly=TRUE)
 s=as.numeric(args[1])
-ntimes = 2
+ntimes = 50
 model = args[2]
 mysx = args[3]
 myseed = 1234
 tuneLength = 10
 cpuDiff = 0
+adhdOnly = F
 
 out_fname = sprintf('/data/NCR_SBRB/loocv/%s_sx_slope_%s/s%03d.log', mysx, model, s)
 # out_fname = sprintf('~/tmp/s%03d.log', s)
@@ -36,10 +37,16 @@ library(doMC)
 ncpus <- detectBatchCPUs()
 njobs <- ncpus - cpuDiff
 registerDoMC(njobs)
-slopes = get_SX_slope(gf, merged$MRN)
-
-X = cbind(prs, geospatial, neuropsych, struct_rois, dti_tracts)
+if (adhdOnly) {
+  idx = which(merged$DX_BASELINE!='NV')
+  ids = merged[idx,]$MRN
+} else {
+  idx = 1:nrow(merged)
+  ids = merged$MRN
+}
+slopes = get_SX_slope(gf, ids)
 y = slopes[, mysx]
+X = cbind(prs, geospatial, neuropsych, struct_rois, dti_tracts)[idx, ]
 
 Xtrain <- X[-s, ]
 ytrain <- y[-s]
@@ -73,6 +80,7 @@ mymod
 myseed
 tuneLength
 ntimes
+adhdOnly
 pred
 sink()
 

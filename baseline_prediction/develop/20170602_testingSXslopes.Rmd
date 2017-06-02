@@ -33,6 +33,7 @@ model = 'enet'
 myseed = 1234
 tuneLength = 10
 cpuDiff = 0
+mysx = 'inatt'
 
 library(caret)
 library(doMC)
@@ -40,14 +41,9 @@ ncpus <- detectBatchCPUs()
 njobs <- ncpus - cpuDiff
 registerDoMC(njobs)
 slopes = get_SX_slope(gf, merged$MRN)
-means = colMeans(slopes)
-print('NIR inatt:')
-RMSE(means['inatt'], slopes[, 'inatt'])
-print('NIR hi:')
-RMSE(means['hi'], slopes[, 'hi'])
 
 X = cbind(prs, geospatial, neuropsych, struct_rois, dti_tracts)
-y = slopes[,'hi']
+y = slopes[, mysx]
 
 Xtrain <- X
 ytrain <- y 
@@ -64,17 +60,29 @@ set.seed(myseed)
 fullCtrl <- trainControl(method = "boot",
                          number = ntimes,
                          savePredictions="final",
-                         summaryFunction=defaultSummary,
-                         allowParallel=allowParallel)
+                         summaryFunction=defaultSummary)
 set.seed(myseed)
-mymod = train(Xtrain, ytrain,
+mymod1 = train(Xtrain, ytrain,
               tuneLength=tuneLength,
               trControl=fullCtrl,
-              method=model,
+              method='enet',
               preProcess = c('medianImpute'))
 
-pred = predict(mymod, newdata=Xtest)
-RMSE(pred, slopes[, 'hi'])
+mymod2 = train(Xtrain, ytrain,
+              tuneLength=tuneLength,
+              trControl=fullCtrl,
+              method='rf',
+              preProcess = c('medianImpute'))
+
+means = colMeans(slopes)
+print(sprintf('NIR %s:', mysx))
+RMSE(means[mysx], slopes[, mysx])
+
+pred1 = predict(mymod1, newdata=Xtest)
+RMSE(pred1, slopes[, mysx])
+pred2 = predict(mymod2, newdata=Xtest)
+RMSE(pred2, slopes[, mysx])
+
 ```
 
 
