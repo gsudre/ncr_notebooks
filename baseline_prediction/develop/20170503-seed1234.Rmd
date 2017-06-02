@@ -158,27 +158,27 @@ Confusion Matrix and Statistics
 
           Reference
 Prediction ADHD NV
-      ADHD   22  7
-      NV      9 20
-                                         
-               Accuracy : 0.7241         
-                 95% CI : (0.591, 0.8334)
-    No Information Rate : 0.5345         
-    P-Value [Acc > NIR] : 0.002447       
-                                         
-                  Kappa : 0.4483         
- Mcnemar's Test P-Value : 0.802587       
-                                         
-            Sensitivity : 0.7097         
-            Specificity : 0.7407         
-         Pos Pred Value : 0.7586         
-         Neg Pred Value : 0.6897         
-             Prevalence : 0.5345         
-         Detection Rate : 0.3793         
-   Detection Prevalence : 0.5000         
-      Balanced Accuracy : 0.7252         
-                                         
-       'Positive' Class : ADHD           
+      ADHD   23  7
+      NV      8 20
+                                          
+               Accuracy : 0.7414          
+                 95% CI : (0.6096, 0.8474)
+    No Information Rate : 0.5345          
+    P-Value [Acc > NIR] : 0.0009915       
+                                          
+                  Kappa : 0.4815          
+ Mcnemar's Test P-Value : 1.0000000       
+                                          
+            Sensitivity : 0.7419          
+            Specificity : 0.7407          
+         Pos Pred Value : 0.7667          
+         Neg Pred Value : 0.7143          
+             Prevalence : 0.5345          
+         Detection Rate : 0.3966          
+   Detection Prevalence : 0.5172          
+      Balanced Accuracy : 0.7413          
+                                          
+       'Positive' Class : ADHD            
 ```
 
 # FA
@@ -396,7 +396,44 @@ model_preds <- lapply(model_preds, function(d) confusionMatrix(d, ref=ytest)$ove
 model_preds <- data.frame(model_preds)
 print(model_preds)
 ```
+```
+Models: kernelpls, svmRadial, rf
+Number of resamples: 20
 
+ROC
+            Min. 1st Qu. Median   Mean 3rd Qu.   Max. NA's
+kernelpls 0.6626  0.6929 0.7349 0.7339  0.7642 0.8330    0
+svmRadial 0.4005  0.4849 0.5310 0.5275  0.5645 0.6798    0
+rf        0.5004  0.5746 0.6211 0.6227  0.6925 0.7110    0
+
+Sens
+            Min. 1st Qu. Median   Mean 3rd Qu.   Max. NA's
+kernelpls 0.4872  0.6364 0.7596 0.7302  0.8230 0.9355    0
+svmRadial 0.2955  0.5829 0.6174 0.6119  0.6595 0.8286    0
+rf        0.4773  0.6165 0.7286 0.7141  0.7677 0.9677    0
+
+Spec
+            Min. 1st Qu. Median   Mean 3rd Qu.   Max. NA's
+kernelpls 0.2973  0.4681 0.5782 0.5582  0.6614 0.7917    0
+svmRadial 0.1500  0.2913 0.3935 0.3972  0.4756 0.6923    0
+rf        0.1351  0.3344 0.4618 0.4443  0.5647 0.7000    0
+
+> model_preds <- lapply(train_model, predict, newdata=filtXtest)
+> model_preds <- lapply(model_preds, function(d, obs) postResample(d, obs)[1], obs=ytest)
+> model_preds <- data.frame(model_preds)
+> print(model_preds)
+         kernelpls svmRadial        rf
+Accuracy 0.5972222 0.5694444 0.5416667
+> print(sprintf('No information rate: Accuracy=%f', max(table(ytrain)/length(ytrain))))
+[1] "No information rate: Accuracy=0.568047"
+> model_preds <- lapply(train_model, predict, newdata=filtXtest)
+> model_preds <- lapply(model_preds, function(d) confusionMatrix(d, ref=ytest)$overall['AccuracyPValue'])
+> model_preds <- data.frame(model_preds)
+> print(model_preds)
+               kernelpls svmRadial        rf
+AccuracyPValue  0.362497 0.5494726 0.7251324
+
+```
 # Thickness
 ```{r}
 source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
