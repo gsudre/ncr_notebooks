@@ -912,7 +912,8 @@ print(model_preds)
 
 # Everything 2 class HI no imputation
 ```{r}
-source('~/ncr_notebooks/baseline_prediction/src/load_voting_data.R')
+library(caret)
+source('~/ncr_notebooks/baseline_prediction/src/load_raw_voting_data.R')
 X = cbind(prs, geospatial, neuropsych, struct_rois, dti_tracts)
 # everything in voting_data is already < 12
 y = merged$HI3_named
