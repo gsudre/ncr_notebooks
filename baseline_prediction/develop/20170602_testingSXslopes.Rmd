@@ -24,7 +24,7 @@ get_SX_slope = function (df, ids) {
   rownames(res) = mrns
   return(res)
 }
-source('~/ncr_notebooks/baseline_prediction/src/load_voting_data.R')
+source('~/ncr_notebooks/baseline_prediction/src/load_raw_voting_data.R')
 ```
 
 ```{r}

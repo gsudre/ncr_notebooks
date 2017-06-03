@@ -853,14 +853,16 @@ AccuracyPValue 0.9656695 0.9986584 0.9231351
 
 # Everything 2 class HI
 ```{r}
-source('~/ncr_notebooks/baseline_prediction/src/load_voting_data.R')
-X = cbind(prs, geospatial, neuropsych, struct_rois, dti_tracts)
-# everything in voting_data is already < 12
-y = merged$HI3_named
+library(caret)
+source('~/ncr_notebooks/baseline_prediction/src/load_raw_voting_data.R')
+X = cbind(geospatial, prs, neuropsych, struct_rois, dti_tracts)
+# everything in voting_data is already < 12. Let's keep the first age and SEX only,
+# which will from geospatial and therefore there are no NAs (everybody has geospatial data)
+X <- X[, !duplicated(colnames(X))]
+y = gf_base$HI3_named
 keep_me = y!='never_affected'
 y = factor(y[keep_me])
 X = X[keep_me, ]
-merged = merged[keep_me,]
 
 myseed = 1234
 set.seed(myseed)
@@ -870,14 +872,14 @@ ytrain <- y[ split ]
 Xtest  <- X[-split, ]
 ytest = y[-split]
 
-pp <- preProcess(Xtrain, method = c('knnImpute','BoxCox', 'center', 'scale', 'pca'), thresh=.9)
+pp <- preProcess(Xtrain, method = c('knnImpute'))
 filtXtrain<- predict(pp, Xtrain)
 filtXtest <- predict(pp, Xtest)
 print(dim(filtXtrain))
 
 tuneLength=10
 set.seed(myseed)
-index <- createResample(ytrain, times=20)
+index <- createResample(ytrain, times=50)
 
 library(doMC)
 ncpus <- detectBatchCPUs()
@@ -892,7 +894,7 @@ fullCtrl <- trainControl(method = "boot",
                          allowParallel = T)
 
 
-methodList=c('kernelpls', 'svmRadial', 'rf')
+methodList=c('rf')
 train_model = lapply(methodList, function(m) train(filtXtrain, ytrain,
                                                    tuneLength=10, trControl=fullCtrl,
                                                    metric='ROC', method=m))
@@ -914,13 +916,14 @@ print(model_preds)
 ```{r}
 library(caret)
 source('~/ncr_notebooks/baseline_prediction/src/load_raw_voting_data.R')
-X = cbind(prs, geospatial, neuropsych, struct_rois, dti_tracts)
-# everything in voting_data is already < 12
-y = merged$HI3_named
+X = cbind(geospatial, prs, neuropsych, struct_rois, dti_tracts)
+# everything in voting_data is already < 12. Let's keep the first age and SEX only,
+# which will from geospatial and therefore there are no NAs (everybody has geospatial data)
+X <- X[, !duplicated(colnames(X))]
+y = gf_base$HI3_named
 keep_me = y!='never_affected'
 y = factor(y[keep_me])
 X = X[keep_me, ]
-merged = merged[keep_me,]
 
 myseed = 1234
 set.seed(myseed)
@@ -932,7 +935,7 @@ ytest = y[-split]
 
 tuneLength=10
 set.seed(myseed)
-index <- createResample(ytrain, times=20)
+index <- createResample(ytrain, times=50)
 
 library(doMC)
 ncpus <- detectBatchCPUs()
