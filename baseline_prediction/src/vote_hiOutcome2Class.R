@@ -8,7 +8,7 @@ cpuDiff = 0
 dsets = c('geospatial', 'prs', 'neuropsych', 'struct_rois', 'dti_tracts')
 
 source('~/ncr_notebooks/baseline_prediction/src/load_raw_voting_data.R')
-out_fname = sprintf('/data/NCR_SBRB/loocv/hiOutcome2Class_%s/s%03d.log', model, s)
+out_fname = sprintf('/data/NCR_SBRB/loocv/hiOutcome2Class_%s/s%03d.log', model, subj)
 # out_fname = sprintf('~/tmp/s%03d.log', s)
 sink(out_fname, append=FALSE, split=TRUE)
 
