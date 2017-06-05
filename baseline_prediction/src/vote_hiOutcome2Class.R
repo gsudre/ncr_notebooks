@@ -8,8 +8,8 @@ cpuDiff = 0
 dsets = c('geospatial', 'prs', 'neuropsych', 'struct_rois', 'dti_tracts')
 
 source('~/ncr_notebooks/baseline_prediction/src/load_raw_voting_data.R')
-out_fname = sprintf('/data/NCR_SBRB/loocv/hiOutcome2Class_%s/s%03d.log', model, subj)
-# out_fname = sprintf('~/tmp/s%03d.log', s)
+# out_fname = sprintf('/data/NCR_SBRB/loocv/hiOutcome2Class_%s/s%03d.log', model, subj)
+out_fname = sprintf('~/tmp/s%03d.log', subj)
 sink(out_fname, append=FALSE, split=TRUE)
 
 vote_hiOutcome2Class = function(X, y, s) {
@@ -43,6 +43,7 @@ vote_hiOutcome2Class = function(X, y, s) {
                 trControl=fullCtrl,
                 metric='Accuracy',
                 method=model)
+  print(varImp(mymod))
   return(predict(mymod, newdata=Xtest, type='prob'))
 }
 

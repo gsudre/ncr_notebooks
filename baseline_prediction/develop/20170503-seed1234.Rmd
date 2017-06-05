@@ -863,7 +863,10 @@ y = gf_base$HI3_named
 keep_me = y!='never_affected'
 y = factor(y[keep_me])
 X = X[keep_me, ]
-
+dummies = dummyVars(~SEX, data=X)
+X = cbind(X, predict(dummies, newdata=X))
+X$SEX = NULL
+  
 myseed = 1234
 set.seed(myseed)
 split <- createDataPartition(y, p = .7, list = FALSE)
@@ -872,7 +875,7 @@ ytrain <- y[ split ]
 Xtest  <- X[-split, ]
 ytest = y[-split]
 
-pp <- preProcess(Xtrain, method = c('knnImpute'))
+pp <- preProcess(Xtrain, method = c('BoxCox', 'center', 'scale', 'pca'), thresh=.9)
 filtXtrain<- predict(pp, Xtrain)
 filtXtest <- predict(pp, Xtest)
 print(dim(filtXtrain))
@@ -894,7 +897,7 @@ fullCtrl <- trainControl(method = "boot",
                          allowParallel = T)
 
 
-methodList=c('rf')
+methodList=c('kernelpls', 'svmRadial', 'rf')
 train_model = lapply(methodList, function(m) train(filtXtrain, ytrain,
                                                    tuneLength=10, trControl=fullCtrl,
                                                    metric='ROC', method=m))
@@ -924,6 +927,9 @@ y = gf_base$HI3_named
 keep_me = y!='never_affected'
 y = factor(y[keep_me])
 X = X[keep_me, ]
+dummies = dummyVars(~SEX, data=X)
+X = cbind(X, predict(dummies, newdata=X))
+X$SEX = NULL
 
 myseed = 1234
 set.seed(myseed)
