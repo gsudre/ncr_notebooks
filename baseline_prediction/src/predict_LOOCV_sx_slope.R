@@ -10,8 +10,7 @@ out_fname = sprintf('/data/NCR_SBRB/loocv/%s_sx_slope_%s_%s/s%03d.log', mysx, mo
 library(caret)
 library(doMC)
 ncpus <- detectBatchCPUs()
-njobs <- ncpus - cpuDiff
-registerDoMC(njobs)
+registerDoMC(ncpus)
 
 # subj=5
 # model = 'rf'
