@@ -1,3 +1,5 @@
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
+
 args = commandArgs(trailingOnly=TRUE)
 subj=as.numeric(args[1])
 model = args[2]
@@ -23,8 +25,6 @@ myseed = 1234
 tuneLength = 10
 cpuDiff = 0
 dsets = c('geospatial', 'prs', 'neuropsych', 'struct_rois', 'dti_tracts')
-
-source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
 
 get_SX_slope = function (df, ids) {
   inatt = c()
