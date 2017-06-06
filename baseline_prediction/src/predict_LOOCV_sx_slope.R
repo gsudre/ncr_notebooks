@@ -24,6 +24,8 @@ tuneLength = 10
 cpuDiff = 0
 dsets = c('geospatial', 'prs', 'neuropsych', 'struct_rois', 'dti_tracts')
 
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
+
 get_SX_slope = function (df, ids) {
   inatt = c()
   hi = c()
