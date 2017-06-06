@@ -39,7 +39,7 @@ ncpus <- detectBatchCPUs()
 registerDoMC(ncpus)
 
 mysx = 'hi'
-adhdOnly = F
+adhdOnly = T
 methods = c("enet", "rf")
 methods = c("avNNet", "bagEarth", "bagEarthGCV", 
 "bayesglm", "blackboost", "brnn", "BstLm" , 
@@ -70,9 +70,9 @@ if (adhdOnly) {
   ids = gf_base$MRN
 }
 slopes = get_SX_slope(gf, ids)
-y = slopes[, mysx]
+y = slopes[idx, mysx]
 
-X = geospatial
+X = geospatial[idx, ]
 
 # recoding SEX
 dummies = dummyVars(~SEX, data=X)
