@@ -1,0 +1,124 @@
+---
+title: "Overfitting SX slope"
+output: html_notebook
+---
+
+Can we find anything in the symptom slopes if we overfit the data?
+
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
+source('~/ncr_notebooks/baseline_prediction/src/load_raw_voting_data.R')
+
+library(caret)
+
+get_SX_slope = function (df, ids) {
+  inatt = c()
+  hi = c()
+  mrns = c()
+  for (s in ids) {
+    idx = df$MRN==s
+    # proceed if we have more than one observation in the data
+    if (sum(idx) >= 2) {
+      inatt = c(inatt, lm(SX_inatt ~ age, data=df[idx,])$coefficients[[2]])
+      hi = c(hi, lm(SX_HI ~ age, data=df[idx,])$coefficients[[2]])
+      mrns = c(mrns, s)
+    }
+  }
+  res = cbind(inatt, hi)
+  colnames(res) = c('inatt', 'hi')
+  rownames(res) = mrns
+  return(res)
+}
+```
+
+Note that for now I'm running caretEnsemble just to make it easier to run several methods at the same time. I might use an actual ensemble in the future, but not now.
+
+```{r}
+library(doMC)
+ncpus <- detectBatchCPUs()
+registerDoMC(ncpus)
+
+mysx = 'hi'
+adhdOnly = F
+methods = c("enet", "rf")
+methods = c("avNNet", "bagEarth", "bagEarthGCV", 
+"bayesglm", "blackboost", "brnn", "BstLm" , 
+"bstTree", "cforest", "ctree", "ctree2", "cubist", "DENFIS", 
+"dnn", "earth", "elm", "enet",   "evtree", 
+"extraTrees",  "gamLoess",  "gaussprLinear", "gaussprPoly", "gaussprRadial", 
+"gcvEarth","glm", "glmboost", "glmnet", "icr", "kernelpls", 
+"kknn", "knn",  "krlsRadial", "lars" , "lasso", 
+"leapBackward", "leapForward", "leapSeq", "lm", "M5", "M5Rules", 
+"mlpWeightDecay", "neuralnet" , "partDSA", 
+"pcaNNet", "pcr", "penalized", "pls", "plsRglm", "ppr", 
+"qrf" , "ranger",  "rf", "rfRules", "rbfDDA",
+"ridge", "rlm", "rpart", "rpart2", "rqlasso", 
+"rqnc", "RRF", "RRFglobal",  "rvmPoly", "rvmRadial", 
+"SBC", "simpls", "spls", "superpc" , 
+"svmLinear", "svmLinear2", "svmPoly", "svmRadial", "svmRadialCost", 
+"treebag", "widekernelpls", "WM", "xgbLinear", 
+"xgbTree", "xyf")
+ntimes = 50
+myseed = 1234
+tuneLength = 10
+
+if (adhdOnly) {
+  idx = which(gf_base$DX_BASELINE!='NV')
+  ids = gf_base[idx,]$MRN
+} else {
+  idx = 1:nrow(gf_base)
+  ids = gf_base$MRN
+}
+slopes = get_SX_slope(gf, ids)
+y = slopes[, mysx]
+
+X = geospatial
+
+# recoding SEX
+dummies = dummyVars(~SEX, data=X)
+X = cbind(X, predict(dummies, newdata=X))
+X$SEX = NULL
+
+rm_me = rowSums(is.na(X)) == ncol(X)
+X = X[!rm_me,]
+y = y[!rm_me]
+
+pp = preProcess(X, method=c('medianImpute'))
+X = predict(pp, X)
+
+library("mlbench")
+library("pROC")
+set.seed(myseed)
+my_control <- trainControl(
+  method="boot632",
+  number=ntimes,
+  savePredictions="final",
+  index=createResample(y, ntimes)
+  )
+
+library("caretEnsemble")
+model_list <- caretList(X, y,
+  trControl=my_control,
+  methodList=methods
+  )
+
+greedy_ensemble <- caretEnsemble(
+  model_list, 
+  trControl=trainControl(
+    number=2
+    ))
+print(summary(greedy_ensemble))
+
+means = colMeans(slopes)
+nir = RMSE(means[mysx], y)
+print(sprintf('NIR %s: %.2f', mysx, nir))
+
+```
+
+# HI
+## all
+## adhd only
+
+# inatt
+## all
+## adhd only
