@@ -46,11 +46,11 @@ methods = c("avNNet", "bagEarth", "bagEarthGCV",
 "bayesglm", "blackboost", "brnn", "BstLm" , 
 "bstTree", "cforest", "ctree", "ctree2", "cubist", "DENFIS", 
 "dnn", "earth", "elm", "enet",   "evtree", 
-"gamLoess",  "gaussprLinear", "gaussprPoly", "gaussprRadial", 
+"gaussprLinear", "gaussprPoly", "gaussprRadial", 
 "gcvEarth","glm", "glmboost", "glmnet", "icr", "kernelpls", 
 "kknn", "knn",  "krlsRadial", "lars" , "lasso", 
 "leapBackward", "leapForward", "leapSeq", "lm", 
-"neuralnet" , "partDSA", 
+"neuralnet", 
 "pcaNNet", "pcr", "penalized", "pls", "plsRglm", "ppr", 
 "qrf" , "rf", "rfRules",
 "ridge", "rpart", "rpart2", "rqlasso", 
@@ -180,6 +180,9 @@ resamps <- resamples(trained_models)
 print(summary(resamps))
 
 ```
+
+Now I'll transform the code above into a function so I can run it for every individual dataset.
+
 
 # HI
 ## all
