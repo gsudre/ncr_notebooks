@@ -55,7 +55,7 @@ methods = c("avNNet", "bagEarth", "bagEarthGCV",
 "qrf" , "rf", "rfRules",
 "ridge", "rpart", "rpart2", "rqlasso", 
 "rqnc", "RRF", "RRFglobal",  "rvmRadial", 
-"SBC", "simpls", "spls", "superpc" , 
+"SBC", "simpls", "spls", 
 "svmLinear", "svmLinear2", "svmPoly", "svmRadial", "svmRadialCost", 
 "treebag", "widekernelpls", "WM", "xgbLinear", 
 "xgbTree")
