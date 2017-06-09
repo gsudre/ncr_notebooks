@@ -30,7 +30,12 @@ struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
 rm_me = (struct_data$mprage_score > 2)
 struct_data = struct_data[!rm_me, ]
 merged = mergeOnClosestDate(gf_base, struct_data, my_ids)
-X = merged[, c(5, 15, 33:302)]
+phen_vars = c(which(grepl("^lh_", colnames(merged))),
+              which(grepl("^rh_", colnames(merged))),
+              which(grepl("^age$", colnames(merged))),
+              which(grepl("^SEX", colnames(merged)))
+)
+X = merged[, phen_vars]
 rm_me = abs(merged$dateX.minus.dateY.months) > 12
 X[which(rm_me), ] = NA
 struct_rois = as.data.frame(X)
@@ -99,16 +104,16 @@ if (sum(gf_base$MRN != merged$MRN) != 0) {
 }
 
 print('Loading PRS')
-prs_data = read.csv('~/data/baseline_prediction/stripped/PRS.csv')
-# we don't need the extra BASELINE column
-prs_data = prs_data[, -3]
+prs_data = read.csv('~/data/baseline_prediction/stripped/PRS_original_clump_default.csv')
+# we don't need the extra BASELINE or GenotypeWave columns
+prs_data = prs_data[, -c(3, 4)]
 # remove people with more than one genotype
 prs_data = prs_data[!duplicated(prs_data$MRN), ]
 merged = merge(gf_base, prs_data, by='MRN', sort=F, all.x=T)
 # somehow all.x=T is canceling sort=F, so we need to resort things here
 X = c()
-mycols = c(29:ncol(merged), which(colnames(merged)=='age'),
-           which(colnames(merged)=='SEX'))
+mycols = c(which(grepl("^SEX", colnames(merged))), which(grepl("age", colnames(merged))),
+           which(grepl("^PROFILES", colnames(merged))))
 for (s in gf_base$MRN) {
   X = rbind(X, merged[merged$MRN==s, mycols])
 }
@@ -117,6 +122,7 @@ if (sum(gf_base$age != X$age) != 0) {
   print('ERROR merging!')
 }
 
+##################
 # # print('Loading DTI voxels')
 # # tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
 # # load('~/data/baseline_prediction/dti/ad_voxelwise.RData')
