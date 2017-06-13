@@ -95,5 +95,25 @@ featurePlot(x = cleanX,
             ## Add a key at the top
             auto.key = list(columns = 3))
 ```
+I honestly don't think these types of oplots will be too useful, as we won't be able to observe more than a handful of variable interaction. We can, however, do the exact type pe cleaning we did above for other variable types:
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).
+```{r}
+dsets = c('prs', 'geospatial', 'neuropsych', 'dti_tracts', 'struct_rois')
+for (dset in dsets) {
+  print(sprintf('cleaning %s', dset))
+  eval(parse(text=sprintf('X = %s', dset)))
+  X$SEX = as.numeric(X$SEX)
+  # removing anyone that is all NaNs for this dataset
+  rm_me = rowSums(is.na(X)) == ncol(X)
+  X = X[!rm_me,]
+  rm_me = which(colnames(X) %in% c('Exercise_Access', 'social_environment',
+                                 'physical_envronment', 'physical_health_environment',
+                                 'Home_Type', 'SEX', 'age'))
+  cleanX = sapply(X, function(d) {outlier = boxplot.stats(d)$out; return(ifelse(d %in% outlier, NA, d))})
+  cleanX = cleanX[, -rm_me]
+  cleanX = cbind(cleanX, X[, c('SEX', 'age')])  # making sure we didn't clean those 2
+  print(sprintf('Before cleaning: %d NAs', sum(is.na(X))))
+  print(sprintf('Before cleaning: %d NAs', sum(is.na(cleanX))))
+}
+```
+So, we can certainly remove some of the outliers, but whether that makes a difference in prediction results is still to be seen. In fact, tree-based classifiers shouldn't care too much about outliers anyways, and neither should SVMs as long as the outliers are not vectors.

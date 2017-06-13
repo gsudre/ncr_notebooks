@@ -1,0 +1,193 @@
+---
+title: "Final SX using current one"
+output: html_notebook
+---
+
+The question here is whether we can predict future symptom count, but adding current cymptom count to the set of predictors.
+
+```{r}
+source('~/ncr_notebooks/baseline_prediction/src/aux_functions.R')
+source('~/ncr_notebooks/baseline_prediction/src/load_raw_voting_data.R')
+library(caret)
+adhd_idx = gf_base$DX_BASELINE!='NV'
+```
+
+First let's figure out the last symptom count for each individual:
+
+```{r}
+get_last_SX = function (df, ids) {
+  mrns = c()
+  res = c()
+  for (s in ids) {
+    idx = which(df$MRN==s)
+    # proceed if we have more than one observation in the data
+    if (length(idx) >= 2) {
+      # sort visits based on age
+      visits = sort(df[idx,]$age, index.return=T)
+      this_status = c(df[idx[visits$ix][length(idx)], 'SX_inatt'],
+                      df[idx[visits$ix][length(idx)], 'SX_HI'])
+      res = rbind(res, this_status)
+      mrns = c(mrns, s)
+    }
+  }
+  rownames(res) = mrns
+  colnames(res) = c('inatt', 'hi')
+  return(res)
+}
+```
+
+Now we do some simple prediction using the entire data:
+
+```{r}
+dtype = 'neuropsych'
+
+lastSX = get_last_SX(gf, gf_base$MRN)
+y = lastSX[adhd_idx, 'hi']
+X = gf_base[adhd_idx, 'SX_HI']
+
+methods = c('rpart', 'rpart2')
+
+library(caret)
+library(doMC)
+ncpus <- 2 #detectBatchCPUs()
+registerDoMC(ncpus)
+
+ntimes = 50
+myseed = 1234
+tuneLength = 10
+cpuDiff = 0
+
+eval(parse(text=sprintf('X = cbind(X, %s[adhd_idx, ])', dtype)))
+
+# recoding SEX
+dummies = dummyVars(~SEX, data=X)
+X = cbind(X, predict(dummies, newdata=X))
+X$SEX = NULL
+
+# removing anyone that is all NaNs for this dataset
+rm_me = rowSums(is.na(X)) == ncol(X)
+X = X[!rm_me,]
+y = y[!rm_me]
+
+# # do PCA but do not include age and sex variables in it
+# not_include = c(which(grepl("^SEX", colnames(X))), which(grepl("age", colnames(X))))
+# pp = preProcess(X[, -not_include], method=c('medianImpute', 'center', 'scale', 'pca'), thresh=.9)
+# nfeat = ncol(X)
+# Xfilt = predict(pp, X[, -not_include])
+# X = cbind(Xfilt, X[, not_include])
+# print(sprintf('Reduced from %d to %d features', nfeat, ncol(X)))
+
+index=createResample(y, ntimes)
+
+train_model = function(m) {
+  if (m %in% c('xgbLinear', 'xgbTree', 'avNNet')) {
+    ap = F
+  } else { ap = T }
+  set.seed(myseed)
+  my_control <- trainControl(
+    method="boots",
+    repeats=ntimes,
+    savePredictions="final",
+    index=index,
+    allowParallel = ap
+  )
+  print(sprintf('===== TRYING %s =====', m))
+  mymod = train(X, y, trControl=my_control, method=m, tuneLength=tuneLength)
+  return(mymod)
+}
+
+trained_models = lapply(methods, train_model)
+
+names(trained_models) = methods
+resamps <- resamples(trained_models)
+print(summary(resamps))
+nir = RMSE(mean(y), y)
+print(sprintf('NIR: %.2f', nir))
+```
+
+This is slightly better than chance, but certainly not clinically relevant. Let's take a quick look at voxels again to figure out if we can do better. The approach is to first do a univariate selection to reduce computation, then we do a PCA to remove correlations, and finally use what we get for prediction:
+
+```{r}
+dtype = 'brain_ad'
+
+lastSX = get_last_SX(gf, gf_base$MRN)
+# y = lastSX[, 'hi']
+# X = gf_base[, 'SX_HI']
+y = lastSX[, 'inatt']
+X = gf_base[, 'SX_inatt']
+
+methods = c('rpart', 'rpart2', 'rf', 'enet', 'svmLinear', 'svmRadial')
+
+library(caret)
+library(doMC)
+ncpus <- 2 #detectBatchCPUs()
+registerDoMC(ncpus)
+
+ntimes = 50
+myseed = 1234
+tuneLength = 10
+cpuDiff = 0
+
+eval(parse(text=sprintf('X = cbind(X, %s[, ])', dtype)))
+colnames(X)[1] = 'sx0'
+
+# recoding SEX
+dummies = dummyVars(~SEX, data=X)
+X = cbind(X, predict(dummies, newdata=X))
+X$SEX = NULL
+
+# removing anyone that is all NaNs for this dataset
+rm_me = rowSums(is.na(X)) == ncol(X)
+X = X[!rm_me,]
+y = y[!rm_me]
+
+# do PCA but do not include age and sex variables in it
+not_include = c(which(grepl("^SEX", colnames(X))),
+                which(grepl("age", colnames(X))),
+                which(grepl("sx0", colnames(X))))
+X2 = X[, -not_include]
+pvals = sapply(X2, function(d) cor.test(d, y)$p.value)
+X2 = X2[, which(pvals <= .05)]
+pp = preProcess(X2, method=c('medianImpute', 'center', 'scale', 'pca'), thresh=.9)
+nfeat = ncol(X)
+X2 = predict(pp, X2)
+X = cbind(X2, X[, not_include])
+print(sprintf('Reduced from %d to %d features', nfeat, ncol(X)))
+
+set.seed(myseed)
+index=createResample(y, ntimes)
+
+train_model = function(m) {
+  if (m %in% c('xgbLinear', 'xgbTree', 'avNNet')) {
+    ap = F
+  } else { ap = T }
+  set.seed(myseed)
+  my_control <- trainControl(
+    method="boots",
+    repeats=ntimes,
+    savePredictions="final",
+    index=index,
+    allowParallel = ap
+  )
+  print(sprintf('===== TRYING %s =====', m))
+  mymod = train(X, y, trControl=my_control, method=m, tuneLength=tuneLength)
+  return(mymod)
+}
+
+trained_models = lapply(methods, train_model)
+
+names(trained_models) = methods
+resamps <- resamples(trained_models)
+print(summary(resamps))
+nir = RMSE(mean(y), y)
+print(sprintf('NIR: %.2f', nir))
+```
+
+This is better than chance for sure, but it heavily relies on symptom counts, and I'd have to prove that it's significantly better than just using symptom counts. Even if it is, would the difference be clinically relevant? In other words, is 2 symptoms of better that much better than 3? And the difference between adding the brain variables t  
+
+
+
+
+
+
+

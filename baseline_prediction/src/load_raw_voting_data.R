@@ -123,47 +123,33 @@ if (sum(gf_base$age != X$age) != 0) {
 }
 
 ##################
-# # print('Loading DTI voxels')
-# # tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
-# # load('~/data/baseline_prediction/dti/ad_voxelwise.RData')
-# # dti_vdata = cbind(tract_data$maskid, ad_data)
-# # merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
-# # rm_me = abs(merged$dateX.minus.dateY.months) > 12
-# # dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
-# # X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
-# # X[which(rm_me), ] = NA
-# # library(parallel)
-# # cl <- makeCluster(ncpus)
-# # X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
-# # stopCluster(cl)
-# # brain_ad = as.data.frame(X_resid)
-# # 
-# # tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
-# # load('~/data/baseline_prediction/dti/fa_voxelwise.RData')
-# # dti_vdata = cbind(tract_data$maskid, fa_data)
-# # merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
-# # rm_me = abs(merged$dateX.minus.dateY.months) > 12
-# # dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
-# # X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
-# # X[which(rm_me), ] = NA
-# # library(parallel)
-# # cl <- makeCluster(ncpus)
-# # X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
-# # stopCluster(cl)
-# # brain_fa = as.data.frame(X_resid)
-# # 
-# # tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
-# # load('~/data/baseline_prediction/dti/rd_voxelwise.RData')
-# # dti_vdata = cbind(tract_data$maskid, rd_data)
-# # merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
-# # rm_me = abs(merged$dateX.minus.dateY.months) > 12
-# # dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
-# # X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
-# # X[which(rm_me), ] = NA
-# # library(parallel)
-# # cl <- makeCluster(ncpus)
-# # X_resid = parSapply(cl, X, get_needed_residuals, 'y ~ df$age + I(df$age^2) + df$SEX', .1, merged)
-# # stopCluster(cl)
-# # brain_rd = as.data.frame(X_resid)
-# 
-# # print('Loading structural voxels')
+print('Loading DTI voxels')
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+load('~/data/baseline_prediction/dti/ad_voxelwise.RData')
+dti_vdata = cbind(tract_data$maskid, ad_data)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+X[which(rm_me), ] = NA
+brain_ad = cbind(as.data.frame(X), merged[, c('SEX', 'age')])
+
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+load('~/data/baseline_prediction/dti/rd_voxelwise.RData')
+dti_vdata = cbind(tract_data$maskid, rd_data)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+X[which(rm_me), ] = NA
+brain_rd = cbind(as.data.frame(X), merged[, c('SEX', 'age')])
+
+tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+load('~/data/baseline_prediction/dti/fa_voxelwise.RData')
+dti_vdata = cbind(tract_data$maskid, fa_data)
+merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+rm_me = abs(merged$dateX.minus.dateY.months) > 12
+dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+X[which(rm_me), ] = NA
+brain_fa = cbind(as.data.frame(X), merged[, c('SEX', 'age')])
