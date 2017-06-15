@@ -153,3 +153,66 @@ dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=
 X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
 X[which(rm_me), ] = NA
 brain_fa = cbind(as.data.frame(X), merged[, c('SEX', 'age')])
+
+###############
+# print('Loading voxels (area)')
+# struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
+# load('~/data/baseline_prediction/struct_area.rData')
+# # the first column of lh and rh is an index variable
+# vdata = cbind(struct_data$Mask.ID...Scan,
+#               lh_area[,2:ncol(lh_area)],
+#               rh_area[,2:ncol(rh_area)])
+# rm(lh_area)
+# rm(rh_area)
+# mstruct = mergeOnClosestDate(gf_base, struct_data, my_ids)
+# rm_me = abs(mstruct$dateX.minus.dateY.months) > 12
+# struct_base_vdata = merge(mstruct$Mask.ID...Scan, vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+# rm(vdata)
+# X = struct_base_vdata[, 2:ncol(struct_base_vdata)]
+# # remove voxels that are zeros for all subjects
+# rm_me = colSums(is.na(X)) > 0
+# X = X[, !rm_me]
+# print(sprintf('Area voxels: %d datapoints, %d phenotypes', nrow(X), ncol(X)))
+# library(parallel)
+# cl <- makeCluster(6)
+# res = parSapply(cl, X, nvVSadhd_test, mstruct, 'pheno ~ df$age + I(df$age^2) + df$SEX')
+# res2 = parSapply(cl, X, outcome_test, mstruct, 'pheno ~ df$age + I(df$age^2) + df$SEX')
+# stopCluster(cl)
+# 
+# 
+# 
+# struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
+# load('~/data/baseline_prediction/struct_volume.rData')
+# # the first column of lh and rh is an index variable
+# vdata = cbind(volume_ids,
+#               lh_volume[,2:ncol(lh_volume)],
+#               rh_volume[,2:ncol(rh_volume)])
+# rm(lh_volume)
+# rm(rh_volume)
+# mstruct = mergeOnClosestDate(gf_base, struct_data, my_ids)
+# rm_me = abs(mstruct$dateX.minus.dateY.months) > 12
+# keep_me = c()
+# keep_mstruct = c()
+# for (i in 1:nrow(vdata)) {
+#   if (vdata[i, 1] %in% mstruct$Mask.ID...Scan) {
+#     keep_me = c(keep_me, i)
+#     keep_mstruct = c(keep_mstruct, which(mstruct$Mask.ID...Scan == vdata[i, 1]))
+#   }
+# }
+# struct_base_vdata = matrix(nrow=nrow(mstruct), ncol=ncol(vdata)-1)
+# vdata = vdata[keep_me, 2:ncol(vdata)]
+# struct_base_vdata[keep_mstruct, ] = vdata
+# rm(vdata)
+# 
+# X = struct_base_vdata[, 2:ncol(struct_base_vdata)]
+# rm_me = colSums(is.na(X)) > 0
+# X = X[, !rm_me]
+# keep_me = mstruct$age <= 12
+# X = X[keep_me, ]
+# mstruct = mstruct[keep_me, ]
+# print(sprintf('Volume voxels: %d datapoints, %d phenotypes', nrow(X), ncol(X)))
+# cl <- makeCluster(6)
+# res = parSapply(cl, X, nvVSadhd_test, mstruct, 'pheno ~ df$age + I(df$age^2) + df$SEX')
+# res2 = parSapply(cl, X, outcome_test, mstruct, 'pheno ~ df$age + I(df$age^2) + df$SEX')
+# stopCluster(cl)
+

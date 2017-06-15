@@ -111,16 +111,16 @@ This is slightly better than chance, but certainly not clinically relevant. Let'
 dtype = 'brain_ad'
 
 lastSX = get_last_SX(gf, gf_base$MRN)
-# y = lastSX[, 'hi']
-# X = gf_base[, 'SX_HI']
-y = lastSX[, 'inatt']
-X = gf_base[, 'SX_inatt']
+y = lastSX[, 'hi']
+X = gf_base[, 'SX_HI']
+# y = lastSX[, 'inatt']
+# X = gf_base[, 'SX_inatt']
 
 methods = c('rpart', 'rpart2', 'rf', 'enet', 'svmLinear', 'svmRadial')
 
 library(caret)
 library(doMC)
-ncpus <- 2 #detectBatchCPUs()
+ncpus <- detectBatchCPUs()
 registerDoMC(ncpus)
 
 ntimes = 50
@@ -182,8 +182,108 @@ print(summary(resamps))
 nir = RMSE(mean(y), y)
 print(sprintf('NIR: %.2f', nir))
 ```
+# Inattention
 
-This is better than chance for sure, but it heavily relies on symptom counts, and I'd have to prove that it's significantly better than just using symptom counts. Even if it is, would the difference be clinically relevant? In other words, is 2 symptoms of better that much better than 3? And the difference between adding the brain variables t  
+##FA
+```
+RMSE
+           Min. 1st Qu. Median  Mean 3rd Qu.  Max. NA's
+rpart     1.703   2.002  2.103 2.091   2.174 2.498    0
+rpart2    1.703   1.948  2.022 2.047   2.155 2.498    0
+rf        1.700   1.946  2.006 2.018   2.120 2.362    0
+enet      1.645   1.834  1.897 1.895   1.977 2.181    0
+svmLinear 2.881   3.347  3.529 3.749   4.155 5.883    0
+svmRadial 1.899   2.144  2.213 2.210   2.281 2.555    0
+
+Rsquared
+            Min. 1st Qu. Median   Mean 3rd Qu.   Max. NA's
+rpart     0.4353  0.5579 0.5772 0.5865  0.6324 0.7433    0
+rpart2    0.4392  0.5631 0.6223 0.6036  0.6468 0.7433    0
+rf        0.4979  0.5868 0.6149 0.6144  0.6497 0.7187    0
+enet      0.5597  0.6358 0.6666 0.6665  0.6968 0.7484    0
+svmLinear 0.1367  0.2700 0.3492 0.3318  0.3976 0.5425    0
+svmRadial 0.4211  0.5112 0.5466 0.5461  0.5798 0.6482    0
+
+> nir = RMSE(mean(y), y)
+> print(sprintf('NIR: %.2f', nir))
+[1] "NIR: 3.21"
+```
+
+##AD
+```
+RMSE
+           Min. 1st Qu. Median  Mean 3rd Qu.  Max. NA's
+rpart     1.703   2.001  2.098 2.088   2.180 2.411    0
+rpart2    1.703   1.922  2.020 2.041   2.132 2.528    0
+rf        1.686   1.934  2.002 2.006   2.131 2.307    0
+enet      1.605   1.829  1.897 1.896   1.964 2.170    0
+svmLinear 2.698   3.312  3.688 3.922   4.344 7.399    0
+svmRadial 1.901   2.101  2.162 2.153   2.219 2.447    0
+
+Rsquared
+            Min. 1st Qu. Median   Mean 3rd Qu.   Max. NA's
+rpart     0.4353  0.5535 0.5826 0.5875  0.6300 0.7433    0
+rpart2    0.3926  0.5772 0.6223 0.6057  0.6438 0.7433    0
+rf        0.5205  0.5760 0.6164 0.6190  0.6604 0.7320    0
+enet      0.5382  0.6412 0.6604 0.6649  0.6927 0.7632    0
+svmLinear 0.1213  0.2789 0.3354 0.3328  0.3924 0.5338    0
+svmRadial 0.4456  0.5457 0.5778 0.5728  0.6056 0.6600    0
+
+> nir = RMSE(mean(y), y)
+> print(sprintf('NIR: %.2f', nir))
+[1] "NIR: 3.21"
+```
+
+# HI
+
+## FA
+```
+RMSE
+           Min. 1st Qu. Median  Mean 3rd Qu.  Max. NA's
+rpart     1.677   1.975  2.102 2.104   2.240 2.627    0
+rpart2    1.710   1.993  2.099 2.092   2.199 2.439    0
+rf        1.669   1.887  2.002 1.992   2.057 2.302    0
+enet      1.579   1.789  1.912 1.891   1.971 2.220    0
+svmLinear 2.558   3.323  3.647 3.743   4.040 5.297    0
+svmRadial 1.990   2.199  2.266 2.283   2.409 2.550    0
+
+Rsquared
+             Min. 1st Qu. Median   Mean 3rd Qu.   Max. NA's
+rpart     0.34610  0.4461 0.4985 0.4937  0.5474 0.6411    0
+rpart2    0.36810  0.4467 0.4925 0.4965  0.5378 0.6391    0
+rf        0.40470  0.5180 0.5423 0.5393  0.5708 0.6572    0
+enet      0.51770  0.5621 0.5950 0.5956  0.6305 0.6912    0
+svmLinear 0.03276  0.1338 0.1875 0.1958  0.2581 0.4196    0
+svmRadial 0.29150  0.3690 0.4067 0.4073  0.4439 0.5209    0
+```
+
+## AD
+```
+RMSE
+           Min. 1st Qu. Median  Mean 3rd Qu.  Max. NA's
+rpart     1.710   2.007  2.143 2.125   2.236 2.577    0
+rpart2    1.710   2.005  2.122 2.118   2.232 2.577    0
+rf        1.673   1.885  1.995 1.986   2.058 2.266    0
+enet      1.568   1.790  1.889 1.878   1.951 2.207    0
+svmLinear 3.065   3.915  4.468 4.592   5.133 7.263    0
+svmRadial 1.963   2.097  2.188 2.195   2.293 2.448    0
+
+Rsquared
+             Min. 1st Qu. Median   Mean 3rd Qu.   Max. NA's
+rpart     0.35580 0.43720 0.4748 0.4811  0.5188 0.6391    0
+rpart2    0.35580 0.44100 0.4794 0.4848  0.5262 0.6391    0
+rf        0.42770 0.51410 0.5449 0.5424  0.5765 0.6483    0
+enet      0.51980 0.56590 0.6015 0.5976  0.6235 0.7057    0
+svmLinear 0.01534 0.09432 0.1381 0.1574  0.2190 0.4061    0
+svmRadial 0.36750 0.43540 0.4710 0.4657  0.4890 0.6091    0
+
+```
+
+This is better than chance for sure, but it heavily relies on symptom counts, and I'd have to prove that it's significantly better than just using symptom counts. Even if it is, would the difference be clinically relevant? In other words, is 2 symptoms of better that much better than 3? And the difference between adding the brain variables and not? Are those clinically relevant?
+
+Out of curiosity, let's see how well we can do with brain voxelwise, which has always been surprisingly interesting...
+
+
 
 
 
