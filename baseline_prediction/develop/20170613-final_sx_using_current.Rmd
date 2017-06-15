@@ -426,7 +426,37 @@ So, we do a bit better by adding brain data, but it's hard to say it's statiscal
 
 Out of curiosity, let's see how well we can do with brain struct voxelwise, which has always been surprisingly interesting...
 
+# Inattention
 
+## area
+```
+
+```
+
+## thickness
+```
+
+```
+
+## volume
+```
+```
+
+# HI
+
+## area
+```
+
+```
+
+## thickness
+```
+
+```
+
+## volume
+```
+```
 
 
 

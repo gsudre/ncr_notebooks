@@ -182,7 +182,7 @@ struct_base_vdata = as.data.frame(matrix(nrow=nrow(mstruct), ncol=ncol(vdata)-1)
 vdata = vdata[keep_me, 2:ncol(vdata)]
 struct_base_vdata[keep_mstruct, ] = vdata
 rm(vdata)
-brain_area = struct_base_vdata
+brain_area = cbind(struct_base_vdata, mstruct[, c('SEX', 'age')])
 
 
 print('Loading voxels (volume)')
@@ -212,7 +212,7 @@ struct_base_vdata = as.data.frame(matrix(nrow=nrow(mstruct), ncol=ncol(vdata)-1)
 vdata = vdata[keep_me, 2:ncol(vdata)]
 struct_base_vdata[keep_mstruct, ] = vdata
 rm(vdata)
-brain_volume = struct_base_vdata
+brain_volume = cbind(struct_base_vdata, mstruct[, c('SEX', 'age')])
 
 
 print('Loading voxels (thickness)')
@@ -242,4 +242,4 @@ struct_base_vdata = as.data.frame(matrix(nrow=nrow(mstruct), ncol=ncol(vdata)-1)
 vdata = vdata[keep_me, 2:ncol(vdata)]
 struct_base_vdata[keep_mstruct, ] = vdata
 rm(vdata)
-brain_thickness = struct_base_vdata
+brain_thickness = cbind(struct_base_vdata, mstruct[, c('SEX', 'age')])
