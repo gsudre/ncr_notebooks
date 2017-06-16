@@ -243,3 +243,4 @@ vdata = vdata[keep_me, 2:ncol(vdata)]
 struct_base_vdata[keep_mstruct, ] = vdata
 rm(vdata)
 brain_thickness = cbind(struct_base_vdata, mstruct[, c('SEX', 'age')])
+rm(struct_base_vdata)
