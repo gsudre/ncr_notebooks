@@ -61,6 +61,53 @@ x = 1:nrow(res)
 for (i in plot_me) {
   plot(x, res[, i], lty=3, ylab=colnames(res)[i], xlab='profiles')
 }
+write.csv(res, file='~/tmp/gwas_all_prs.csv')
 ```
 
-CHECK WHICH PROFILE BEST PREDICTS ADHD, AND HOPEFULLY IT MATCHES THE BEST ONE WE HAVE ACROSS PHENOTYPES!
+And do the same thing for the European-only sample:
+
+```{r}
+library(nlme)
+dep_vars = which(grepl('^Nresid', colnames(df_eur)))
+indep_vars = which(grepl('^PROFILES', colnames(df_eur)))
+res = as.data.frame(matrix(nrow=length(indep_vars), ncol=(2*length(dep_vars))))
+rownames(res) = colnames(df_eur)[indep_vars]
+i = 1
+cnt = 1
+while (i < 2*length(dep_vars)) {
+  colnames(res)[i] = sprintf('%s_tstat', colnames(df_eur)[dep_vars][cnt])
+  colnames(res)[i+1] = sprintf('%s_pval', colnames(df_eur)[dep_vars][cnt])
+  i = i + 2
+  cnt = cnt + 1
+}
+for (i in 1:length(indep_vars)) {
+  for (j in 1:length(dep_vars)) {
+    y_str = colnames(df_eur)[dep_vars][j]
+    x_str = colnames(df_eur)[indep_vars][i]
+    fm_str = sprintf('%s ~ %s', y_str, x_str)
+    fit = try(lme(as.formula(fm_str), random=~1|FID, data=df_eur, na.action = na.omit))
+    res[x_str, sprintf('%s_tstat', y_str)] = summary(fit)$tTable[x_str,'t-value']
+    res[x_str, sprintf('%s_pval', y_str)] = summary(fit)$tTable[x_str,'p-value']
+  }
+}
+```
+
+```{r}
+plot_me = which(grepl('_pval$', colnames(res)))
+x = 1:nrow(res)
+for (i in plot_me) {
+  plot(x, res[, i], lty=3, ylab=colnames(res)[i], xlab='profiles')
+}
+write.csv(res, file='~/tmp/gwas_euroOnly_prs.csv')
+```
+
+It doesn't look like there's much there.
+
+# GenR
+
+Can we find anything in the GenR sample?
+
+# Combined
+
+Here's what we get using the combined sample:
+
