@@ -6,7 +6,7 @@ output: html_notebook
 Philip asked me to run PRS for all our kids using the new PGC data that was just released, and then grab the kids that were in the GWAS study to see if the new PRS does a better job correlating with the brain growth variables used.
 
 ```{r}
-gwas = read.csv('/Volumes/Labs/CIDR/for_Philip/FINAL_pheno_file_nhgri_genr_combined_18Aug2016.csv')
+gwas = read.csv('~/data/gwas_brain_growth/FINAL_pheno_file_nhgri_genr_combined_18Aug2016.csv')
 gwas = gwas[gwas$COHORT=='nhgri_nimh',]
 pgc = read.csv('~/data/baseline_prediction/stripped/PRS2017_original_clump_default.csv')
 pgc_eur = read.csv('~/data/baseline_prediction/stripped/PRS2017eur_original_clump_default.csv')
@@ -105,7 +105,41 @@ It doesn't look like there's much there.
 
 # GenR
 
-Can we find anything in the GenR sample?
+Can we find anything in the GenR sample? 
+
+```{r}
+genr_prs = read.csv('~/data/gwas_brain_growth/ADHD_new_GENR_SCORES_N5731.csv')
+gwas = read.csv('~/data/gwas_brain_growth/FINAL_pheno_file_nhgri_genr_combined_18Aug2016.csv')
+mgenr = merge(gwas, genr_prs, by.x='PERSON', by.y='IDC')
+```
+
+genR sample doesn't have family IDs, so we run the vanilla lm.
+
+```{r}
+library(nlme)
+dep_vars = which(grepl('^Nresid', colnames(mgenr)))
+indep_vars = which(grepl('^pT', colnames(mgenr)))
+res = as.data.frame(matrix(nrow=length(indep_vars), ncol=(2*length(dep_vars))))
+rownames(res) = colnames(mgenr)[indep_vars]
+i = 1
+cnt = 1
+while (i < 2*length(dep_vars)) {
+  colnames(res)[i] = sprintf('%s_tstat', colnames(mgenr)[dep_vars][cnt])
+  colnames(res)[i+1] = sprintf('%s_pval', colnames(mgenr)[dep_vars][cnt])
+  i = i + 2
+  cnt = cnt + 1
+}
+for (i in 1:length(indep_vars)) {
+  for (j in 1:length(dep_vars)) {
+    y_str = colnames(mgenr)[dep_vars][j]
+    x_str = colnames(mgenr)[indep_vars][i]
+    fm_str = sprintf('%s ~ %s', y_str, x_str)
+    fit = try(lm(as.formula(fm_str), data=mgenr, na.action = na.omit))
+    res[x_str, sprintf('%s_tstat', y_str)] = summary(fit)$coefficients[x_str,'t value']
+    res[x_str, sprintf('%s_pval', y_str)] = summary(fit)$coefficients[x_str,'Pr(>|t|)']
+  }
+}
+```
 
 # Combined
 
