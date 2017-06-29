@@ -8,7 +8,7 @@ Here we are trying to use PRS to predict any of the clinical variables. If we ge
 Note that this clinical file we're loading will keep on getting updated, cleaned, etc. So, let's make sure to save different versions of this analysis.
 
 ```{r}
-gf = read.csv('~/data/prs/clinical_06162017.csv')
+gf = read.csv('~/data/prs/clinical_06192017.csv')
 gf = gf[gf$ADHD_current!='exclude',]
 pgc = read.csv('~/data/baseline_prediction/stripped/PRS2017_original_clump_default.csv')
 pgc_eur = read.csv('~/data/baseline_prediction/stripped/PRS2017eur_original_clump_default.csv')
@@ -28,15 +28,10 @@ df_eur = df_eur[eur_idx, ]
 
 Now we're ready to run our LME using family ID as the random term:
 
-
-
 ```{r}
-# GONNA DO A QUICK HACK HERE BECAUSE WE'RE CURRENTLY MISSING MANY FAMILY IDS
-df = df[!is.na(df$NuclearFamID), ]
-
 library(nlme)
 
-print(sprintf('NV vs ADHD: %d subjects', sum(~is.na(df$ADHD_current_yes_no))))
+print(sprintf('NV vs ADHD: %d subjects', sum(!is.na(df$ADHD_current_yes_no))))
 # start with quick T-test for DX
 vars = which(grepl('^PROFILES', colnames(df)))
 all_res = c()
@@ -105,20 +100,23 @@ for (y_str in targets) {
 Let's do both regressions above but including NVs. Here, we assume any NVs without SX to be 0:
 
 ```{r}
-assume_idx = df$ADHD_current_yes_no=='no' && is.na(df$SX_HI + df$SX_inatt)
+assume_idx = df$ADHD_current_yes_no=='no' & is.na(df$SX_HI + df$SX_inatt)
 df2 = df
 df2[assume_idx, 'SX_inatt'] = 0
 df2[assume_idx, 'SX_HI'] = 0
 targets = c('SX_inatt', 'SX_HI')
-print(sprintf('ADHD-only regressions: %d subjects', sum(adhd_idx)))
 for (y_str in targets) {
   sx_res = c()
   for (i in 1:length(vars)) {
     x_str = colnames(df2)[vars][i]
     fm_str = sprintf('%s ~ %s', y_str, x_str) # make sure the interesting variable comes last!
     fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=df2, na.action = na.omit))
-    last_row = nrow(summary(fit)$tTable)
-    res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
+    if (length(fit) > 1) {
+      last_row = nrow(summary(fit)$tTable)
+      res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
+    } else {
+      res = c(NA, NA)
+    }
     sx_res = rbind(sx_res, res)
   }
   colnames(sx_res) = c(sprintf('Tstat_%s', y_str), sprintf('pval_%s', y_str))
@@ -151,12 +149,115 @@ for (y_str in targets) {
 Let's write out the table for easier visualization:
 
 ```{r}
-write.csv(all_res, file='~/philip/prs_results_06162017.csv')
+write.csv(all_res, file='~/philip/prs_results_06192017.csv')
+```
+
+# European-only sample
+And now we do the exact same analysis, but using the European-only sample
+
+```{r}
+print(sprintf('NV vs ADHD: %d subjects', sum(!is.na(df_eur$ADHD_current_yes_no))))
+# start with quick T-test for DX
+vars = which(grepl('^PROFILES', colnames(df_eur)))
+all_res = c()
+x_str = 'ADHD_current_yes_no'
+for (i in 1:length(vars)) {
+    y_str = colnames(df_eur)[vars][i]
+    fm_str = sprintf('%s ~ %s', y_str, x_str) # make sure the interesting variable comes last!
+    fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=df_eur, na.action = na.omit))
+    last_row = nrow(summary(fit)$tTable)
+    res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
+    all_res = rbind(all_res, res)
+}
+colnames(all_res) = c(sprintf('Tstat_%s', x_str), sprintf('pval_%s', x_str))
+rownames(all_res) = colnames(df_eur)[vars]
+
+adhd_idx = df_eur$ADHD_current_yes_no=='yes'
+print(sprintf('ADHD-only regressions: %d subjects', sum(adhd_idx)))
+targets = c('SX_inatt', 'SX_HI')
+for (y_str in targets) {
+  sx_res = c()
+  for (i in 1:length(vars)) {
+    x_str = colnames(df_eur)[vars][i]
+    fm_str = sprintf('%s ~ %s', y_str, x_str) # make sure the interesting variable comes last!
+    fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=df_eur[adhd_idx,], na.action = na.omit))
+    last_row = nrow(summary(fit)$tTable)
+    res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
+    sx_res = rbind(sx_res, res)
+  }
+  colnames(sx_res) = c(sprintf('Tstat_%s_adhdOnly', y_str), sprintf('pval_%s_adhdOnly', y_str))
+  rownames(sx_res) = colnames(df_eur)[vars]
+  all_res = cbind(all_res, sx_res)
+}
+
+adhd_idx = df$ADHD_current_yes_no=='yes'
+targets = c('inatt', 'HI')
+for (y_str in targets) {
+  y = pmax(df[adhd_idx, sprintf('SX_%s', y_str)],
+           df[adhd_idx, sprintf('%s_child', y_str)],
+           na.rm=T)
+  sx_res = c()
+  for (i in 1:length(vars)) {
+    x_str = colnames(df_eur)[vars][i]
+    fm_str = sprintf('y ~ %s', x_str) # make sure the interesting variable comes last!
+    fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=df_eur[adhd_idx,], na.action = na.omit))
+    last_row = nrow(summary(fit)$tTable)
+    res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
+    sx_res = rbind(sx_res, res)
+  }
+  colnames(sx_res) = c(sprintf('Tstat_Max%s_adhdOnly', y_str), sprintf('pval_Max%s_adhdOnly', y_str))
+  rownames(sx_res) = colnames(df_eur)[vars]
+  all_res = cbind(all_res, sx_res)
+}
+
+assume_idx = df_eur$ADHD_current_yes_no=='no' & is.na(df_eur$SX_HI + df_eur$SX_inatt)
+df2 = df_eur
+df2[assume_idx, 'SX_inatt'] = 0
+df2[assume_idx, 'SX_HI'] = 0
+targets = c('SX_inatt', 'SX_HI')
+for (y_str in targets) {
+  sx_res = c()
+  for (i in 1:length(vars)) {
+    x_str = colnames(df2)[vars][i]
+    fm_str = sprintf('%s ~ %s', y_str, x_str) # make sure the interesting variable comes last!
+    fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=df2, na.action = na.omit))
+    if (length(fit) > 1) {
+      last_row = nrow(summary(fit)$tTable)
+      res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
+    } else {
+      res = c(NA, NA)
+    }
+    sx_res = rbind(sx_res, res)
+  }
+  colnames(sx_res) = c(sprintf('Tstat_%s', y_str), sprintf('pval_%s', y_str))
+  rownames(sx_res) = colnames(df_eur)[vars]
+  all_res = cbind(all_res, sx_res)
+}
+
+targets = c('inatt', 'HI')
+for (y_str in targets) {
+  y = pmax(df2[, sprintf('SX_%s', y_str)],
+           df2[, sprintf('%s_child', y_str)],
+           na.rm=T)
+  sx_res = c()
+  for (i in 1:length(vars)) {
+    x_str = colnames(df2)[vars][i]
+    fm_str = sprintf('y ~ %s', x_str) # make sure the interesting variable comes last!
+    fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=df2, na.action = na.omit))
+    last_row = nrow(summary(fit)$tTable)
+    res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
+    sx_res = rbind(sx_res, res)
+  }
+  colnames(sx_res) = c(sprintf('Tstat_Max%s', y_str), sprintf('pval_Max%s', y_str))
+  rownames(sx_res) = colnames(df_eur)[vars]
+  all_res = cbind(all_res, sx_res)
+}
+
+write.csv(all_res, file='~/philip/prs_eur_results_06192017.csv')
+
 ```
 
 # TODO:
 * clean up clinical file
-* add FAMIDs to clinical file
 * play with age groups
 * run mediation analysis for good correlations
-* repeat analysis with european PGC sample only
