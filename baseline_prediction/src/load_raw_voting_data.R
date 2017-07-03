@@ -104,9 +104,7 @@ if (sum(gf_base$MRN != merged$MRN) != 0) {
 }
 
 print('Loading PRS')
-prs_data = read.csv('~/data/baseline_prediction/stripped/PRS_original_clump_default.csv')
-# we don't need the extra BASELINE or GenotypeWave columns
-prs_data = prs_data[, -c(3, 4)]
+prs_data = read.csv('~/data/baseline_prediction/stripped/PRS2017_original_clump_default.csv')
 # remove people with more than one genotype
 prs_data = prs_data[!duplicated(prs_data$MRN), ]
 merged = merge(gf_base, prs_data, by='MRN', sort=F, all.x=T)
@@ -122,125 +120,125 @@ if (sum(gf_base$age != X$age) != 0) {
   print('ERROR merging!')
 }
 
-##################
-print('Loading DTI voxels')
-tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
-load('~/data/baseline_prediction/dti/ad_voxelwise.RData')
-dti_vdata = cbind(tract_data$maskid, ad_data)
-merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
-rm_me = abs(merged$dateX.minus.dateY.months) > 12
-dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
-X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
-X[which(rm_me), ] = NA
-brain_ad = cbind(as.data.frame(X), merged[, c('SEX', 'age')])
+# ##################
+# print('Loading DTI voxels')
+# tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+# load('~/data/baseline_prediction/dti/ad_voxelwise.RData')
+# dti_vdata = cbind(tract_data$maskid, ad_data)
+# merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+# rm_me = abs(merged$dateX.minus.dateY.months) > 12
+# dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+# X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+# X[which(rm_me), ] = NA
+# brain_ad = cbind(as.data.frame(X), merged[, c('SEX', 'age')])
+# 
+# tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+# load('~/data/baseline_prediction/dti/rd_voxelwise.RData')
+# dti_vdata = cbind(tract_data$maskid, rd_data)
+# merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+# rm_me = abs(merged$dateX.minus.dateY.months) > 12
+# dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+# X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+# X[which(rm_me), ] = NA
+# brain_rd = cbind(as.data.frame(X), merged[, c('SEX', 'age')])
+# 
+# tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
+# load('~/data/baseline_prediction/dti/fa_voxelwise.RData')
+# dti_vdata = cbind(tract_data$maskid, fa_data)
+# merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
+# rm_me = abs(merged$dateX.minus.dateY.months) > 12
+# dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
+# X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
+# X[which(rm_me), ] = NA
+# brain_fa = cbind(as.data.frame(X), merged[, c('SEX', 'age')])
 
-tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
-load('~/data/baseline_prediction/dti/rd_voxelwise.RData')
-dti_vdata = cbind(tract_data$maskid, rd_data)
-merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
-rm_me = abs(merged$dateX.minus.dateY.months) > 12
-dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
-X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
-X[which(rm_me), ] = NA
-brain_rd = cbind(as.data.frame(X), merged[, c('SEX', 'age')])
-
-tract_data = read.csv('~/data/baseline_prediction/stripped/dti.csv')
-load('~/data/baseline_prediction/dti/fa_voxelwise.RData')
-dti_vdata = cbind(tract_data$maskid, fa_data)
-merged = mergeOnClosestDate(gf_base, tract_data, my_ids)
-rm_me = abs(merged$dateX.minus.dateY.months) > 12
-dti_base_vdata = merge(merged$maskid, dti_vdata, by.x=1, by.y=1, all.y=F, all.x=T)
-X = dti_base_vdata[, 2:ncol(dti_base_vdata)]
-X[which(rm_me), ] = NA
-brain_fa = cbind(as.data.frame(X), merged[, c('SEX', 'age')])
-
-###############
-print('Loading voxels (area)')
-struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
-load('~/data/baseline_prediction/struct_area.rData')
-# the first column of lh and rh is an index variable
-vdata = cbind(struct_data$Mask.ID...Scan,
-              lh_area[,2:ncol(lh_area)],
-              rh_area[,2:ncol(rh_area)])
-rm(lh_area)
-rm(rh_area)
-mstruct = mergeOnClosestDate(gf_base, struct_data, my_ids)
-# mstruct has clinical vars merged with struct metadata
-rm_me = abs(mstruct$dateX.minus.dateY.months) > 12
-keep_me = c()
-keep_mstruct = c()
-# merging using vdata is very costly, so we need to do this instead
-for (i in 1:nrow(vdata)) {
-  if (vdata[i, 1] %in% mstruct$Mask.ID...Scan && !(vdata[i, 1] %in% rm_me)) {
-    # figure out which indexes to keep from vdata
-    keep_me = c(keep_me, i)
-    # figure out which index it corresponds in mstruct
-    keep_mstruct = c(keep_mstruct, which(mstruct$Mask.ID...Scan == vdata[i, 1]))
-  }
-}
-struct_base_vdata = as.data.frame(matrix(nrow=nrow(mstruct), ncol=ncol(vdata)-1))
-vdata = vdata[keep_me, 2:ncol(vdata)]
-struct_base_vdata[keep_mstruct, ] = vdata
-rm(vdata)
-brain_area = cbind(struct_base_vdata, mstruct[, c('SEX', 'age')])
-
-
-print('Loading voxels (volume)')
-struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
-load('~/data/baseline_prediction/struct_volume.rData')
-# the first column of lh and rh is an index variable
-vdata = cbind(volume_ids,
-              lh_volume[,2:ncol(lh_volume)],
-              rh_volume[,2:ncol(rh_volume)])
-rm(lh_volume)
-rm(rh_volume)
-mstruct = mergeOnClosestDate(gf_base, struct_data, my_ids)
-# mstruct has clinical vars merged with struct metadata
-rm_me = which(abs(mstruct$dateX.minus.dateY.months) > 12)
-keep_me = c()
-keep_mstruct = c()
-# merging using vdata is very costly, so we need to do this instead
-for (i in 1:nrow(vdata)) {
-  if (vdata[i, 1] %in% mstruct$Mask.ID...Scan && !(vdata[i, 1] %in% rm_me)) {
-    # figure out which indexes to keep from vdata
-    keep_me = c(keep_me, i)
-    # figure out which index it corresponds in mstruct
-    keep_mstruct = c(keep_mstruct, which(mstruct$Mask.ID...Scan == vdata[i, 1]))
-  }
-}
-struct_base_vdata = as.data.frame(matrix(nrow=nrow(mstruct), ncol=ncol(vdata)-1))
-vdata = vdata[keep_me, 2:ncol(vdata)]
-struct_base_vdata[keep_mstruct, ] = vdata
-rm(vdata)
-brain_volume = cbind(struct_base_vdata, mstruct[, c('SEX', 'age')])
-
-
-print('Loading voxels (thickness)')
-struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
-load('~/data/baseline_prediction/struct_thickness.rData')
-# the first column of lh and rh is an index variable
-vdata = cbind(struct_data$Mask.ID...Scan,
-              lh_thickness[,2:ncol(lh_thickness)],
-              rh_thickness[,2:ncol(rh_thickness)])
-rm(lh_thickness)
-rm(rh_thickness)
-mstruct = mergeOnClosestDate(gf_base, struct_data, my_ids)
-# mstruct has clinical vars merged with struct metadata
-rm_me = abs(mstruct$dateX.minus.dateY.months) > 12
-keep_me = c()
-keep_mstruct = c()
-# merging using vdata is very costly, so we need to do this instead
-for (i in 1:nrow(vdata)) {
-  if (vdata[i, 1] %in% mstruct$Mask.ID...Scan && !(vdata[i, 1] %in% rm_me)) {
-    # figure out which indexes to keep from vdata
-    keep_me = c(keep_me, i)
-    # figure out which index it corresponds in mstruct
-    keep_mstruct = c(keep_mstruct, which(mstruct$Mask.ID...Scan == vdata[i, 1]))
-  }
-}
-struct_base_vdata = as.data.frame(matrix(nrow=nrow(mstruct), ncol=ncol(vdata)-1))
-vdata = vdata[keep_me, 2:ncol(vdata)]
-struct_base_vdata[keep_mstruct, ] = vdata
-rm(vdata)
-brain_thickness = cbind(struct_base_vdata, mstruct[, c('SEX', 'age')])
-rm(struct_base_vdata)
+# ###############
+# print('Loading voxels (area)')
+# struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
+# load('~/data/baseline_prediction/struct_area.rData')
+# # the first column of lh and rh is an index variable
+# vdata = cbind(struct_data$Mask.ID...Scan,
+#               lh_area[,2:ncol(lh_area)],
+#               rh_area[,2:ncol(rh_area)])
+# rm(lh_area)
+# rm(rh_area)
+# mstruct = mergeOnClosestDate(gf_base, struct_data, my_ids)
+# # mstruct has clinical vars merged with struct metadata
+# rm_me = abs(mstruct$dateX.minus.dateY.months) > 12
+# keep_me = c()
+# keep_mstruct = c()
+# # merging using vdata is very costly, so we need to do this instead
+# for (i in 1:nrow(vdata)) {
+#   if (vdata[i, 1] %in% mstruct$Mask.ID...Scan && !(vdata[i, 1] %in% rm_me)) {
+#     # figure out which indexes to keep from vdata
+#     keep_me = c(keep_me, i)
+#     # figure out which index it corresponds in mstruct
+#     keep_mstruct = c(keep_mstruct, which(mstruct$Mask.ID...Scan == vdata[i, 1]))
+#   }
+# }
+# struct_base_vdata = as.data.frame(matrix(nrow=nrow(mstruct), ncol=ncol(vdata)-1))
+# vdata = vdata[keep_me, 2:ncol(vdata)]
+# struct_base_vdata[keep_mstruct, ] = vdata
+# rm(vdata)
+# brain_area = cbind(struct_base_vdata, mstruct[, c('SEX', 'age')])
+# 
+# 
+# print('Loading voxels (volume)')
+# struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
+# load('~/data/baseline_prediction/struct_volume.rData')
+# # the first column of lh and rh is an index variable
+# vdata = cbind(volume_ids,
+#               lh_volume[,2:ncol(lh_volume)],
+#               rh_volume[,2:ncol(rh_volume)])
+# rm(lh_volume)
+# rm(rh_volume)
+# mstruct = mergeOnClosestDate(gf_base, struct_data, my_ids)
+# # mstruct has clinical vars merged with struct metadata
+# rm_me = which(abs(mstruct$dateX.minus.dateY.months) > 12)
+# keep_me = c()
+# keep_mstruct = c()
+# # merging using vdata is very costly, so we need to do this instead
+# for (i in 1:nrow(vdata)) {
+#   if (vdata[i, 1] %in% mstruct$Mask.ID...Scan && !(vdata[i, 1] %in% rm_me)) {
+#     # figure out which indexes to keep from vdata
+#     keep_me = c(keep_me, i)
+#     # figure out which index it corresponds in mstruct
+#     keep_mstruct = c(keep_mstruct, which(mstruct$Mask.ID...Scan == vdata[i, 1]))
+#   }
+# }
+# struct_base_vdata = as.data.frame(matrix(nrow=nrow(mstruct), ncol=ncol(vdata)-1))
+# vdata = vdata[keep_me, 2:ncol(vdata)]
+# struct_base_vdata[keep_mstruct, ] = vdata
+# rm(vdata)
+# brain_volume = cbind(struct_base_vdata, mstruct[, c('SEX', 'age')])
+# 
+# 
+# print('Loading voxels (thickness)')
+# struct_data = read.csv('~/data/baseline_prediction/stripped/structural.csv')
+# load('~/data/baseline_prediction/struct_thickness.rData')
+# # the first column of lh and rh is an index variable
+# vdata = cbind(struct_data$Mask.ID...Scan,
+#               lh_thickness[,2:ncol(lh_thickness)],
+#               rh_thickness[,2:ncol(rh_thickness)])
+# rm(lh_thickness)
+# rm(rh_thickness)
+# mstruct = mergeOnClosestDate(gf_base, struct_data, my_ids)
+# # mstruct has clinical vars merged with struct metadata
+# rm_me = abs(mstruct$dateX.minus.dateY.months) > 12
+# keep_me = c()
+# keep_mstruct = c()
+# # merging using vdata is very costly, so we need to do this instead
+# for (i in 1:nrow(vdata)) {
+#   if (vdata[i, 1] %in% mstruct$Mask.ID...Scan && !(vdata[i, 1] %in% rm_me)) {
+#     # figure out which indexes to keep from vdata
+#     keep_me = c(keep_me, i)
+#     # figure out which index it corresponds in mstruct
+#     keep_mstruct = c(keep_mstruct, which(mstruct$Mask.ID...Scan == vdata[i, 1]))
+#   }
+# }
+# struct_base_vdata = as.data.frame(matrix(nrow=nrow(mstruct), ncol=ncol(vdata)-1))
+# vdata = vdata[keep_me, 2:ncol(vdata)]
+# struct_base_vdata[keep_mstruct, ] = vdata
+# rm(vdata)
+# brain_thickness = cbind(struct_base_vdata, mstruct[, c('SEX', 'age')])
+# rm(struct_base_vdata)
