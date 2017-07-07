@@ -9,8 +9,8 @@ Note that this clinical file we're loading will keep on getting updated, cleaned
 
 ```{r}
 gf = read.csv('~/data/prs/clinical_06192017.csv')
-gf = gf[gf$ADHD_current!='exclude',]
-pgc = read.csv('~/data/baseline_prediction/stripped/PRS2017_original_clump_default.csv')
+gf = gf[gf$ADHD_current_yes_no!='exclude',]
+pgc = read.csv('~/data/prs/PRS2017_original_clump_default.csv')
 pgc_eur = read.csv('~/data/baseline_prediction/stripped/PRS2017eur_original_clump_default.csv')
 ```
 

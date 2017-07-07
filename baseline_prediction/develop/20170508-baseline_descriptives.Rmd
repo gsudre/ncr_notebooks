@@ -725,20 +725,20 @@ write.csv(cbind(t(res), t(res2), t(res3), t(res4), t(res5)),
 gf_fname = '~/data/baseline_prediction/stripped/clinical.csv'
 gf = read.csv(gf_fname)
 gf_base = gf[gf$BASELINE=='BASELINE', ]
-prs_data = read.csv('~/data/baseline_prediction/stripped/PRS.csv')
-# we don't need the extra BASELINE column
-prs_data = prs_data[, -3]
+prs_data = read.csv('~/data/baseline_prediction/stripped/PRS2017_original_clump_default.csv')
+# # we don't need the extra BASELINE column
+# prs_data = prs_data[, -3]
 merged = merge(gf_base, prs_data, by='MRN')
-X = merged[, 29:ncol(merged)]
+X = merged[, 4:ncol(merged)]
 print(sprintf('PRS: %d datapoints, %d phenotypes', nrow(X), ncol(X)))
 res = sapply(X, nvVSadhd_test, merged, 'pheno ~ df$age + df$SEX + I(df$age^2)')
 res2 = sapply(X, outcome_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)')
 res3 = sapply(X, symptom_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)')
 slopes = get_SX_slope(gf, merged$MRN)
 res4 = sapply(X, sx_slope_test, merged, 'pheno ~ df$age + df$SEX +  + I(df$age^2)', slopes)
-res5 = sapply(X, outcomePairwise_test, merged)
+res5 = sapply(X, outcomePairwise_test, merged, get_resid=T)
 write.csv(cbind(t(res), t(res2), t(res3), t(res4), t(res5)),
-          file='~/data/baseline_prediction/descriptives/prs.csv')
+          file='~/data/baseline_prediction/descriptives/prs2017.csv')
 ```
 
 # Main lobar structures
