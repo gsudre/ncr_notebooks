@@ -30,11 +30,16 @@ cor.test(gf[adhdOnly,]$mvmt, gf[adhdOnly,]$inatt)
 cor.test(gf[adhdOnly,]$mvmt, gf[adhdOnly,]$hi)
 ```
 
-OK, nothing to worry about in the fMRI side.
+OK, nothing to worry about in the fMRI side. But let's do an ANOVA as well, just in case:
+
+```{r}
+fit = lm(gf[idx,]$mvmt ~ gf[idx,]$group)
+summary(aov(fit))
+```
 
 # MEG
 
-For MEg we'll do a similar analysis, but looking at the delta in head positions between end and begin:
+For MEG we'll do a similar analysis, but looking at the delta in head positions between end and begin:
 
 ```{r}
 gf = read.csv('~/data/meg/gf.csv')
@@ -55,7 +60,12 @@ cor.test(gf[adhdOnly,]$delta_movement, gf[adhdOnly,]$inatt)
 cor.test(gf[adhdOnly,]$delta_movement, gf[adhdOnly,]$hi)
 ```
 
-All good here as well.
+All good here as well. But we run an ANOVA just in case too:
+
+```{r}
+fit = lm(gf[idx,]$delta_movement ~ gf[idx,]$group)
+summary(aov(fit))
+```
 
 
 
