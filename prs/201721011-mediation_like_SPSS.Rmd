@@ -1,0 +1,175 @@
+---
+title: "Mediation like SPSS"
+output: html_notebook
+---
+
+I found this webpage (https://nickmichalak.blogspot.com/2016/07/reproducing-hayess-process-models.html), which gives code to run the exact same mediation analysis as PROCESS, but using R. Let's play with it:
+
+```{r}
+gf = read.csv('~/data/prs/clinical_06192017.csv')
+gf = gf[gf$ADHD_current_yes_no!='exclude',]
+pgc = read.csv('~/data/prs/PRS2017_original_clump_default.csv')
+df = merge(gf, pgc)
+# remove duplicated MRNs
+df = df[!duplicated(df$MRN),]
+```
+
+```{r}
+X = 'PROFILES.0.3.profile'
+M = 'IQ'
+Y = 'ADHD_current_yes_no'
+neuropsych = read.csv('~/data/prs/neuropsych_07072017.csv')
+mydata = merge(df, neuropsych, by='MRN')
+mydata = mydata[!is.na(mydata$IQ), ]
+mydata = as.data.frame(mydata)
+mydata$ADHD_current_yes_no = factor(mydata$ADHD_current_yes_no)
+```
+
+```{r}
+# function for centering variables
+center.var <- function(x){
+  centered <- as.vector(scale(x = x, center = TRUE,
+                              scale = FALSE))
+  return(centered)
+}
+
+# apply function to many variables and name them oldname_c (_c for centered)
+mydata[,c("IQ_c", "PRS_c")] <- lapply(X = mydata[,c("IQ", 'PROFILES.0.3.profile')], FUN = function(x) center.var(x))
+
+mydata[,c("IQ_c", "PRS_c")] <- lapply(X = mydata[,c("IQ", 'PROFILES.0.3.profile')], FUN = function(x) scale(x))
+
+# means of the vars
+sapply(mydata[,c("IQ", 'PROFILES.0.3.profile', "IQ_c", "PRS_c")], FUN = function(x){
+         round(mean(x), 5)
+       }, simplify = TRUE,
+       USE.NAMES = TRUE)
+
+sapply(mydata[,c("IQ", 'PROFILES.0.3.profile', "IQ_c", "PRS_c")], FUN = function(x){
+         round(sd(x), 5)
+       }, simplify = TRUE,
+       USE.NAMES = TRUE)
+```
+
+Now, the actual mediation code:
+
+```{r}
+library(lavaan)
+mydata = merge(df, neuropsych, by='MRN')
+mydata = mydata[!is.na(mydata$IQ), ]
+mydata = as.data.frame(mydata)
+mydata$ADHD_current_yes_no = factor(mydata$ADHD_current_yes_no)
+
+Y = mydata$ADHD_current_yes_no
+X = scale(mydata$PROFILES.0.3.profile)
+M = scale(mydata$IQ)
+
+run_data = data.frame(X = X, Y = Y, M = M)
+
+hayes4 <- ' # direct effect
+              Y ~ c*X
+              direct := c
+
+            # regressions
+              M ~ a*X
+              Y ~ b*M
+
+            # indirect effect (a*b)
+              indirect := a*b
+
+            # total effect
+              total := c + (a*b)'
+
+# fit model
+sem4 <- sem(model = hayes4,
+            data = run_data,
+            se = "bootstrap",
+            bootstrap = 1000)
+# fit measures
+summary(sem4,
+        fit.measures = TRUE,
+        standardize = TRUE,
+        rsquare = TRUE)
+
+parameterEstimates(sem4,
+                   boot.ci.type = "bca.simple",
+                   level = .95, ci = TRUE,
+                   standardized = FALSE)
+```
+
+The code was breaking when I didn't stardardize the PRS, so I'll have to go with that. Hayes doesn't like it when dichotomous independent variables are standardized, but it should be OK otherwise provided that the appropriate bootstrapping procedures for effect size are used. Let's see then if we get the same thing in SPSS:
+
+```{r}
+write.csv(run_data, file='~/data/prs/model4_spss_test.csv')
+```
+
+
+
+
+
+Now, say we want to try model 6, then we need the equations from here http://offbeat.group.shef.ac.uk/FIO/model6.htm. Translating it to R, it probably looks like this:
+
+```{r}
+mydata = merge(df, neuropsych, by='MRN')
+mydata = mydata[!is.na(mydata$IQ), ]
+mydata = mydata[!is.na(mydata$SS_PS), ]
+mydata = as.data.frame(mydata)
+mydata$ADHD_current_yes_no = factor(mydata$ADHD_current_yes_no)
+
+Y = mydata$ADHD_current_yes_no
+X = scale(mydata$PROFILES.0.3.profile)
+M1 = scale(mydata$IQ)
+M2 = scale(mydata$SS_PS)
+
+run_data = data.frame(X = X, Y = Y, M1 = M1, M2 = M2)
+
+hayes6 <- ' Y ~ b1*M1
+            Y ~ b2*M2
+            Y ~ cdash*X
+            # direct effect of X on Y
+            directXonY := cdash
+
+            M1 ~ a1*X
+            M2 ~ a2*X
+            M2 ~ d1*M1
+
+            # Specific indirect effect of X on Y via M1
+            indXonYvM1 := a1*b1
+            # Specific indirect effect of X on Y via M2
+            indXonYvM2 := a2*b2
+            # Specific indirect effect of X on Y via M1 and M2
+            indXonYvM1M2 := a1*d1*b2
+            # Total indirect effect of X on Y via M1, M2
+            totalIndXonYvM1M2 := a1*b1 + a2*b2 + a1*d1*b2
+            # Total effect of X on Y
+            totalXonY := a1*b1 + a2*b2 + a1*d1*b2 + cdash'
+
+# fit model
+sem6 <- sem(model = hayes6,
+            data = run_data,
+            se = "bootstrap",
+            bootstrap = 1000)
+# fit measures
+summary(sem6,
+        fit.measures = TRUE,
+        standardize = TRUE,
+        rsquare = TRUE)
+
+parameterEstimates(sem6,
+                   boot.ci.type = "bca.simple",
+                   level = .95, ci = TRUE,
+                   standardized = FALSE)
+```
+
+But how does it compare to SPSS?
+
+```{r}
+write.csv(run_data, file='~/data/prs/model6_spss_test.csv')
+```
+
+
+
+
+
+
+
+
