@@ -94,5 +94,70 @@ As stated in (Sripada REF), prior to the ICA analysis, the regression-based clea
 
 We finally use nonparametric tests (corrected using Bonferroni) to tease out which stable components are independently related to inattention and HI symptoms. ICASSO (as illustrated above) shows no significant bias in attaching a higher stability metric to ICs more correlated to symptom counts. Also note that the majority of components (stable or not) show no relationship to the two phenotypes of interest.
 
+# Correlation to total symptoms
+
+But it so happens that we augmented the ICA with total symptoms, and not inattention or HI by itself. So, let's see if the same analysis as above works for total symptoms.
+
+```{r}
+fmri_iqs = read.csv('~/data/fmri/fmri_iqs.csv', header = F)[,1]
+library(RcppCNPy)
+fmat <- npyLoad('/Users/sudregp/data/sripada/fmri/exp_scores_enrichedNoDummies1K.npy')
+subjs = read.table('~/data/fmri/joel_all_147.txt')
+exp_scores = cbind(subjs, fmat)
+gf = read.csv('~/data/fmri/gf.csv')
+df = merge(gf, exp_scores, by.x='maskid', by.y='V1')
+df = df[df$used==1,]
+total = df$inatt + df$hi
+pvals = sapply(df[, 14:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
+adhdOnly = df$group!='NV'
+total = df[adhdOnly,]$inatt + df[adhdOnly,]$hi
+pvals_adhdOnly = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
+myorder = sort(fmri_iqs, index.return=T, decreasing = T)
+par(mfrow=(c(1, 2)))
+plot(fmri_iqs[myorder$ix], pvals[myorder$ix], xlab='Stability', ylab='P-value', main='Everyone')
+abline(h=.05, lty=3)
+abline(v=.85, lty=3)
+plot(fmri_iqs[myorder$ix], pvals_adhdOnly[myorder$ix], xlab='Stability', ylab='P-value', main='ADHD Only')
+abline(h=.05, lty=3)
+abline(v=.85, lty=3)
+cor.test(1-pvals, fmri_iqs, method='spearman')
+cor.test(1-pvals_adhdOnly, fmri_iqs, method='spearman')
+
+```
+
+
+Still nothing for fMRI. Let's check on MEG:
+
+```{r}
+bands = c('1-4', '4-8', '8-13', '13-30', '30-55', '65-100')
+meg_iqs = c()
+fmat = c()
+for (b in bands) {
+  meg_iqs = c(meg_iqs, read.csv(sprintf('~/data/meg/iqs_%s.csv', b), header = F)[,1])
+  fmat = cbind(fmat, npyLoad(sprintf('/Users/sudregp/data/sripada/meg/exp_scores_%s_imcoh_enriched_1000perms_15ics.npy', b)))
+}
+subjs = read.table('~/data/meg/usable_subjects_5segs13p654_SAM.txt')
+exp_scores = cbind(subjs, fmat)
+gf = read.csv('~/data/meg/gf.csv')
+df = merge(gf, exp_scores, by.x='maskid', by.y='V1')
+df = df[df$used==1,]
+total = df$inatt + df$hi
+pvals = sapply(df[, 17:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
+adhdOnly = df$group!='NV'
+total = df[adhdOnly,]$inatt + df[adhdOnly,]$hi
+pvals_adhdOnly = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
+myorder = sort(meg_iqs, index.return=T, decreasing = T)
+par(mfrow=(c(1, 2)))
+plot(meg_iqs[myorder$ix], pvals[myorder$ix], xlab='Stability', ylab='P-value', main='All')
+abline(h=.05, lty=3)
+abline(v=.85, lty=3)
+plot(meg_iqs[myorder$ix], pvals_adhdOnly[myorder$ix], xlab='Stability', ylab='P-value', main='ADHD only')
+abline(h=.05, lty=3)
+abline(v=.85, lty=3)
+cor.test(1-pvals, meg_iqs, method='spearman')
+cor.test(1-pvals_adhdOnly, meg_iqs, method='spearman')
+```
+
+
 
 

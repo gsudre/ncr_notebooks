@@ -68,4 +68,47 @@ summary(aov(fit))
 ```
 
 
+# Recalculating some variables using nonparemetric methods
+
+## fMRI
+
+```{r}
+gf = read.csv('~/data/fmri/gf.csv')
+idx = gf$used==1
+kruskal.test(gf[idx,]$trs_used ~ gf[idx,]$group)
+pairwise.wilcox.test(gf[idx,]$trs_used, gf[idx,]$group, p.adjust.method = 'none')
+cor.test(gf[idx & gf$group!='NV',]$trs_used, gf[idx & gf$group!='NV',]$inatt, method='spearman')
+cor.test(gf[idx & gf$group!='NV',]$trs_used, gf[idx & gf$group!='NV',]$hi, method='spearman')
+total = gf[idx & gf$group!='NV',]$inatt + gf[idx & gf$group!='NV',]$hi
+cor.test(gf[idx & gf$group!='NV',]$trs_used, total, method='spearman')
+kruskal.test(gf[idx,]$mvmt ~ gf[idx,]$group)
+pairwise.wilcox.test(gf[idx,]$mvmt, gf[idx,]$group, p.adjust.method = 'none')
+cor.test(gf[idx & gf$group!='NV',]$mvmt, gf[idx & gf$group!='NV',]$inatt, method='spearman')
+cor.test(gf[idx & gf$group!='NV',]$mvmt, gf[idx & gf$group!='NV',]$hi, method='spearman')
+total = gf[idx & gf$group!='NV',]$inatt + gf[idx & gf$group!='NV',]$hi
+cor.test(gf[idx & gf$group!='NV',]$mvmt, total, method='spearman')
+```
+
+## MEG
+
+```{r}
+gf = read.csv('~/data/meg/gf.csv')
+idx = gf$used==1
+kruskal.test(gf[idx,]$good_secs ~ gf[idx,]$group)
+pairwise.wilcox.test(gf[idx,]$good_secs, gf[idx,]$group, p.adjust.method = 'none')
+cor.test(gf[idx & gf$group!='NV',]$good_secs, gf[idx & gf$group!='NV',]$inatt, method='spearman')
+cor.test(gf[idx & gf$group!='NV',]$good_secs, gf[idx & gf$group!='NV',]$hi, method='spearman')
+total = gf[idx & gf$group!='NV',]$inatt + gf[idx & gf$group!='NV',]$hi
+cor.test(gf[idx & gf$group!='NV',]$good_secs, total, method='spearman')
+kruskal.test(gf[idx,]$delta_movement ~ gf[idx,]$group)
+pairwise.wilcox.test(gf[idx,]$delta_movement, gf[idx,]$group, p.adjust.method = 'none')
+cor.test(gf[idx & gf$group!='NV',]$delta_movement, gf[idx & gf$group!='NV',]$inatt, method='spearman')
+cor.test(gf[idx & gf$group!='NV',]$delta_movement, gf[idx & gf$group!='NV',]$hi, method='spearman')
+total = gf[idx & gf$group!='NV',]$inatt + gf[idx & gf$group!='NV',]$hi
+cor.test(gf[idx & gf$group!='NV',]$delta_movement, total, method='spearman')
+```
+
+
+
+
 
