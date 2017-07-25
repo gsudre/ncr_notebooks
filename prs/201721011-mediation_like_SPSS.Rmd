@@ -83,7 +83,7 @@ hayes4 <- ' # direct effect
 sem4 <- sem(model = hayes4,
             data = run_data,
             se = "bootstrap",
-            bootstrap = 1000)
+            bootstrap = 5000)
 # fit measures
 summary(sem4,
         fit.measures = TRUE,
@@ -102,16 +102,14 @@ The code was breaking when I didn't stardardize the PRS, so I'll have to go with
 write.csv(run_data, file='~/data/prs/model4_spss_test.csv')
 ```
 
-
-
-
+It does... perfect match to results Philip sent me.
 
 Now, say we want to try model 6, then we need the equations from here http://offbeat.group.shef.ac.uk/FIO/model6.htm. Translating it to R, it probably looks like this:
 
 ```{r}
 mydata = merge(df, neuropsych, by='MRN')
 mydata = mydata[!is.na(mydata$IQ), ]
-mydata = mydata[!is.na(mydata$RawscoreDSWISC), ]
+mydata = mydata[!is.na(mydata$SS_PS), ]
 mydata = as.data.frame(mydata)
 mydata$ADHD_current_yes_no = factor(mydata$ADHD_current_yes_no)
 
@@ -170,6 +168,90 @@ write.csv(run_data, file='~/data/prs/model6_spss_test.csv')
 
 
 
+# Making the code modular
 
+## model 4
+
+```{r}
+run_model4 = function(X, M, Y, nboot=1000) {
+  library(lavaan)
+  idx = is.na(X) | is.na(Y) | is.na(M)
+  run_data = data.frame(X = scale(X[!idx]),
+                        Y = scale(Y[!idx]),
+                        M = scale(M[!idx]))
+
+  hayes4 <- ' # direct effect
+              Y ~ c*X
+              direct := c
+
+            # regressions
+              M ~ a*X
+              Y ~ b*M
+
+            # indirect effect (a*b)
+              indirect := a*b
+
+            # total effect
+              total := c + (a*b)'
+  
+  # fit model
+  sem4 <- sem(model = hayes4,
+              data = run_data,
+              se = "bootstrap",
+              bootstrap = nboot)
+  
+  res = parameterEstimates(sem4,
+                           boot.ci.type = "bca.simple",
+                           level = .95, ci = TRUE,
+                           standardized = FALSE)
+  res2 = res[7:9, 5:10]
+  rownames(res2) = res[7:9,]$label
+  return(res2)
+}
+
+run_model6 = function(X, M1, M2, Y, nboot=1000) {
+  library(lavaan)
+  idx = is.na(X) | is.na(Y) | is.na(M1) | is.na(M2)
+  run_data = data.frame(X = scale(X[!idx]),
+                        Y = scale(Y[!idx]),
+                        M1 = scale(M1[!idx]),
+                        M2 = scale(M2[!idx]))
+
+  hayes6 <- ' Y ~ b1*M1
+            Y ~ b2*M2
+            Y ~ cdash*X
+            # direct effect of X on Y
+            directXonY := cdash
+
+            M1 ~ a1*X
+            M2 ~ a2*X
+            M2 ~ d1*M1
+
+            # Specific indirect effect of X on Y via M1
+            indXonYvM1 := a1*b1
+            # Specific indirect effect of X on Y via M2
+            indXonYvM2 := a2*b2
+            # Specific indirect effect of X on Y via M1 and M2
+            indXonYvM1M2 := a1*d1*b2
+            # Total indirect effect of X on Y via M1, M2
+            totalIndXonYvM1M2 := a1*b1 + a2*b2 + a1*d1*b2
+            # Total effect of X on Y
+            totalXonY := a1*b1 + a2*b2 + a1*d1*b2 + cdash'
+  
+  # fit model
+  sem6 <- sem(model = hayes6,
+              data = run_data,
+              se = "bootstrap",
+              bootstrap = nboot)
+  
+  res = parameterEstimates(sem6,
+                           boot.ci.type = "bca.simple",
+                           level = .95, ci = TRUE,
+                           standardized = FALSE)
+  res2 = res[11:16, 5:10]
+  rownames(res2) = res[11:16,]$label
+  return(res2)
+}
+```
 
 
