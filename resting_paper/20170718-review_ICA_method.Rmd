@@ -120,9 +120,8 @@ abline(v=.85, lty=3)
 plot(fmri_iqs[myorder$ix], pvals_adhdOnly[myorder$ix], xlab='Stability', ylab='P-value', main='ADHD Only')
 abline(h=.05, lty=3)
 abline(v=.85, lty=3)
-cor.test(1-pvals, fmri_iqs, method='spearman')
-cor.test(1-pvals_adhdOnly, fmri_iqs, method='spearman')
-
+cor.test(1-pvals, fmri_iqs, method='spearman', alternative='greater')
+cor.test(1-pvals_adhdOnly, fmri_iqs, method='spearman', alternative='greater')
 ```
 
 
@@ -154,10 +153,46 @@ abline(v=.85, lty=3)
 plot(meg_iqs[myorder$ix], pvals_adhdOnly[myorder$ix], xlab='Stability', ylab='P-value', main='ADHD only')
 abline(h=.05, lty=3)
 abline(v=.85, lty=3)
-cor.test(1-pvals, meg_iqs, method='spearman')
-cor.test(1-pvals_adhdOnly, meg_iqs, method='spearman')
+cor.test(1-pvals, meg_iqs, method='spearman', alternative='greater')
+cor.test(1-pvals_adhdOnly, meg_iqs, method='spearman', alternative='greater')
 ```
 
+# Association with total symptoms
 
+```{r}
+fmri_iqs = read.csv('~/data/fmri/fmri_iqs.csv', header = F)[,1]
+library(RcppCNPy)
+fmat <- npyLoad('/Users/sudregp/data/sripada/fmri/exp_scores_enrichedNoDummies1K.npy')
+subjs = read.table('~/data/fmri/joel_all_147.txt')
+exp_scores = cbind(subjs, fmat)
+gf = read.csv('~/data/fmri/gf.csv')
+df = merge(gf, exp_scores, by.x='maskid', by.y='V1')
+df = df[df$used==1,]
+total = df$inatt + df$hi
+pvals = sapply(df[, 14:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
+adhdOnly = df$group!='NV'
+total = df[adhdOnly,]$inatt + df[adhdOnly,]$hi
+pvals_adhdOnly = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
+sum(pvals_adhdOnly[fmri_iqs > .85] < .05/6)
+
+bands = c('1-4', '4-8', '8-13', '13-30', '30-55', '65-100')
+meg_iqs = c()
+fmat = c()
+for (b in bands) {
+  meg_iqs = c(meg_iqs, read.csv(sprintf('~/data/meg/iqs_%s.csv', b), header = F)[,1])
+  fmat = cbind(fmat, npyLoad(sprintf('/Users/sudregp/data/sripada/meg/exp_scores_%s_imcoh_enriched_1000perms_15ics.npy', b)))
+}
+subjs = read.table('~/data/meg/usable_subjects_5segs13p654_SAM.txt')
+exp_scores = cbind(subjs, fmat)
+gf = read.csv('~/data/meg/gf.csv')
+df = merge(gf, exp_scores, by.x='maskid', by.y='V1')
+df = df[df$used==1,]
+total = df$inatt + df$hi
+pvals = sapply(df[, 17:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
+adhdOnly = df$group!='NV'
+total = df[adhdOnly,]$inatt + df[adhdOnly,]$hi
+pvals_adhdOnly = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
+sum(pvals_adhdOnly[meg_iqs > .85] < .05/56)
+```
 
 
