@@ -10,7 +10,7 @@ df = merge(gf, pgc)
 df = df[!duplicated(df$MRN),]
 
 # loading brain structural
-brain = read.csv('~/data/prs/neuropsych_07072017.csv')
+brain = read.csv('~/data/prs/neuropsych_07282017.csv')
 mydata = merge(df, brain, by='MRN')
 
 # choosing mediators
