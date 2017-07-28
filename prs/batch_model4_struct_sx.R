@@ -1,6 +1,8 @@
 # loading clinical data
 gf = read.csv('~/data/prs/clinical_06192017.csv')
-gf = gf[gf$ADHD_current_yes_no=='yes',]
+gf = gf[gf$ADHD_current_yes_no!='exclude',]
+gf[gf$ADHD_current_yes_no=='no' & is.na(gf$SX_HI),]$SX_HI = 0
+gf[gf$ADHD_current_yes_no=='no' & is.na(gf$SX_inatt),]$SX_inatt = 0
 
 # loading PRS data
 pgc = read.csv('~/data/prs/PRS2017_original_clump_default.csv')
@@ -9,13 +11,17 @@ df = merge(gf, pgc)
 df = df[!duplicated(df$MRN),]
 
 # loading brain structural
-brain = read.csv('~/data/prs/neuropsych_07282017.csv')
-mydata = merge(df, brain, by='MRN')
+struct = read.csv('~/data/prs/struct_07112017.csv')
+rois = merge(df, struct, by='MRN')
+# filtering on QC
+keep_me = which(rois$avg_freesurfer_score <= 2 & rois$MPRAGE_QC <= 2)
+# in the end, all data needs to be in a matrix called mydata!
+mydata = rois[keep_me, ]
 
 # choosing mediators
-Ms = c(33:ncol(mydata))
+Ms = c(42:ncol(mydata))
 
-out_fname = '~/data/prs/results/model4_p3_neuropsych_inattADHDOnly.csv'
+out_fname = '~/data/prs/results/struct/model4_p3_struct_inatt_QCse2Both.csv'
 X = mydata$PROFILES.0.3.profile
 Y = mydata$SX_inatt
 nboot = 1000
