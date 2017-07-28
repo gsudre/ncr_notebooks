@@ -29,7 +29,7 @@ out_fname = '~/data/prs/model6_p3_neuropsych_struct_DX_QCst2.5Both.csv'
 X = mydata$PROFILES.0.3.profile
 Y = mydata$ADHD_current_yes_no
 nboot = 100
-
+ncpus = 4
 
 
 run_model6 = function(X, M1, M2, Y, nboot=1000) {
@@ -83,10 +83,10 @@ run_model6 = function(X, M1, M2, Y, nboot=1000) {
   return(res2)
 }
 
-run_wrapper = function(m2, mydata, m1_name, nboot) {
+run_wrapper = function(m2, run_model, mydata, m1_name, nboot, X, Y, m1) {
   m2_name = colnames(mydata)[m2]
   print(sprintf('Running M1=%s, M2=%s', m1_name, m2_name))
-  tmp = run_model6(X, mydata[, m1], mydata[, m2], Y, nboot=nboot)
+  tmp = run_model(X, mydata[, m1], mydata[, m2], Y, nboot=nboot)
   res = c(m1_name, m2_name)
   names(res) = c('M1', 'M2')
   for (i in 1:nrow(tmp)) {
@@ -100,10 +100,14 @@ run_wrapper = function(m2, mydata, m1_name, nboot) {
 
 # no need to change anything below here. The functions remove NAs and zscore variables on their own
 all_res = c()
+library(parallel)
+cl <- makeCluster(ncpus)
+
 for (m1 in M1s) {
   m1_name = colnames(mydata)[m1]
-  m1_res = lapply(M2s, run_wrapper, mydata, m1_name, nboot)
+  m1_res = parLapply(cl, M2s, run_wrapper, run_model6, mydata, m1_name, nboot, X, Y, m1)
   m1_res = do.call(rbind, m1_res)
   all_res = rbind(all_res, m1_res)
 }
+stopCluster(cl)
 write.csv(all_res, file=out_fname, row.names=F)
