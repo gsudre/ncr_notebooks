@@ -17,15 +17,15 @@ df = merge(df, neuropsych, by='MRN')
 struct = read.csv('~/data/prs/struct_07112017.csv')
 rois = merge(df, struct, by='MRN')
 # filtering on QC
-keep_me = which(rois$avg_freesurfer_score < 2.5 & rois$MPRAGE_QC < 2.5)
+keep_me = which(rois$avg_freesurfer_score <= 2 & rois$MPRAGE_QC <= 2)
 # in the end, all data needs to be in a matrix called mydata!
 mydata = rois[keep_me, ]
 
 # choosing mediators
-M1s = c(65:ncol(mydata))[1:3]
-M2s = c(33:63)[1:4]
+M1s = c(65:ncol(mydata))
+M2s = c(33:63)
 
-out_fname = '~/data/prs/model6_p3_neuropsych_struct_DX_QCst2.5Both.csv'
+out_fname = '~/data/prs/model6_p3_neuropsych_struct_DX_QCse2Both.csv'
 X = mydata$PROFILES.0.3.profile
 Y = mydata$ADHD_current_yes_no
 nboot = 100
