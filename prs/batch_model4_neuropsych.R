@@ -16,7 +16,7 @@ mydata = merge(df, brain, by='MRN')
 # choosing mediators
 Ms = c(33:ncol(mydata))
 
-out_fname = '~/data/prs/results/model4_p3_neuropsych_DX_QCse2Both.csv'
+out_fname = '~/data/prs/results/model4_p3_neuropsych_DX.csv'
 X = mydata$PROFILES.0.3.profile
 Y = mydata$ADHD_current_yes_no
 nboot = 1000
