@@ -22,13 +22,14 @@ keep_me = which(rois$avg_freesurfer_score <= 2 & rois$MPRAGE_QC <= 2)
 mydata = rois[keep_me, ]
 
 # choosing mediators
-M1s = c(65:ncol(mydata))
-M2s = c(33:63)
+args = commandArgs(trailingOnly=TRUE)
+m1_name = args[1]
+M2s = c(33:44, 47:55)
 
-out_fname = '~/data/prs/model6_p3_neuropsych_struct_DX_QCse2Both.csv'
+out_fname = sprintf('~/data/prs/results/struct/model6_p3_%s_neuropsych_DX_QCse2Both.csv', m1_name)
 X = mydata$PROFILES.0.3.profile
 Y = mydata$ADHD_current_yes_no
-nboot = 100
+nboot = 1000
 ncpus = 4
 
 
@@ -99,17 +100,13 @@ run_wrapper = function(m2, run_model, mydata, m1_name, nboot, X, Y, m1) {
 }
 
 # no need to change anything below here. The functions remove NAs and zscore variables on their own
-all_res = c()
 library(parallel)
 cl <- makeCluster(ncpus)
 
-for (m1 in M1s) {
-  m1_name = colnames(mydata)[m1]
-  print(sprintf('Running M1=%s', m1_name))
-  # m1_res = parLapply(cl, M2s, run_wrapper, run_model6, mydata, m1_name, nboot, X, Y, m1)
-  m1_res = lapply(M2s, run_wrapper, run_model6, mydata, m1_name, nboot, X, Y, m1)
-  m1_res = do.call(rbind, m1_res)
-  all_res = rbind(all_res, m1_res)
-}
+m1 = which(colnames(mydata)==m1_name)
+m1_res = parLapply(cl, M2s, run_wrapper, run_model6, mydata, m1_name, nboot, X, Y, m1)
+# m1_res = lapply(M2s, run_wrapper, run_model6, mydata, m1_name, nboot, X, Y, m1)
+all_res = do.call(rbind, m1_res)
+  
 stopCluster(cl)
 write.csv(all_res, file=out_fname, row.names=F)
