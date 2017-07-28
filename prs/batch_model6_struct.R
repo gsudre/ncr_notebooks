@@ -85,7 +85,7 @@ run_model6 = function(X, M1, M2, Y, nboot=1000) {
 
 run_wrapper = function(m2, run_model, mydata, m1_name, nboot, X, Y, m1) {
   m2_name = colnames(mydata)[m2]
-  print(sprintf('Running M1=%s, M2=%s', m1_name, m2_name))
+  cat('\t', sprintf('M2=%s', m2_name), '\n')
   tmp = run_model(X, mydata[, m1], mydata[, m2], Y, nboot=nboot)
   res = c(m1_name, m2_name)
   names(res) = c('M1', 'M2')
@@ -105,7 +105,9 @@ cl <- makeCluster(ncpus)
 
 for (m1 in M1s) {
   m1_name = colnames(mydata)[m1]
-  m1_res = parLapply(cl, M2s, run_wrapper, run_model6, mydata, m1_name, nboot, X, Y, m1)
+  print(sprintf('Running M1=%s', m1_name))
+  # m1_res = parLapply(cl, M2s, run_wrapper, run_model6, mydata, m1_name, nboot, X, Y, m1)
+  m1_res = lapply(M2s, run_wrapper, run_model6, mydata, m1_name, nboot, X, Y, m1)
   m1_res = do.call(rbind, m1_res)
   all_res = rbind(all_res, m1_res)
 }
