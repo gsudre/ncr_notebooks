@@ -30,8 +30,8 @@ We test if QC makes a difference for several different structures:
 ```{r}
 mydata = merge(df, struct, by='MRN')
 Ys = colnames(mydata)[42:ncol(mydata)]
-pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + Sex + MPRAGE_QC', s)), data=mydata))$coefficients['MPRAGE_QC',4])
-sum(pvals < .01)/length(pvals)
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2) + Sex + MPRAGE_QC', s)), data=mydata))$coefficients['MPRAGE_QC',4])
+sum(pvals < .05)/length(pvals)
 nrow(mydata)
 ```
 
@@ -41,8 +41,8 @@ Not good... without QC, 81% of variables are significant. Let's remove QC > 2.5.
 mydata = merge(df, struct, by='MRN')
 Ys = colnames(mydata)[42:ncol(mydata)]
 mydata = mydata[mydata$MPRAGE_QC < 3, ]
-pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + Sex + MPRAGE_QC', s)), data=mydata))$coefficients['MPRAGE_QC',4])
-sum(pvals < .01)/length(pvals)
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + MPRAGE_QC', s)), data=mydata))$coefficients['MPRAGE_QC',4])
+sum(pvals < .05)/length(pvals)
 nrow(mydata)
 ```
 
@@ -52,8 +52,17 @@ Much better... if we remove the 2.5s?
 mydata = merge(df, struct, by='MRN')
 Ys = colnames(mydata)[42:ncol(mydata)]
 mydata = mydata[mydata$MPRAGE_QC < 2.5, ]
-pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + Sex + MPRAGE_QC', s)), data=mydata))$coefficients['MPRAGE_QC',4])
-sum(pvals < .01)/length(pvals)
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + MPRAGE_QC', s)), data=mydata))$coefficients['MPRAGE_QC',4])
+sum(pvals < .05)/length(pvals)
+nrow(mydata)
+```
+
+```{r}
+mydata = merge(df, struct, by='MRN')
+Ys = colnames(mydata)[42:ncol(mydata)]
+mydata = mydata[mydata$MPRAGE_QC < 2, ]
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + MPRAGE_QC', s)), data=mydata))$coefficients['MPRAGE_QC',4])
+sum(pvals < .05)/length(pvals)
 nrow(mydata)
 ```
 
@@ -63,9 +72,9 @@ That's not so bad anymore, especially as many of these variables are highly corr
 mydata = merge(df, struct, by='MRN')
 Ys = colnames(mydata)[42:ncol(mydata)]
 mydata = mydata[!is.na(mydata$avg_freesurfer_score),]
-pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + Sex + avg_freesurfer_score', s)),
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + avg_freesurfer_score', s)),
                                           data=mydata))$coefficients['avg_freesurfer_score',4])
-sum(pvals < .01)/length(pvals)
+sum(pvals < .05)/length(pvals)
 nrow(mydata)
 ```
 
@@ -76,9 +85,9 @@ mydata = merge(df, struct, by='MRN')
 Ys = colnames(mydata)[42:ncol(mydata)]
 mydata = mydata[!is.na(mydata$avg_freesurfer_score),]
 mydata = mydata[mydata$avg_freesurfer_score < 3, ]
-pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + Sex + avg_freesurfer_score', s)),
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + avg_freesurfer_score', s)),
                                           data=mydata))$coefficients['avg_freesurfer_score',4])
-sum(pvals < .01)/length(pvals)
+sum(pvals < .05)/length(pvals)
 nrow(mydata)
 ```
 
@@ -89,9 +98,31 @@ mydata = merge(df, struct, by='MRN')
 Ys = colnames(mydata)[42:ncol(mydata)]
 mydata = mydata[!is.na(mydata$avg_freesurfer_score),]
 mydata = mydata[mydata$avg_freesurfer_score < 2.5, ]
-pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + Sex + avg_freesurfer_score', s)),
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + avg_freesurfer_score', s)),
                                           data=mydata))$coefficients['avg_freesurfer_score',4])
-sum(pvals < .01)/length(pvals)
+sum(pvals < .05)/length(pvals)
+nrow(mydata)
+```
+
+```{r}
+mydata = merge(df, struct, by='MRN')
+Ys = colnames(mydata)[42:ncol(mydata)]
+mydata = mydata[!is.na(mydata$avg_freesurfer_score),]
+mydata = mydata[mydata$avg_freesurfer_score <= 2, ]
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + avg_freesurfer_score', s)),
+                                          data=mydata))$coefficients['avg_freesurfer_score',4])
+sum(pvals < .05)/length(pvals)
+nrow(mydata)
+```
+
+```{r}
+mydata = merge(df, struct, by='MRN')
+Ys = colnames(mydata)[42:ncol(mydata)]
+mydata = mydata[!is.na(mydata$avg_freesurfer_score),]
+mydata = mydata[mydata$avg_freesurfer_score < 2, ]
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + avg_freesurfer_score', s)),
+                                          data=mydata))$coefficients['avg_freesurfer_score',4])
+sum(pvals < .05)/length(pvals)
 nrow(mydata)
 ```
 
@@ -101,8 +132,17 @@ We're in the same ballpark in terms of correlation as the MPRAGE QC. But how man
 mydata = merge(df, struct, by='MRN')
 Ys = colnames(mydata)[42:ncol(mydata)]
 mydata = mydata[!is.na(mydata$avg_freesurfer_score),]
-mydata = mydata[mydata$avg_freesurfer_score < 2.5, ]
-mydata = mydata[mydata$MPRAGE_QC < 2.5, ]
+mydata = mydata[mydata$avg_freesurfer_score <= 2, ]
+mydata = mydata[mydata$MPRAGE_QC <= 2, ]
+nrow(mydata)
+```
+
+```{r}
+mydata = merge(df, struct, by='MRN')
+Ys = colnames(mydata)[42:ncol(mydata)]
+mydata = mydata[!is.na(mydata$avg_freesurfer_score),]
+mydata = mydata[mydata$avg_freesurfer_score <= 2, ]
+mydata = mydata[mydata$MPRAGE_QC < 2, ]
 nrow(mydata)
 ```
 

@@ -209,14 +209,14 @@ struct = read.csv('~/data/prs/struct_07112017.csv')</code></pre>
 <p>We test if QC makes a difference for several different structures:</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxucHZhbHMgPSBzYXBwbHkoWXMsIGZ1bmN0aW9uKHMpIHN1bW1hcnkobG0oYXMuZm9ybXVsYShzcHJpbnRmKCclcyB+IEFHRSArIFNleCArIE1QUkFHRV9RQycsIHMpKSwgZGF0YT1teWRhdGEpKSRjb2VmZmljaWVudHNbJ01QUkFHRV9RQycsNF0pXG5zdW0ocHZhbHMgPCAuMDEpL2xlbmd0aChwdmFscylcbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxucHZhbHMgPSBzYXBwbHkoWXMsIGZ1bmN0aW9uKHMpIHN1bW1hcnkobG0oYXMuZm9ybXVsYShzcHJpbnRmKCclcyB+IEFHRSArIEkoQUdFXjIpICsgU2V4ICsgTVBSQUdFX1FDJywgcykpLCBkYXRhPW15ZGF0YSkpJGNvZWZmaWNpZW50c1snTVBSQUdFX1FDJyw0XSlcbnN1bShwdmFscyA8IC4wNSkvbGVuZ3RoKHB2YWxzKVxuYGBgIn0= -->
 <pre class="r"><code>mydata = merge(df, struct, by='MRN')
 Ys = colnames(mydata)[42:ncol(mydata)]
-pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + Sex + MPRAGE_QC', s)), data=mydata))$coefficients['MPRAGE_QC',4])
-sum(pvals &lt; .01)/length(pvals)</code></pre>
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2) + Sex + MPRAGE_QC', s)), data=mydata))$coefficients['MPRAGE_QC',4])
+sum(pvals &lt; .05)/length(pvals)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuODE4NTE4NVxuIn0= -->
-<pre><code>[1] 0.8185185</code></pre>
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuODUxODUxOVxuIn0= -->
+<pre><code>[1] 0.8518519</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnJvdyhteWRhdGEpXG5gYGAifQ== -->
 <pre class="r"><code>nrow(mydata)</code></pre>
@@ -229,15 +229,15 @@ sum(pvals &lt; .01)/length(pvals)</code></pre>
 <p>Not good… without QC, 81% of variables are significant. Let’s remove QC &gt; 2.5.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhW215ZGF0YSRNUFJBR0VfUUMgPCAzLCBdXG5wdmFscyA9IHNhcHBseShZcywgZnVuY3Rpb24ocykgc3VtbWFyeShsbShhcy5mb3JtdWxhKHNwcmludGYoJyVzIH4gQUdFICsgU2V4ICsgTVBSQUdFX1FDJywgcykpLCBkYXRhPW15ZGF0YSkpJGNvZWZmaWNpZW50c1snTVBSQUdFX1FDJyw0XSlcbnN1bShwdmFscyA8IC4wMSkvbGVuZ3RoKHB2YWxzKVxuYGBgIn0= -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhW215ZGF0YSRNUFJBR0VfUUMgPCAzLCBdXG5wdmFscyA9IHNhcHBseShZcywgZnVuY3Rpb24ocykgc3VtbWFyeShsbShhcy5mb3JtdWxhKHNwcmludGYoJyVzIH4gQUdFICsgSShBR0VeMikgICsgU2V4ICsgTVBSQUdFX1FDJywgcykpLCBkYXRhPW15ZGF0YSkpJGNvZWZmaWNpZW50c1snTVBSQUdFX1FDJyw0XSlcbnN1bShwdmFscyA8IC4wNSkvbGVuZ3RoKHB2YWxzKVxuYGBgIn0= -->
 <pre class="r"><code>mydata = merge(df, struct, by='MRN')
 Ys = colnames(mydata)[42:ncol(mydata)]
 mydata = mydata[mydata$MPRAGE_QC &lt; 3, ]
-pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + Sex + MPRAGE_QC', s)), data=mydata))$coefficients['MPRAGE_QC',4])
-sum(pvals &lt; .01)/length(pvals)</code></pre>
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + MPRAGE_QC', s)), data=mydata))$coefficients['MPRAGE_QC',4])
+sum(pvals &lt; .05)/length(pvals)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuNDMzMzMzM1xuIn0= -->
-<pre><code>[1] 0.4333333</code></pre>
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuNTU5MjU5M1xuIn0= -->
+<pre><code>[1] 0.5592593</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnJvdyhteWRhdGEpXG5gYGAifQ== -->
 <pre class="r"><code>nrow(mydata)</code></pre>
@@ -250,15 +250,15 @@ sum(pvals &lt; .01)/length(pvals)</code></pre>
 <p>Much better… if we remove the 2.5s?</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhW215ZGF0YSRNUFJBR0VfUUMgPCAyLjUsIF1cbnB2YWxzID0gc2FwcGx5KFlzLCBmdW5jdGlvbihzKSBzdW1tYXJ5KGxtKGFzLmZvcm11bGEoc3ByaW50ZignJXMgfiBBR0UgKyBTZXggKyBNUFJBR0VfUUMnLCBzKSksIGRhdGE9bXlkYXRhKSkkY29lZmZpY2llbnRzWydNUFJBR0VfUUMnLDRdKVxuc3VtKHB2YWxzIDwgLjAxKS9sZW5ndGgocHZhbHMpXG5gYGAifQ== -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhW215ZGF0YSRNUFJBR0VfUUMgPCAyLjUsIF1cbnB2YWxzID0gc2FwcGx5KFlzLCBmdW5jdGlvbihzKSBzdW1tYXJ5KGxtKGFzLmZvcm11bGEoc3ByaW50ZignJXMgfiBBR0UgKyBJKEFHRV4yKSAgKyBTZXggKyBNUFJBR0VfUUMnLCBzKSksIGRhdGE9bXlkYXRhKSkkY29lZmZpY2llbnRzWydNUFJBR0VfUUMnLDRdKVxuc3VtKHB2YWxzIDwgLjA1KS9sZW5ndGgocHZhbHMpXG5gYGAifQ== -->
 <pre class="r"><code>mydata = merge(df, struct, by='MRN')
 Ys = colnames(mydata)[42:ncol(mydata)]
 mydata = mydata[mydata$MPRAGE_QC &lt; 2.5, ]
-pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + Sex + MPRAGE_QC', s)), data=mydata))$coefficients['MPRAGE_QC',4])
-sum(pvals &lt; .01)/length(pvals)</code></pre>
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + MPRAGE_QC', s)), data=mydata))$coefficients['MPRAGE_QC',4])
+sum(pvals &lt; .05)/length(pvals)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuMjU1NTU1NlxuIn0= -->
-<pre><code>[1] 0.2555556</code></pre>
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuMzQ0NDQ0NFxuIn0= -->
+<pre><code>[1] 0.3444444</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnJvdyhteWRhdGEpXG5gYGAifQ== -->
 <pre class="r"><code>nrow(mydata)</code></pre>
@@ -268,19 +268,39 @@ sum(pvals &lt; .01)/length(pvals)</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhW215ZGF0YSRNUFJBR0VfUUMgPCAyLCBdXG5wdmFscyA9IHNhcHBseShZcywgZnVuY3Rpb24ocykgc3VtbWFyeShsbShhcy5mb3JtdWxhKHNwcmludGYoJyVzIH4gQUdFICsgSShBR0VeMikgICsgU2V4ICsgTVBSQUdFX1FDJywgcykpLCBkYXRhPW15ZGF0YSkpJGNvZWZmaWNpZW50c1snTVBSQUdFX1FDJyw0XSlcbnN1bShwdmFscyA8IC4wNSkvbGVuZ3RoKHB2YWxzKVxuYGBgIn0= -->
+<pre class="r"><code>mydata = merge(df, struct, by='MRN')
+Ys = colnames(mydata)[42:ncol(mydata)]
+mydata = mydata[mydata$MPRAGE_QC &lt; 2, ]
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + MPRAGE_QC', s)), data=mydata))$coefficients['MPRAGE_QC',4])
+sum(pvals &lt; .05)/length(pvals)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuMjYyOTYzXG4ifQ== -->
+<pre><code>[1] 0.262963</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnJvdyhteWRhdGEpXG5gYGAifQ== -->
+<pre class="r"><code>nrow(mydata)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDcyMlxuIn0= -->
+<pre><code>[1] 722</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
 <p>That’s not so bad anymore, especially as many of these variables are highly correlated. And we still have about 800 people. Let’s do the same analysis for the Freesurfer variable.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhWyFpcy5uYShteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUpLF1cbnB2YWxzID0gc2FwcGx5KFlzLCBmdW5jdGlvbihzKSBzdW1tYXJ5KGxtKGFzLmZvcm11bGEoc3ByaW50ZignJXMgfiBBR0UgKyBTZXggKyBhdmdfZnJlZXN1cmZlcl9zY29yZScsIHMpKSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGRhdGE9bXlkYXRhKSkkY29lZmZpY2llbnRzWydhdmdfZnJlZXN1cmZlcl9zY29yZScsNF0pXG5zdW0ocHZhbHMgPCAuMDEpL2xlbmd0aChwdmFscylcbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhWyFpcy5uYShteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUpLF1cbnB2YWxzID0gc2FwcGx5KFlzLCBmdW5jdGlvbihzKSBzdW1tYXJ5KGxtKGFzLmZvcm11bGEoc3ByaW50ZignJXMgfiBBR0UgKyBJKEFHRV4yKSAgKyBTZXggKyBhdmdfZnJlZXN1cmZlcl9zY29yZScsIHMpKSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGRhdGE9bXlkYXRhKSkkY29lZmZpY2llbnRzWydhdmdfZnJlZXN1cmZlcl9zY29yZScsNF0pXG5zdW0ocHZhbHMgPCAuMDUpL2xlbmd0aChwdmFscylcbmBgYCJ9 -->
 <pre class="r"><code>mydata = merge(df, struct, by='MRN')
 Ys = colnames(mydata)[42:ncol(mydata)]
 mydata = mydata[!is.na(mydata$avg_freesurfer_score),]
-pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + Sex + avg_freesurfer_score', s)),
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + avg_freesurfer_score', s)),
                                           data=mydata))$coefficients['avg_freesurfer_score',4])
-sum(pvals &lt; .01)/length(pvals)</code></pre>
+sum(pvals &lt; .05)/length(pvals)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuNzI5NjI5NlxuIn0= -->
-<pre><code>[1] 0.7296296</code></pre>
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuNzgxNDgxNVxuIn0= -->
+<pre><code>[1] 0.7814815</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnJvdyhteWRhdGEpXG5gYGAifQ== -->
 <pre class="r"><code>nrow(mydata)</code></pre>
@@ -293,17 +313,17 @@ sum(pvals &lt; .01)/length(pvals)</code></pre>
 <p>Not good… without QC, 81% of variables are significant. Let’s remove QC &gt; 2.5.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhWyFpcy5uYShteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUpLF1cbm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUgPCAzLCBdXG5wdmFscyA9IHNhcHBseShZcywgZnVuY3Rpb24ocykgc3VtbWFyeShsbShhcy5mb3JtdWxhKHNwcmludGYoJyVzIH4gQUdFICsgU2V4ICsgYXZnX2ZyZWVzdXJmZXJfc2NvcmUnLCBzKSksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBkYXRhPW15ZGF0YSkpJGNvZWZmaWNpZW50c1snYXZnX2ZyZWVzdXJmZXJfc2NvcmUnLDRdKVxuc3VtKHB2YWxzIDwgLjAxKS9sZW5ndGgocHZhbHMpXG5gYGAifQ== -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhWyFpcy5uYShteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUpLF1cbm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUgPCAzLCBdXG5wdmFscyA9IHNhcHBseShZcywgZnVuY3Rpb24ocykgc3VtbWFyeShsbShhcy5mb3JtdWxhKHNwcmludGYoJyVzIH4gQUdFICsgSShBR0VeMikgICsgU2V4ICsgYXZnX2ZyZWVzdXJmZXJfc2NvcmUnLCBzKSksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBkYXRhPW15ZGF0YSkpJGNvZWZmaWNpZW50c1snYXZnX2ZyZWVzdXJmZXJfc2NvcmUnLDRdKVxuc3VtKHB2YWxzIDwgLjA1KS9sZW5ndGgocHZhbHMpXG5gYGAifQ== -->
 <pre class="r"><code>mydata = merge(df, struct, by='MRN')
 Ys = colnames(mydata)[42:ncol(mydata)]
 mydata = mydata[!is.na(mydata$avg_freesurfer_score),]
 mydata = mydata[mydata$avg_freesurfer_score &lt; 3, ]
-pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + Sex + avg_freesurfer_score', s)),
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + avg_freesurfer_score', s)),
                                           data=mydata))$coefficients['avg_freesurfer_score',4])
-sum(pvals &lt; .01)/length(pvals)</code></pre>
+sum(pvals &lt; .05)/length(pvals)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuNDMzMzMzM1xuIn0= -->
-<pre><code>[1] 0.4333333</code></pre>
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuNTUxODUxOVxuIn0= -->
+<pre><code>[1] 0.5518519</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnJvdyhteWRhdGEpXG5gYGAifQ== -->
 <pre class="r"><code>nrow(mydata)</code></pre>
@@ -316,17 +336,17 @@ sum(pvals &lt; .01)/length(pvals)</code></pre>
 <p>Much better… if we remove the 2.5s?</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhWyFpcy5uYShteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUpLF1cbm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUgPCAyLjUsIF1cbnB2YWxzID0gc2FwcGx5KFlzLCBmdW5jdGlvbihzKSBzdW1tYXJ5KGxtKGFzLmZvcm11bGEoc3ByaW50ZignJXMgfiBBR0UgKyBTZXggKyBhdmdfZnJlZXN1cmZlcl9zY29yZScsIHMpKSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGRhdGE9bXlkYXRhKSkkY29lZmZpY2llbnRzWydhdmdfZnJlZXN1cmZlcl9zY29yZScsNF0pXG5zdW0ocHZhbHMgPCAuMDEpL2xlbmd0aChwdmFscylcbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhWyFpcy5uYShteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUpLF1cbm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUgPCAyLjUsIF1cbnB2YWxzID0gc2FwcGx5KFlzLCBmdW5jdGlvbihzKSBzdW1tYXJ5KGxtKGFzLmZvcm11bGEoc3ByaW50ZignJXMgfiBBR0UgKyBJKEFHRV4yKSAgKyBTZXggKyBhdmdfZnJlZXN1cmZlcl9zY29yZScsIHMpKSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGRhdGE9bXlkYXRhKSkkY29lZmZpY2llbnRzWydhdmdfZnJlZXN1cmZlcl9zY29yZScsNF0pXG5zdW0ocHZhbHMgPCAuMDUpL2xlbmd0aChwdmFscylcbmBgYCJ9 -->
 <pre class="r"><code>mydata = merge(df, struct, by='MRN')
 Ys = colnames(mydata)[42:ncol(mydata)]
 mydata = mydata[!is.na(mydata$avg_freesurfer_score),]
 mydata = mydata[mydata$avg_freesurfer_score &lt; 2.5, ]
-pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + Sex + avg_freesurfer_score', s)),
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + avg_freesurfer_score', s)),
                                           data=mydata))$coefficients['avg_freesurfer_score',4])
-sum(pvals &lt; .01)/length(pvals)</code></pre>
+sum(pvals &lt; .05)/length(pvals)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuMjc0MDc0MVxuIn0= -->
-<pre><code>[1] 0.2740741</code></pre>
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuMzY2NjY2N1xuIn0= -->
+<pre><code>[1] 0.3666667</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnJvdyhteWRhdGEpXG5gYGAifQ== -->
 <pre class="r"><code>nrow(mydata)</code></pre>
@@ -336,19 +356,78 @@ sum(pvals &lt; .01)/length(pvals)</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<p>We’re in the same ballpark in terms of correlation as the MPRAGE QC. But how many people are left if we include both?</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhWyFpcy5uYShteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUpLF1cbm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUgPCAyLjUsIF1cbm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkTVBSQUdFX1FDIDwgMi41LCBdXG5ucm93KG15ZGF0YSlcbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhWyFpcy5uYShteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUpLF1cbm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUgPD0gMiwgXVxucHZhbHMgPSBzYXBwbHkoWXMsIGZ1bmN0aW9uKHMpIHN1bW1hcnkobG0oYXMuZm9ybXVsYShzcHJpbnRmKCclcyB+IEFHRSArIEkoQUdFXjIpICArIFNleCArIGF2Z19mcmVlc3VyZmVyX3Njb3JlJywgcykpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZGF0YT1teWRhdGEpKSRjb2VmZmljaWVudHNbJ2F2Z19mcmVlc3VyZmVyX3Njb3JlJyw0XSlcbnN1bShwdmFscyA8IC4wNSkvbGVuZ3RoKHB2YWxzKVxuYGBgIn0= -->
 <pre class="r"><code>mydata = merge(df, struct, by='MRN')
 Ys = colnames(mydata)[42:ncol(mydata)]
 mydata = mydata[!is.na(mydata$avg_freesurfer_score),]
-mydata = mydata[mydata$avg_freesurfer_score &lt; 2.5, ]
-mydata = mydata[mydata$MPRAGE_QC &lt; 2.5, ]
+mydata = mydata[mydata$avg_freesurfer_score &lt;= 2, ]
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + avg_freesurfer_score', s)),
+                                          data=mydata))$coefficients['avg_freesurfer_score',4])
+sum(pvals &lt; .05)/length(pvals)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuMTk2Mjk2M1xuIn0= -->
+<pre><code>[1] 0.1962963</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnJvdyhteWRhdGEpXG5gYGAifQ== -->
+<pre class="r"><code>nrow(mydata)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDQzMVxuIn0= -->
+<pre><code>[1] 431</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhWyFpcy5uYShteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUpLF1cbm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUgPCAyLCBdXG5wdmFscyA9IHNhcHBseShZcywgZnVuY3Rpb24ocykgc3VtbWFyeShsbShhcy5mb3JtdWxhKHNwcmludGYoJyVzIH4gQUdFICsgSShBR0VeMikgICsgU2V4ICsgYXZnX2ZyZWVzdXJmZXJfc2NvcmUnLCBzKSksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBkYXRhPW15ZGF0YSkpJGNvZWZmaWNpZW50c1snYXZnX2ZyZWVzdXJmZXJfc2NvcmUnLDRdKVxuc3VtKHB2YWxzIDwgLjA1KS9sZW5ndGgocHZhbHMpXG5gYGAifQ== -->
+<pre class="r"><code>mydata = merge(df, struct, by='MRN')
+Ys = colnames(mydata)[42:ncol(mydata)]
+mydata = mydata[!is.na(mydata$avg_freesurfer_score),]
+mydata = mydata[mydata$avg_freesurfer_score &lt; 2, ]
+pvals = sapply(Ys, function(s) summary(lm(as.formula(sprintf('%s ~ AGE + I(AGE^2)  + Sex + avg_freesurfer_score', s)),
+                                          data=mydata))$coefficients['avg_freesurfer_score',4])
+sum(pvals &lt; .05)/length(pvals)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuMjE4NTE4NVxuIn0= -->
+<pre><code>[1] 0.2185185</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnJvdyhteWRhdGEpXG5gYGAifQ== -->
+<pre class="r"><code>nrow(mydata)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDM0NFxuIn0= -->
+<pre><code>[1] 344</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>We’re in the same ballpark in terms of correlation as the MPRAGE QC. But how many people are left if we include both?</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhWyFpcy5uYShteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUpLF1cbm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUgPD0gMiwgXVxubXlkYXRhID0gbXlkYXRhW215ZGF0YSRNUFJBR0VfUUMgPD0gMiwgXVxubnJvdyhteWRhdGEpXG5gYGAifQ== -->
+<pre class="r"><code>mydata = merge(df, struct, by='MRN')
+Ys = colnames(mydata)[42:ncol(mydata)]
+mydata = mydata[!is.na(mydata$avg_freesurfer_score),]
+mydata = mydata[mydata$avg_freesurfer_score &lt;= 2, ]
+mydata = mydata[mydata$MPRAGE_QC &lt;= 2, ]
 nrow(mydata)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDUyMlxuIn0= -->
-<pre><code>[1] 522</code></pre>
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDQyM1xuIn0= -->
+<pre><code>[1] 423</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpXG5ZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXVxubXlkYXRhID0gbXlkYXRhWyFpcy5uYShteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUpLF1cbm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUgPD0gMiwgXVxubXlkYXRhID0gbXlkYXRhW215ZGF0YSRNUFJBR0VfUUMgPCAyLCBdXG5ucm93KG15ZGF0YSlcbmBgYCJ9 -->
+<pre class="r"><code>mydata = merge(df, struct, by='MRN')
+Ys = colnames(mydata)[42:ncol(mydata)]
+mydata = mydata[!is.na(mydata$avg_freesurfer_score),]
+mydata = mydata[mydata$avg_freesurfer_score &lt;= 2, ]
+mydata = mydata[mydata$MPRAGE_QC &lt; 2, ]
+nrow(mydata)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDM5M1xuIn0= -->
+<pre><code>[1] 393</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
@@ -360,7 +439,7 @@ nrow(mydata)</code></pre>
 <!-- rnb-text-end -->
 </div>
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiVHJ5aW5nIHNlcmlhbCBtb2R1bGF0aW9uIHdpdGggc3RydWN0dXJlcyIKb3V0cHV0OiBodG1sX25vdGVib29rCi0tLQoKRmlyc3QgdGhpbmcgaXMgdG8gY2hlY2sgd2hlbiBRQyBzdGFydHMgYmVjb21pbmcgc2lnbmlmaWNhbnQuCgpgYGB7cn0KZ2YgPSByZWFkLmNzdignfi9kYXRhL3Bycy9jbGluaWNhbF8wNjE5MjAxNy5jc3YnKQpnZiA9IGdmW2dmJEFESERfY3VycmVudF95ZXNfbm8hPSdleGNsdWRlJyxdCmdmJEFESERfY3VycmVudF95ZXNfbm8gPSBmYWN0b3IoZ2YkQURIRF9jdXJyZW50X3llc19ubykKcGdjID0gcmVhZC5jc3YoJ34vZGF0YS9wcnMvUFJTMjAxN19vcmlnaW5hbF9jbHVtcF9kZWZhdWx0LmNzdicpCmRmID0gbWVyZ2UoZ2YsIHBnYykKIyByZW1vdmUgZHVwbGljYXRlZCBNUk5zCmRmID0gZGZbIWR1cGxpY2F0ZWQoZGYkTVJOKSxdCgpzdHJ1Y3QgPSByZWFkLmNzdignfi9kYXRhL3Bycy9zdHJ1Y3RfMDcxMTIwMTcuY3N2JykKYGBgCgpMZXQncyBjaGVjayBob3cgb3VyIFFDIHZhcmlhYmxlcyBsb29rIGxpa2U6CgpgYGB7cn0Kc3VtbWFyeShzdHJ1Y3RbLDU6MTBdKSAgCmBgYAoKUmVtZW1iZXIgaGVyZSB0aGF0IGF2Z19mcmVlc3VyZmVyX3Njb3JlIGlzIGFuIGF2ZXJhZ2Ugb2YgaW50IGFuZCBleHQgYXZnLCByZW1vdmluZyBOQU5zLiBXZSBjbGVhcmx5IHNob3VsZCB1c2UgYSBjb21iaW5hdGlvbiBvZiBNUFJBR0VfUUMgYW5kIGF2Z19mcmVlc3VyZmVyX3Njb3JlLiBXZSdsbCByZXBsYWNlIHNvbWUgb2YgdGhlIE5BcyBsYXRlciwgZXNwZWNpYWxseSBpbiB0aGUgRnJlZXN1cmZlciBjYXNlLCBidXQgbGV0J3MgcGxheSB3aXRoIHRoZSBjdXJyZW50IGRhdGEgZmlyc3QuCgpXZSB0ZXN0IGlmIFFDIG1ha2VzIGEgZGlmZmVyZW5jZSBmb3Igc2V2ZXJhbCBkaWZmZXJlbnQgc3RydWN0dXJlczoKCmBgYHtyfQpteWRhdGEgPSBtZXJnZShkZiwgc3RydWN0LCBieT0nTVJOJykKWXMgPSBjb2xuYW1lcyhteWRhdGEpWzQyOm5jb2wobXlkYXRhKV0KcHZhbHMgPSBzYXBwbHkoWXMsIGZ1bmN0aW9uKHMpIHN1bW1hcnkobG0oYXMuZm9ybXVsYShzcHJpbnRmKCclcyB+IEFHRSArIFNleCArIE1QUkFHRV9RQycsIHMpKSwgZGF0YT1teWRhdGEpKSRjb2VmZmljaWVudHNbJ01QUkFHRV9RQycsNF0pCnN1bShwdmFscyA8IC4wMSkvbGVuZ3RoKHB2YWxzKQpucm93KG15ZGF0YSkKYGBgCgpOb3QgZ29vZC4uLiB3aXRob3V0IFFDLCA4MSUgb2YgdmFyaWFibGVzIGFyZSBzaWduaWZpY2FudC4gTGV0J3MgcmVtb3ZlIFFDID4gMi41LgoKYGBge3J9Cm15ZGF0YSA9IG1lcmdlKGRmLCBzdHJ1Y3QsIGJ5PSdNUk4nKQpZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXQpteWRhdGEgPSBteWRhdGFbbXlkYXRhJE1QUkFHRV9RQyA8IDMsIF0KcHZhbHMgPSBzYXBwbHkoWXMsIGZ1bmN0aW9uKHMpIHN1bW1hcnkobG0oYXMuZm9ybXVsYShzcHJpbnRmKCclcyB+IEFHRSArIFNleCArIE1QUkFHRV9RQycsIHMpKSwgZGF0YT1teWRhdGEpKSRjb2VmZmljaWVudHNbJ01QUkFHRV9RQycsNF0pCnN1bShwdmFscyA8IC4wMSkvbGVuZ3RoKHB2YWxzKQpucm93KG15ZGF0YSkKYGBgCgpNdWNoIGJldHRlci4uLiBpZiB3ZSByZW1vdmUgdGhlIDIuNXM/CgpgYGB7cn0KbXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpCllzID0gY29sbmFtZXMobXlkYXRhKVs0MjpuY29sKG15ZGF0YSldCm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkTVBSQUdFX1FDIDwgMi41LCBdCnB2YWxzID0gc2FwcGx5KFlzLCBmdW5jdGlvbihzKSBzdW1tYXJ5KGxtKGFzLmZvcm11bGEoc3ByaW50ZignJXMgfiBBR0UgKyBTZXggKyBNUFJBR0VfUUMnLCBzKSksIGRhdGE9bXlkYXRhKSkkY29lZmZpY2llbnRzWydNUFJBR0VfUUMnLDRdKQpzdW0ocHZhbHMgPCAuMDEpL2xlbmd0aChwdmFscykKbnJvdyhteWRhdGEpCmBgYAoKVGhhdCdzIG5vdCBzbyBiYWQgYW55bW9yZSwgZXNwZWNpYWxseSBhcyBtYW55IG9mIHRoZXNlIHZhcmlhYmxlcyBhcmUgaGlnaGx5IGNvcnJlbGF0ZWQuIEFuZCB3ZSBzdGlsbCBoYXZlIGFib3V0IDgwMCBwZW9wbGUuIExldCdzIGRvIHRoZSBzYW1lIGFuYWx5c2lzIGZvciB0aGUgRnJlZXN1cmZlciB2YXJpYWJsZS4KCmBgYHtyfQpteWRhdGEgPSBtZXJnZShkZiwgc3RydWN0LCBieT0nTVJOJykKWXMgPSBjb2xuYW1lcyhteWRhdGEpWzQyOm5jb2wobXlkYXRhKV0KbXlkYXRhID0gbXlkYXRhWyFpcy5uYShteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUpLF0KcHZhbHMgPSBzYXBwbHkoWXMsIGZ1bmN0aW9uKHMpIHN1bW1hcnkobG0oYXMuZm9ybXVsYShzcHJpbnRmKCclcyB+IEFHRSArIFNleCArIGF2Z19mcmVlc3VyZmVyX3Njb3JlJywgcykpLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBkYXRhPW15ZGF0YSkpJGNvZWZmaWNpZW50c1snYXZnX2ZyZWVzdXJmZXJfc2NvcmUnLDRdKQpzdW0ocHZhbHMgPCAuMDEpL2xlbmd0aChwdmFscykKbnJvdyhteWRhdGEpCmBgYAoKTm90IGdvb2QuLi4gd2l0aG91dCBRQywgODElIG9mIHZhcmlhYmxlcyBhcmUgc2lnbmlmaWNhbnQuIExldCdzIHJlbW92ZSBRQyA+IDIuNS4KCmBgYHtyfQpteWRhdGEgPSBtZXJnZShkZiwgc3RydWN0LCBieT0nTVJOJykKWXMgPSBjb2xuYW1lcyhteWRhdGEpWzQyOm5jb2wobXlkYXRhKV0KbXlkYXRhID0gbXlkYXRhWyFpcy5uYShteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUpLF0KbXlkYXRhID0gbXlkYXRhW215ZGF0YSRhdmdfZnJlZXN1cmZlcl9zY29yZSA8IDMsIF0KcHZhbHMgPSBzYXBwbHkoWXMsIGZ1bmN0aW9uKHMpIHN1bW1hcnkobG0oYXMuZm9ybXVsYShzcHJpbnRmKCclcyB+IEFHRSArIFNleCArIGF2Z19mcmVlc3VyZmVyX3Njb3JlJywgcykpLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBkYXRhPW15ZGF0YSkpJGNvZWZmaWNpZW50c1snYXZnX2ZyZWVzdXJmZXJfc2NvcmUnLDRdKQpzdW0ocHZhbHMgPCAuMDEpL2xlbmd0aChwdmFscykKbnJvdyhteWRhdGEpCmBgYAoKTXVjaCBiZXR0ZXIuLi4gaWYgd2UgcmVtb3ZlIHRoZSAyLjVzPwoKYGBge3J9Cm15ZGF0YSA9IG1lcmdlKGRmLCBzdHJ1Y3QsIGJ5PSdNUk4nKQpZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXQpteWRhdGEgPSBteWRhdGFbIWlzLm5hKG15ZGF0YSRhdmdfZnJlZXN1cmZlcl9zY29yZSksXQpteWRhdGEgPSBteWRhdGFbbXlkYXRhJGF2Z19mcmVlc3VyZmVyX3Njb3JlIDwgMi41LCBdCnB2YWxzID0gc2FwcGx5KFlzLCBmdW5jdGlvbihzKSBzdW1tYXJ5KGxtKGFzLmZvcm11bGEoc3ByaW50ZignJXMgfiBBR0UgKyBTZXggKyBhdmdfZnJlZXN1cmZlcl9zY29yZScsIHMpKSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZGF0YT1teWRhdGEpKSRjb2VmZmljaWVudHNbJ2F2Z19mcmVlc3VyZmVyX3Njb3JlJyw0XSkKc3VtKHB2YWxzIDwgLjAxKS9sZW5ndGgocHZhbHMpCm5yb3cobXlkYXRhKQpgYGAKCldlJ3JlIGluIHRoZSBzYW1lIGJhbGxwYXJrIGluIHRlcm1zIG9mIGNvcnJlbGF0aW9uIGFzIHRoZSBNUFJBR0UgUUMuIEJ1dCBob3cgbWFueSBwZW9wbGUgYXJlIGxlZnQgaWYgd2UgaW5jbHVkZSBib3RoPwoKYGBge3J9Cm15ZGF0YSA9IG1lcmdlKGRmLCBzdHJ1Y3QsIGJ5PSdNUk4nKQpZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXQpteWRhdGEgPSBteWRhdGFbIWlzLm5hKG15ZGF0YSRhdmdfZnJlZXN1cmZlcl9zY29yZSksXQpteWRhdGEgPSBteWRhdGFbbXlkYXRhJGF2Z19mcmVlc3VyZmVyX3Njb3JlIDwgMi41LCBdCm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkTVBSQUdFX1FDIDwgMi41LCBdCm5yb3cobXlkYXRhKQpgYGAKCkxldCdzIHNlZSB3aGF0IHdlIGNhbiBnZXQgd2l0aCB0aGF0IHRoZW4uCgojIFNlcmlhbCBQUlMgYW5hbHlzaXMKCkFzIFBoaWxpcCBzdWdnZXN0ZWQsIGxldCdzIHJ1biBpdCB1c2luZyBBREhEX3llcy9ubyBhcyBZIGZpcnN0LiBUaGlzIHdheSB3ZSBsZXZlcmFnZSBldmVyeW9uZSwgcmVnYXJkbGVzcyBvZiBTWC4gQWxzbywgbm90ZSB0aGF0IHdlIGNhbiBwb3RlbnRpYWxseSBydW4gYSBkaWZmZXJlbnQgUFJTIHRocmVzaG9sZCwgaWYgLjMgZG9lc24ndCB3b3JrIHF1aXRlIHdlbGwuCgoqKiBiYXRjaF9tb2RlbDYuUiAqKgoKCgoK</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiVHJ5aW5nIHNlcmlhbCBtb2R1bGF0aW9uIHdpdGggc3RydWN0dXJlcyIKb3V0cHV0OiBodG1sX25vdGVib29rCi0tLQoKRmlyc3QgdGhpbmcgaXMgdG8gY2hlY2sgd2hlbiBRQyBzdGFydHMgYmVjb21pbmcgc2lnbmlmaWNhbnQuCgpgYGB7cn0KZ2YgPSByZWFkLmNzdignfi9kYXRhL3Bycy9jbGluaWNhbF8wNjE5MjAxNy5jc3YnKQpnZiA9IGdmW2dmJEFESERfY3VycmVudF95ZXNfbm8hPSdleGNsdWRlJyxdCmdmJEFESERfY3VycmVudF95ZXNfbm8gPSBmYWN0b3IoZ2YkQURIRF9jdXJyZW50X3llc19ubykKcGdjID0gcmVhZC5jc3YoJ34vZGF0YS9wcnMvUFJTMjAxN19vcmlnaW5hbF9jbHVtcF9kZWZhdWx0LmNzdicpCmRmID0gbWVyZ2UoZ2YsIHBnYykKIyByZW1vdmUgZHVwbGljYXRlZCBNUk5zCmRmID0gZGZbIWR1cGxpY2F0ZWQoZGYkTVJOKSxdCgpzdHJ1Y3QgPSByZWFkLmNzdignfi9kYXRhL3Bycy9zdHJ1Y3RfMDcxMTIwMTcuY3N2JykKYGBgCgpMZXQncyBjaGVjayBob3cgb3VyIFFDIHZhcmlhYmxlcyBsb29rIGxpa2U6CgpgYGB7cn0Kc3VtbWFyeShzdHJ1Y3RbLDU6MTBdKSAgCmBgYAoKUmVtZW1iZXIgaGVyZSB0aGF0IGF2Z19mcmVlc3VyZmVyX3Njb3JlIGlzIGFuIGF2ZXJhZ2Ugb2YgaW50IGFuZCBleHQgYXZnLCByZW1vdmluZyBOQU5zLiBXZSBjbGVhcmx5IHNob3VsZCB1c2UgYSBjb21iaW5hdGlvbiBvZiBNUFJBR0VfUUMgYW5kIGF2Z19mcmVlc3VyZmVyX3Njb3JlLiBXZSdsbCByZXBsYWNlIHNvbWUgb2YgdGhlIE5BcyBsYXRlciwgZXNwZWNpYWxseSBpbiB0aGUgRnJlZXN1cmZlciBjYXNlLCBidXQgbGV0J3MgcGxheSB3aXRoIHRoZSBjdXJyZW50IGRhdGEgZmlyc3QuCgpXZSB0ZXN0IGlmIFFDIG1ha2VzIGEgZGlmZmVyZW5jZSBmb3Igc2V2ZXJhbCBkaWZmZXJlbnQgc3RydWN0dXJlczoKCmBgYHtyfQpteWRhdGEgPSBtZXJnZShkZiwgc3RydWN0LCBieT0nTVJOJykKWXMgPSBjb2xuYW1lcyhteWRhdGEpWzQyOm5jb2wobXlkYXRhKV0KcHZhbHMgPSBzYXBwbHkoWXMsIGZ1bmN0aW9uKHMpIHN1bW1hcnkobG0oYXMuZm9ybXVsYShzcHJpbnRmKCclcyB+IEFHRSArIEkoQUdFXjIpICsgU2V4ICsgTVBSQUdFX1FDJywgcykpLCBkYXRhPW15ZGF0YSkpJGNvZWZmaWNpZW50c1snTVBSQUdFX1FDJyw0XSkKc3VtKHB2YWxzIDwgLjA1KS9sZW5ndGgocHZhbHMpCm5yb3cobXlkYXRhKQpgYGAKCk5vdCBnb29kLi4uIHdpdGhvdXQgUUMsIDgxJSBvZiB2YXJpYWJsZXMgYXJlIHNpZ25pZmljYW50LiBMZXQncyByZW1vdmUgUUMgPiAyLjUuCgpgYGB7cn0KbXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpCllzID0gY29sbmFtZXMobXlkYXRhKVs0MjpuY29sKG15ZGF0YSldCm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkTVBSQUdFX1FDIDwgMywgXQpwdmFscyA9IHNhcHBseShZcywgZnVuY3Rpb24ocykgc3VtbWFyeShsbShhcy5mb3JtdWxhKHNwcmludGYoJyVzIH4gQUdFICsgSShBR0VeMikgICsgU2V4ICsgTVBSQUdFX1FDJywgcykpLCBkYXRhPW15ZGF0YSkpJGNvZWZmaWNpZW50c1snTVBSQUdFX1FDJyw0XSkKc3VtKHB2YWxzIDwgLjA1KS9sZW5ndGgocHZhbHMpCm5yb3cobXlkYXRhKQpgYGAKCk11Y2ggYmV0dGVyLi4uIGlmIHdlIHJlbW92ZSB0aGUgMi41cz8KCmBgYHtyfQpteWRhdGEgPSBtZXJnZShkZiwgc3RydWN0LCBieT0nTVJOJykKWXMgPSBjb2xuYW1lcyhteWRhdGEpWzQyOm5jb2wobXlkYXRhKV0KbXlkYXRhID0gbXlkYXRhW215ZGF0YSRNUFJBR0VfUUMgPCAyLjUsIF0KcHZhbHMgPSBzYXBwbHkoWXMsIGZ1bmN0aW9uKHMpIHN1bW1hcnkobG0oYXMuZm9ybXVsYShzcHJpbnRmKCclcyB+IEFHRSArIEkoQUdFXjIpICArIFNleCArIE1QUkFHRV9RQycsIHMpKSwgZGF0YT1teWRhdGEpKSRjb2VmZmljaWVudHNbJ01QUkFHRV9RQycsNF0pCnN1bShwdmFscyA8IC4wNSkvbGVuZ3RoKHB2YWxzKQpucm93KG15ZGF0YSkKYGBgCgpgYGB7cn0KbXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpCllzID0gY29sbmFtZXMobXlkYXRhKVs0MjpuY29sKG15ZGF0YSldCm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkTVBSQUdFX1FDIDwgMiwgXQpwdmFscyA9IHNhcHBseShZcywgZnVuY3Rpb24ocykgc3VtbWFyeShsbShhcy5mb3JtdWxhKHNwcmludGYoJyVzIH4gQUdFICsgSShBR0VeMikgICsgU2V4ICsgTVBSQUdFX1FDJywgcykpLCBkYXRhPW15ZGF0YSkpJGNvZWZmaWNpZW50c1snTVBSQUdFX1FDJyw0XSkKc3VtKHB2YWxzIDwgLjA1KS9sZW5ndGgocHZhbHMpCm5yb3cobXlkYXRhKQpgYGAKClRoYXQncyBub3Qgc28gYmFkIGFueW1vcmUsIGVzcGVjaWFsbHkgYXMgbWFueSBvZiB0aGVzZSB2YXJpYWJsZXMgYXJlIGhpZ2hseSBjb3JyZWxhdGVkLiBBbmQgd2Ugc3RpbGwgaGF2ZSBhYm91dCA4MDAgcGVvcGxlLiBMZXQncyBkbyB0aGUgc2FtZSBhbmFseXNpcyBmb3IgdGhlIEZyZWVzdXJmZXIgdmFyaWFibGUuCgpgYGB7cn0KbXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpCllzID0gY29sbmFtZXMobXlkYXRhKVs0MjpuY29sKG15ZGF0YSldCm15ZGF0YSA9IG15ZGF0YVshaXMubmEobXlkYXRhJGF2Z19mcmVlc3VyZmVyX3Njb3JlKSxdCnB2YWxzID0gc2FwcGx5KFlzLCBmdW5jdGlvbihzKSBzdW1tYXJ5KGxtKGFzLmZvcm11bGEoc3ByaW50ZignJXMgfiBBR0UgKyBJKEFHRV4yKSAgKyBTZXggKyBhdmdfZnJlZXN1cmZlcl9zY29yZScsIHMpKSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZGF0YT1teWRhdGEpKSRjb2VmZmljaWVudHNbJ2F2Z19mcmVlc3VyZmVyX3Njb3JlJyw0XSkKc3VtKHB2YWxzIDwgLjA1KS9sZW5ndGgocHZhbHMpCm5yb3cobXlkYXRhKQpgYGAKCk5vdCBnb29kLi4uIHdpdGhvdXQgUUMsIDgxJSBvZiB2YXJpYWJsZXMgYXJlIHNpZ25pZmljYW50LiBMZXQncyByZW1vdmUgUUMgPiAyLjUuCgpgYGB7cn0KbXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpCllzID0gY29sbmFtZXMobXlkYXRhKVs0MjpuY29sKG15ZGF0YSldCm15ZGF0YSA9IG15ZGF0YVshaXMubmEobXlkYXRhJGF2Z19mcmVlc3VyZmVyX3Njb3JlKSxdCm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUgPCAzLCBdCnB2YWxzID0gc2FwcGx5KFlzLCBmdW5jdGlvbihzKSBzdW1tYXJ5KGxtKGFzLmZvcm11bGEoc3ByaW50ZignJXMgfiBBR0UgKyBJKEFHRV4yKSAgKyBTZXggKyBhdmdfZnJlZXN1cmZlcl9zY29yZScsIHMpKSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZGF0YT1teWRhdGEpKSRjb2VmZmljaWVudHNbJ2F2Z19mcmVlc3VyZmVyX3Njb3JlJyw0XSkKc3VtKHB2YWxzIDwgLjA1KS9sZW5ndGgocHZhbHMpCm5yb3cobXlkYXRhKQpgYGAKCk11Y2ggYmV0dGVyLi4uIGlmIHdlIHJlbW92ZSB0aGUgMi41cz8KCmBgYHtyfQpteWRhdGEgPSBtZXJnZShkZiwgc3RydWN0LCBieT0nTVJOJykKWXMgPSBjb2xuYW1lcyhteWRhdGEpWzQyOm5jb2wobXlkYXRhKV0KbXlkYXRhID0gbXlkYXRhWyFpcy5uYShteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUpLF0KbXlkYXRhID0gbXlkYXRhW215ZGF0YSRhdmdfZnJlZXN1cmZlcl9zY29yZSA8IDIuNSwgXQpwdmFscyA9IHNhcHBseShZcywgZnVuY3Rpb24ocykgc3VtbWFyeShsbShhcy5mb3JtdWxhKHNwcmludGYoJyVzIH4gQUdFICsgSShBR0VeMikgICsgU2V4ICsgYXZnX2ZyZWVzdXJmZXJfc2NvcmUnLCBzKSksCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGRhdGE9bXlkYXRhKSkkY29lZmZpY2llbnRzWydhdmdfZnJlZXN1cmZlcl9zY29yZScsNF0pCnN1bShwdmFscyA8IC4wNSkvbGVuZ3RoKHB2YWxzKQpucm93KG15ZGF0YSkKYGBgCgpgYGB7cn0KbXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpCllzID0gY29sbmFtZXMobXlkYXRhKVs0MjpuY29sKG15ZGF0YSldCm15ZGF0YSA9IG15ZGF0YVshaXMubmEobXlkYXRhJGF2Z19mcmVlc3VyZmVyX3Njb3JlKSxdCm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUgPD0gMiwgXQpwdmFscyA9IHNhcHBseShZcywgZnVuY3Rpb24ocykgc3VtbWFyeShsbShhcy5mb3JtdWxhKHNwcmludGYoJyVzIH4gQUdFICsgSShBR0VeMikgICsgU2V4ICsgYXZnX2ZyZWVzdXJmZXJfc2NvcmUnLCBzKSksCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGRhdGE9bXlkYXRhKSkkY29lZmZpY2llbnRzWydhdmdfZnJlZXN1cmZlcl9zY29yZScsNF0pCnN1bShwdmFscyA8IC4wNSkvbGVuZ3RoKHB2YWxzKQpucm93KG15ZGF0YSkKYGBgCgpgYGB7cn0KbXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpCllzID0gY29sbmFtZXMobXlkYXRhKVs0MjpuY29sKG15ZGF0YSldCm15ZGF0YSA9IG15ZGF0YVshaXMubmEobXlkYXRhJGF2Z19mcmVlc3VyZmVyX3Njb3JlKSxdCm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUgPCAyLCBdCnB2YWxzID0gc2FwcGx5KFlzLCBmdW5jdGlvbihzKSBzdW1tYXJ5KGxtKGFzLmZvcm11bGEoc3ByaW50ZignJXMgfiBBR0UgKyBJKEFHRV4yKSAgKyBTZXggKyBhdmdfZnJlZXN1cmZlcl9zY29yZScsIHMpKSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZGF0YT1teWRhdGEpKSRjb2VmZmljaWVudHNbJ2F2Z19mcmVlc3VyZmVyX3Njb3JlJyw0XSkKc3VtKHB2YWxzIDwgLjA1KS9sZW5ndGgocHZhbHMpCm5yb3cobXlkYXRhKQpgYGAKCldlJ3JlIGluIHRoZSBzYW1lIGJhbGxwYXJrIGluIHRlcm1zIG9mIGNvcnJlbGF0aW9uIGFzIHRoZSBNUFJBR0UgUUMuIEJ1dCBob3cgbWFueSBwZW9wbGUgYXJlIGxlZnQgaWYgd2UgaW5jbHVkZSBib3RoPwoKYGBge3J9Cm15ZGF0YSA9IG1lcmdlKGRmLCBzdHJ1Y3QsIGJ5PSdNUk4nKQpZcyA9IGNvbG5hbWVzKG15ZGF0YSlbNDI6bmNvbChteWRhdGEpXQpteWRhdGEgPSBteWRhdGFbIWlzLm5hKG15ZGF0YSRhdmdfZnJlZXN1cmZlcl9zY29yZSksXQpteWRhdGEgPSBteWRhdGFbbXlkYXRhJGF2Z19mcmVlc3VyZmVyX3Njb3JlIDw9IDIsIF0KbXlkYXRhID0gbXlkYXRhW215ZGF0YSRNUFJBR0VfUUMgPD0gMiwgXQpucm93KG15ZGF0YSkKYGBgCgpgYGB7cn0KbXlkYXRhID0gbWVyZ2UoZGYsIHN0cnVjdCwgYnk9J01STicpCllzID0gY29sbmFtZXMobXlkYXRhKVs0MjpuY29sKG15ZGF0YSldCm15ZGF0YSA9IG15ZGF0YVshaXMubmEobXlkYXRhJGF2Z19mcmVlc3VyZmVyX3Njb3JlKSxdCm15ZGF0YSA9IG15ZGF0YVtteWRhdGEkYXZnX2ZyZWVzdXJmZXJfc2NvcmUgPD0gMiwgXQpteWRhdGEgPSBteWRhdGFbbXlkYXRhJE1QUkFHRV9RQyA8IDIsIF0KbnJvdyhteWRhdGEpCmBgYAoKTGV0J3Mgc2VlIHdoYXQgd2UgY2FuIGdldCB3aXRoIHRoYXQgdGhlbi4KCiMgU2VyaWFsIFBSUyBhbmFseXNpcwoKQXMgUGhpbGlwIHN1Z2dlc3RlZCwgbGV0J3MgcnVuIGl0IHVzaW5nIEFESERfeWVzL25vIGFzIFkgZmlyc3QuIFRoaXMgd2F5IHdlIGxldmVyYWdlIGV2ZXJ5b25lLCByZWdhcmRsZXNzIG9mIFNYLiBBbHNvLCBub3RlIHRoYXQgd2UgY2FuIHBvdGVudGlhbGx5IHJ1biBhIGRpZmZlcmVudCBQUlMgdGhyZXNob2xkLCBpZiAuMyBkb2Vzbid0IHdvcmsgcXVpdGUgd2VsbC4KCioqIGJhdGNoX21vZGVsNi5SICoqCgoKCgo=</div>
 
 
 
