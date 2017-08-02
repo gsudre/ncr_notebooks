@@ -243,7 +243,7 @@ for (x_str in M1s) {
     }
     y_res = c(y_res, res)
   }
-  pheno_res = rbind(all_res, y_res)
+  pheno_res = rbind(pheno_res, y_res)
 }
 rownames(pheno_res) = M1s
 all_res = rbind(all_res, pheno_res)
