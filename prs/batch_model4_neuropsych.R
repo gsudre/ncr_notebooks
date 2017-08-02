@@ -17,10 +17,10 @@ mydata = merge(df, brain, by='MRN')
 Ms = c(33:ncol(mydata))
 
 out_fname = '~/data/prs/results/model4_p3_neuropsych_DX.csv'
-X = mydata$PROFILES.0.3.profile
+X = mydata$PROFILES.0.05.profile
 Y = mydata$ADHD_current_yes_no
 nboot = 1000
-ncpus = 12
+ncpus = 5
 
 
 run_model4 = function(X, M, Y, nboot=1000) {

@@ -24,7 +24,8 @@ mydata = rois[!rm_me, ]
 # choosing mediators
 args = commandArgs(trailingOnly=TRUE)
 m1_name = args[1]
-M2s = c(33:44, 47:55)
+m1_name='IQ'
+M2s = c(33,34) #c(33:44, 47:55)
 
 out_fname = sprintf('~/data/prs/results/dti/model6_p3_%s_neuropsych_DX_QCse2Both.csv', m1_name)
 X = mydata$PROFILES.0.3.profile
@@ -76,6 +77,7 @@ run_model6 = function(X, M1, M2, Y, nboot=1000) {
                            boot.ci.type = "bca.simple",
                            level = .95, ci = TRUE,
                            standardized = FALSE)
+  print(res)
   res2 = res[11:16, 5:10]
   rownames(res2) = res[11:16,]$label
   # adding n
