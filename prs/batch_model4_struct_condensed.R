@@ -13,10 +13,10 @@ df = df[!duplicated(df$MRN),]
 struct = read.csv('~/data/prs/struct_07112017.csv')
 
 source('~/ncr_notebooks/prs/condense_struct.R')
-cstruct = condense_sublobar(struct)
+cstruct = condense_theory(struct)
 struct = cbind(struct, cstruct)
 
-out_fname = '~/data/prs/results/model4_p3_structSublobar_DX_QCse2Both.csv'
+out_fname = '~/data/prs/results/model4_p3_structTheory_DX_QCse2Both.csv'
 
 rois = merge(df, struct, by='MRN')
 # filtering on QC
