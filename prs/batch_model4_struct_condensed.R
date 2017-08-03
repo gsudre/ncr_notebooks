@@ -12,7 +12,11 @@ df = df[!duplicated(df$MRN),]
 # loading brain structural
 struct = read.csv('~/data/prs/struct_07112017.csv')
 
-out_fname = '~/data/prs/results/struct/model4_p3_struct_DX_QCse2Both.csv'
+source('~/ncr_notebooks/prs/condense_struct.R')
+cstruct = condense_lobar(struct)
+struct = cbind(struct, cstruct)
+
+out_fname = '~/data/prs/results/struct/model4_p3_structLobar_DX_QCse2Both.csv'
 
 rois = merge(df, struct, by='MRN')
 # filtering on QC
@@ -21,12 +25,12 @@ keep_me = which(rois$avg_freesurfer_score <= 2 & rois$MPRAGE_QC <= 2)
 mydata = rois[keep_me, ]
 
 # choosing mediators
-Ms = c(42:ncol(mydata))
+Ms = colnames(cstruct)
 
 X = mydata$PROFILES.0.3.profile
 Y = mydata$ADHD_current_yes_no
 nboot = 1000
-ncpus = 12
+ncpus = 4
 
 
 run_model4 = function(X, M, Y, nboot=1000) {
@@ -72,9 +76,9 @@ run_model4 = function(X, M, Y, nboot=1000) {
   return(res2)
 }
 
-run_wrapper = function(m, run_model, mydata, nboot, X, Y) {
-  cat('\t', sprintf('M=%s', colnames(mydata)[m]), '\n')
-  tmp = run_model(X, mydata[, m], Y, nboot=nboot)
+run_wrapper = function(m_str, run_model, mydata, nboot, X, Y) {
+  cat('\t', sprintf('M=%s', m_str), '\n')
+  tmp = run_model(X, mydata[, m_str], Y, nboot=nboot)
   res = c()
   for (i in 1:nrow(tmp)) {
     for (j in 1:ncol(tmp)) {

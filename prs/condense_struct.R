@@ -97,11 +97,12 @@ condense_lobar = function(ldata) {
       }
     }
   }
-  colnames(area_data) = lapply(hdr, function(d) sprintf('%s_area', d))
-  colnames(volume_data) = lapply(hdr, function(d) sprintf('%s_volume', d))
-  colnames(thickness_data) = lapply(hdr, function(d) sprintf('%s_thickness', d))
-  colnames(aparc_data) = aparc_hdr
-  return(cbind(area_data, volume_data, thickness_data, aparc_data))
+  colnames(areaLobar_data) = lapply(hdr, function(d) sprintf('%s_area', d))
+  colnames(volumeLobar_data) = lapply(hdr, function(d) sprintf('%s_volume', d))
+  colnames(thicknessLobar_data) = lapply(hdr, function(d) sprintf('%s_thickness', d))
+  colnames(aparcLobar_data) = aparc_hdr
+  return(cbind(areaLobar_data, volumeLobar_data,
+               thicknessLobar_data, aparcLobar_data))
 }
 
 condense_theory = function(ldata) {
@@ -149,9 +150,10 @@ condense_theory = function(ldata) {
       }
     }
   }
-  colnames(area_data) = lapply(hdr, function(d) sprintf('%s_area', d))
-  colnames(volume_data) = lapply(hdr, function(d) sprintf('%s_volume', d))
-  colnames(thickness_data) = lapply(hdr, function(d) sprintf('%s_thickness', d))
-  colnames(aparc_data) = aparc_hdr
-  return(cbind(area_data, volume_data, thickness_data, aparc_data))
+  colnames(areaTheory_data) = lapply(hdr, function(d) sprintf('%s_area', d))
+  colnames(volumeTheory_data) = lapply(hdr, function(d) sprintf('%s_volume', d))
+  colnames(thicknessTheory_data) = lapply(hdr, function(d) sprintf('%s_thickness', d))
+  colnames(aparcTheory_data) = aparc_hdr
+  return(cbind(areaTheory_data, volumeTheory_data,
+               thicknessTheory_data, aparcTheory_data))
 }
