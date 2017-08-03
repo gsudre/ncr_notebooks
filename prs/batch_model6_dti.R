@@ -10,7 +10,7 @@ df = merge(gf, pgc)
 df = df[!duplicated(df$MRN),]
 
 # loading neuropsych
-neuropsych = read.csv('~/data/prs/neuropsych_07072017.csv')
+neuropsych = read.csv('~/data/prs/neuropsych_07282017.csv')
 df = merge(df, neuropsych, by='MRN')
 
 # loading brain structural
