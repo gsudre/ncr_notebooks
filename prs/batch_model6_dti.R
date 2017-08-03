@@ -24,7 +24,7 @@ mydata = rois[!rm_me, ]
 # choosing mediators
 args = commandArgs(trailingOnly=TRUE)
 m1_name = args[1]
-M2s = c(33:44, 47:55)
+M2s = c(33:44, 47:59)
 
 out_fname = sprintf('~/data/prs/results/dti/model6_p3_%s_neuropsych_DX_QCse2Both.csv', m1_name)
 X = mydata$PROFILES.0.3.profile
