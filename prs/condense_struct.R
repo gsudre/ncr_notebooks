@@ -45,13 +45,14 @@ condense_sublobar = function(ldata) {
       }
     }
   }
-  colnames(area_data) = hdr
-  colnames(volume_data) = hdr
-  colnames(thickness_data) = hdr
+  colnames(area_data) = lapply(hdr, function(d) sprintf('%s_area', d))
+  colnames(volume_data) = lapply(hdr, function(d) sprintf('%s_volume', d))
+  colnames(thickness_data) = lapply(hdr, function(d) sprintf('%s_thickness', d))
   colnames(aparc_data) = aparc_hdr
+  return(cbind(area_data, volume_data, thickness_data, aparc_data))
 }
 
-condese_lobar = function(ldata) {
+condense_lobar = function(ldata) {
   lobar_regions = unique(regional$lobar)
   # for each region, add or average the columns corresponding to the ROIs
   areaLobar_data = c()
@@ -96,10 +97,11 @@ condese_lobar = function(ldata) {
       }
     }
   }
-  colnames(areaLobar_data) = hdr
-  colnames(volumeLobar_data) = hdr
-  colnames(thicknessLobar_data) = hdr
-  colnames(aparcLobar_data) = aparc_hdr
+  colnames(area_data) = lapply(hdr, function(d) sprintf('%s_area', d))
+  colnames(volume_data) = lapply(hdr, function(d) sprintf('%s_volume', d))
+  colnames(thickness_data) = lapply(hdr, function(d) sprintf('%s_thickness', d))
+  colnames(aparc_data) = aparc_hdr
+  return(cbind(area_data, volume_data, thickness_data, aparc_data))
 }
 
 condense_theory = function(ldata) {
@@ -147,8 +149,9 @@ condense_theory = function(ldata) {
       }
     }
   }
-  colnames(areaTheory_data) = hdr
-  colnames(volumeTheory_data) = hdr
-  colnames(thicknessTheory_data) = hdr
-  colnames(aparcTheory_data) = aparc_hdr
+  colnames(area_data) = lapply(hdr, function(d) sprintf('%s_area', d))
+  colnames(volume_data) = lapply(hdr, function(d) sprintf('%s_volume', d))
+  colnames(thickness_data) = lapply(hdr, function(d) sprintf('%s_thickness', d))
+  colnames(aparc_data) = aparc_hdr
+  return(cbind(area_data, volume_data, thickness_data, aparc_data))
 }

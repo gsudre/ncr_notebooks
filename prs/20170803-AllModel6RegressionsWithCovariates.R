@@ -18,7 +18,7 @@ for (i in 1:length(indep_vars)) {
   x_str = colnames(mydata)[indep_vars][i]
   y_res = c()
   for (y_str in dep_var_names) {
-    fm_str = sprintf('%s ~ %s', y_str, x_str) # make sure the interesting variable comes last!
+    fm_str = sprintf('%s ~ AGE + I(AGE^2) + Sex + %s', y_str, x_str) # make sure the interesting variable comes last!
     fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
     last_row = nrow(summary(fit)$tTable)
     res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -48,7 +48,7 @@ for (i in 1:length(indep_vars)) {
   x_str = colnames(mydata)[indep_vars][i]
   y_res = c()
   for (y_str in dep_var_names) {
-    fm_str = sprintf('%s ~ %s', y_str, x_str) # make sure the interesting variable comes last!
+    fm_str = sprintf('%s ~ AGE + I(AGE^2) + Sex + %s', y_str, x_str) # make sure the interesting variable comes last!
     fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
     last_row = nrow(summary(fit)$tTable)
     res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -76,7 +76,7 @@ for (i in 1:length(indep_vars)) {
   x_str = colnames(mydata)[indep_vars][i]
   y_res = c()
   for (y_str in dep_var_names) {
-    fm_str = sprintf('%s ~ %s', y_str, x_str) # make sure the interesting variable comes last!
+    fm_str = sprintf('%s ~ AGE + I(AGE^2) + Sex + %s', y_str, x_str) # make sure the interesting variable comes last!
     fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
     if (length(fit) > 1) {
       last_row = nrow(summary(fit)$tTable)
@@ -104,7 +104,7 @@ clin_res = c()
 pheno_res = c()
 for (i in 1:length(indep_vars)) {
   x_str = colnames(mydata)[indep_vars][i]
-  fm_str = sprintf('%s ~ ADHD_current_yes_no', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('%s ~ AGE + I(AGE^2) + Sex + ADHD_current_yes_no', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -115,7 +115,7 @@ clin_res = rbind(clin_res, pheno_res)
 pheno_res = c()
 for (i in 1:length(indep_vars)) {
   x_str = colnames(mydata)[indep_vars][i]
-  fm_str = sprintf('SX_inatt ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('SX_inatt ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -126,7 +126,7 @@ clin_res = rbind(clin_res, pheno_res)
 pheno_res = c()
 for (i in 1:length(indep_vars)) {
   x_str = colnames(mydata)[indep_vars][i]
-  fm_str = sprintf('SX_HI ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('SX_HI ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -138,7 +138,7 @@ mydata = df[df$ADHD_current_yes_no!='no',]
 pheno_res = c()
 for (i in 1:length(indep_vars)) {
   x_str = colnames(mydata)[indep_vars][i]
-  fm_str = sprintf('SX_inatt ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('SX_inatt ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -149,7 +149,7 @@ clin_res = rbind(clin_res, pheno_res)
 pheno_res = c()
 for (i in 1:length(indep_vars)) {
   x_str = colnames(mydata)[indep_vars][i]
-  fm_str = sprintf('SX_HI ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('SX_HI ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -161,7 +161,7 @@ pheno_res = c()
 for (i in 1:length(indep_vars)) {
   x_str = colnames(mydata)[indep_vars][i]
   y = pmax(mydata[, 'SX_inatt'], mydata[, 'inatt_child'], na.rm=T)
-  fm_str = sprintf('y ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('y ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -173,7 +173,7 @@ pheno_res = c()
 for (i in 1:length(indep_vars)) {
   x_str = colnames(mydata)[indep_vars][i]
   y = pmax(mydata[, 'SX_HI'], mydata[, 'HI_child'], na.rm=T)
-  fm_str = sprintf('y ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('y ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -186,7 +186,7 @@ rownames(clin_res) = c('DX', 'inatt', 'HI', 'inattADHDonly',
 colnames(clin_res) = cnames
 all_res = rbind(all_res, pheno_res)
 
-write.csv(all_res, file='~/data/prs/results/all_model6_fromX.csv')
+write.csv(all_res, file='~/data/prs/results/all_model6_fromXCovaried.csv')
 
 
 #####################
@@ -207,7 +207,7 @@ all_res = c()
 for (x_str in M1s) {
   y_res = c()
   for (y_str in M2s) {
-    fm_str = sprintf('%s ~ %s', y_str, x_str) # make sure the interesting variable comes last!
+    fm_str = sprintf('%s ~ AGE + I(AGE^2) + Sex + %s', y_str, x_str) # make sure the interesting variable comes last!
     fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
     if (length(fit) > 1) {
       last_row = nrow(summary(fit)$tTable)
@@ -233,7 +233,7 @@ pheno_res = c()
 for (x_str in M1s) {
   y_res = c()
   for (y_str in M2s) {
-    fm_str = sprintf('%s ~ %s', y_str, x_str) # make sure the interesting variable comes last!
+    fm_str = sprintf('%s ~ AGE + I(AGE^2) + Sex + %s', y_str, x_str) # make sure the interesting variable comes last!
     fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
     if (length(fit) > 1) {
       last_row = nrow(summary(fit)$tTable)
@@ -253,7 +253,7 @@ for (i in M2s) {
 }
 colnames(all_res) = cnames
 
-write.csv(all_res, file='~/data/prs/results/all_model6_M1toM2.csv')
+write.csv(all_res, file='~/data/prs/results/all_model6_M1toM2Covaried.csv')
 
 ################
 # Finally, let's run everything going to Y
@@ -267,7 +267,7 @@ mydata = mydata[!rm_me, ]
 
 pheno_res = c()
 for (x_str in M1s) {
-  fm_str = sprintf('%s ~ ADHD_current_yes_no', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('%s ~ AGE + I(AGE^2) + Sex + ADHD_current_yes_no', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   if (length(fit) > 1) {
     last_row = nrow(summary(fit)$tTable)
@@ -281,7 +281,7 @@ all_res = pheno_res
 
 pheno_res = c()
 for (x_str in M1s) {
-  fm_str = sprintf('SX_inatt ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('SX_inatt ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -291,7 +291,7 @@ all_res = cbind(all_res, pheno_res)
 
 pheno_res = c()
 for (x_str in M1s) {
-  fm_str = sprintf('SX_HI ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('SX_HI ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -302,7 +302,7 @@ all_res = cbind(all_res, pheno_res)
 mydata = mydata[df$ADHD_current_yes_no!='no',]
 pheno_res = c()
 for (x_str in M1s) {
-  fm_str = sprintf('SX_inatt ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('SX_inatt ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -312,7 +312,7 @@ all_res = cbind(all_res, pheno_res)
 
 pheno_res = c()
 for (x_str in M1s) {
-  fm_str = sprintf('SX_HI ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('SX_HI ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -323,7 +323,7 @@ all_res = cbind(all_res, pheno_res)
 pheno_res = c()
 for (x_str in M1s) {
   y = pmax(mydata[, 'SX_inatt'], mydata[, 'inatt_child'], na.rm=T)
-  fm_str = sprintf('y ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('y ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -334,7 +334,7 @@ all_res = cbind(all_res, pheno_res)
 pheno_res = c()
 for (x_str in M1s) {
   y = pmax(mydata[, 'SX_HI'], mydata[, 'HI_child'], na.rm=T)
-  fm_str = sprintf('y ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('y ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -359,7 +359,7 @@ M1s = colnames(pheno)[11:280]
 
 pheno_res = c()
 for (x_str in M1s) {
-  fm_str = sprintf('%s ~ ADHD_current_yes_no', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('%s ~ AGE + I(AGE^2) + Sex + ADHD_current_yes_no', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   if (length(fit) > 1) {
     last_row = nrow(summary(fit)$tTable)
@@ -373,7 +373,7 @@ all_res2 = pheno_res
 
 pheno_res = c()
 for (x_str in M1s) {
-  fm_str = sprintf('SX_inatt ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('SX_inatt ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -383,7 +383,7 @@ all_res2 = cbind(all_res2, pheno_res)
 
 pheno_res = c()
 for (x_str in M1s) {
-  fm_str = sprintf('SX_HI ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('SX_HI ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -394,7 +394,7 @@ all_res2 = cbind(all_res2, pheno_res)
 mydata = mydata[df$ADHD_current_yes_no!='no',]
 pheno_res = c()
 for (x_str in M1s) {
-  fm_str = sprintf('SX_inatt ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('SX_inatt ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -404,7 +404,7 @@ all_res2 = cbind(all_res2, pheno_res)
 
 pheno_res = c()
 for (x_str in M1s) {
-  fm_str = sprintf('SX_HI ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('SX_HI ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -415,7 +415,7 @@ all_res2 = cbind(all_res2, pheno_res)
 pheno_res = c()
 for (x_str in M1s) {
   y = pmax(mydata[, 'SX_inatt'], mydata[, 'inatt_child'], na.rm=T)
-  fm_str = sprintf('y ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('y ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -426,7 +426,7 @@ all_res2 = cbind(all_res2, pheno_res)
 pheno_res = c()
 for (x_str in M1s) {
   y = pmax(mydata[, 'SX_HI'], mydata[, 'HI_child'], na.rm=T)
-  fm_str = sprintf('y ~ %s', x_str) # make sure the interesting variable comes last!
+  fm_str = sprintf('y ~ AGE + I(AGE^2) + Sex + %s', x_str) # make sure the interesting variable comes last!
   fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
   last_row = nrow(summary(fit)$tTable)
   res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
@@ -445,5 +445,5 @@ colnames(all_res2) = cnames
 
 all_res = rbind(all_res, all_res2)
 
-write.csv(all_res, file='~/data/prs/results/all_model6_toY.csv')
+write.csv(all_res, file='~/data/prs/results/all_model6_toYCovaried.csv')
 
