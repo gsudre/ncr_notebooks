@@ -16,7 +16,7 @@ source('~/ncr_notebooks/prs/condense_struct.R')
 cstruct = condense_sublobar(struct)
 struct = cbind(struct, cstruct)
 
-out_fname = '~/data/prs/results/model4_p3_structSubLobar_DX_QCse2Both.csv'
+out_fname = '~/data/prs/results/model4_p05_structSubLobar_DX_QCse2Both.csv'
 
 rois = merge(df, struct, by='MRN')
 # filtering on QC
@@ -27,7 +27,7 @@ mydata = rois[keep_me, ]
 # choosing mediators
 Ms = colnames(cstruct)
 
-X = mydata$PROFILES.0.3.profile
+X = mydata$PROFILES.0.05.profile
 Y = mydata$ADHD_current_yes_no
 nboot = 1000
 ncpus = 4
