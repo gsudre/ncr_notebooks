@@ -10,7 +10,7 @@ df = merge(gf, pgc)
 df = df[!duplicated(df$MRN),]
 
 # loading brain structural
-struct = read.csv('~/data/prs/struct_07112017.csv')
+struct = read.csv('~/data/prs/struct_08042017.csv')
 
 out_fname = '~/data/prs/results/struct/model4_p3_struct_DX_QCse2Both.csv'
 

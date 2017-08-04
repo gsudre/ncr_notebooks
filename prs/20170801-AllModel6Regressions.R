@@ -65,7 +65,7 @@ colnames(pheno_res) = cnames
 rownames(pheno_res) = dep_var_names
 all_res = rbind(all_res, pheno_res)
 
-pheno = read.csv('~/data/prs/struct_07112017.csv')
+pheno = read.csv('~/data/prs/struct_08042017.csv')
 mydata = merge(df, pheno, by='MRN')
 keep_me = which(mydata$avg_freesurfer_score <= 2 & mydata$MPRAGE_QC <= 2)
 # in the end, all data needs to be in a matrix called mydata!
@@ -222,7 +222,7 @@ for (x_str in M1s) {
 rownames(all_res) = M1s
 
 
-pheno = read.csv('~/data/prs/struct_07112017.csv')
+pheno = read.csv('~/data/prs/struct_08042017.csv')
 mydata = merge(df, pheno, by='MRN')
 keep_me = which(mydata$avg_freesurfer_score <= 2 & mydata$MPRAGE_QC <= 2)
 mydata = mydata[keep_me, ]
@@ -351,7 +351,7 @@ for (i in cols) {
 }
 colnames(all_res) = cnames
 
-pheno = read.csv('~/data/prs/struct_07112017.csv')
+pheno = read.csv('~/data/prs/struct_08042017.csv')
 mydata = merge(df, pheno, by='MRN')
 keep_me = which(mydata$avg_freesurfer_score <= 2 & mydata$MPRAGE_QC <= 2)
 mydata = mydata[keep_me, ]

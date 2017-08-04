@@ -14,7 +14,7 @@ neuropsych = read.csv('~/data/prs/neuropsych_07282017.csv')
 df = merge(df, neuropsych, by='MRN')
 
 # loading brain structural
-struct = read.csv('~/data/prs/struct_07112017.csv')
+struct = read.csv('~/data/prs/struct_08042017.csv')
 rois = merge(df, struct, by='MRN')
 # filtering on QC
 keep_me = which(rois$avg_freesurfer_score <= 2 & rois$MPRAGE_QC <= 2)

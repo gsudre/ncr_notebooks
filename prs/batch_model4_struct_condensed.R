@@ -10,13 +10,13 @@ df = merge(gf, pgc)
 df = df[!duplicated(df$MRN),]
 
 # loading brain structural
-struct = read.csv('~/data/prs/struct_07112017.csv')
+struct = read.csv('~/data/prs/struct_08042017.csv')
 
 source('~/ncr_notebooks/prs/condense_struct.R')
-cstruct = condense_theory(struct)
+cstruct = condense_lobar(struct)
 struct = cbind(struct, cstruct)
 
-out_fname = '~/data/prs/results/model4_p3_structTheory_DX_QCse2Both.csv'
+out_fname = '~/data/prs/results/model4_p3_structLobar_DX_QCse2Both.csv'
 
 rois = merge(df, struct, by='MRN')
 # filtering on QC

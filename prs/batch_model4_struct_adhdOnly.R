@@ -9,7 +9,7 @@ df = merge(gf, pgc)
 df = df[!duplicated(df$MRN),]
 
 # loading brain structural
-struct = read.csv('~/data/prs/struct_07112017.csv')
+struct = read.csv('~/data/prs/struct_08042017.csv')
 rois = merge(df, struct, by='MRN')
 # filtering on QC
 keep_me = which(rois$avg_freesurfer_score <= 2 & rois$MPRAGE_QC <= 2)
