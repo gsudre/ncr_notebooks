@@ -560,4 +560,3 @@ mylist = res[[1]]
 run_models = res[[2]]
 source('~/ncr_notebooks/baseline_prediction/src/do_metrics_plots.R')
 ```
-

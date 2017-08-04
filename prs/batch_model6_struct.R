@@ -10,7 +10,7 @@ df = merge(gf, pgc)
 df = df[!duplicated(df$MRN),]
 
 # loading neuropsych
-neuropsych = read.csv('~/data/prs/neuropsych_07072017.csv')
+neuropsych = read.csv('~/data/prs/neuropsych_07282017.csv')
 df = merge(df, neuropsych, by='MRN')
 
 # loading brain structural
@@ -24,7 +24,7 @@ mydata = rois[keep_me, ]
 # choosing mediators
 args = commandArgs(trailingOnly=TRUE)
 m1_name = args[1]
-M2s = c(33:44, 47:55)
+M2s = c(33:44, 47:59)
 
 out_fname = sprintf('~/data/prs/results/struct/model6_p3_%s_neuropsych_DX_QCse2Both.csv', m1_name)
 X = mydata$PROFILES.0.3.profile
