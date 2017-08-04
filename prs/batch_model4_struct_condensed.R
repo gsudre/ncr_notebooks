@@ -13,10 +13,10 @@ df = df[!duplicated(df$MRN),]
 struct = read.csv('~/data/prs/struct_08042017.csv')
 
 source('~/ncr_notebooks/prs/condense_struct.R')
-cstruct = condense_lobar(struct)
+cstruct = condense_sublobar(struct)
 struct = cbind(struct, cstruct)
 
-out_fname = '~/data/prs/results/model4_p3_structLobar_DX_QCse2Both.csv'
+out_fname = '~/data/prs/results/model4_p3_structSubLobar_DX_QCse2Both.csv'
 
 rois = merge(df, struct, by='MRN')
 # filtering on QC
@@ -96,7 +96,7 @@ cl <- makeCluster(ncpus)
 m1_res = parLapply(cl, Ms, run_wrapper, run_model4, mydata, nboot, X, Y)
 # m1_res = lapply(Ms, run_wrapper, run_model4, mydata, nboot, X, Y)
 all_res = do.call(rbind, m1_res)
-rownames(all_res) = colnames(mydata)[Ms]
+rownames(all_res) = Ms
   
 stopCluster(cl)
 write.csv(all_res, file=out_fname)

@@ -21,7 +21,7 @@ mydata = rois[keep_me, ]
 # choosing mediators
 Ms = c(42:ncol(mydata))
 
-out_fname = '~/data/prs/results/struct/model4_p3_struct_inatt_QCse2Both.csv'
+out_fname = '~/data/prs/results/model4_p3_struct_inatt_QCse2Both.csv'
 X = mydata$PROFILES.0.3.profile
 Y = mydata$SX_inatt
 nboot = 1000

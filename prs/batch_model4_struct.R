@@ -12,7 +12,7 @@ df = df[!duplicated(df$MRN),]
 # loading brain structural
 struct = read.csv('~/data/prs/struct_08042017.csv')
 
-out_fname = '~/data/prs/results/struct/model4_p3_struct_DX_QCse2Both.csv'
+out_fname = '~/data/prs/results/model4_p3_struct_DX_QCse2Both.csv'
 
 rois = merge(df, struct, by='MRN')
 # filtering on QC
