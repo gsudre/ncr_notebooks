@@ -50,8 +50,12 @@ for (i in 1:length(indep_vars)) {
   for (y_str in dep_var_names) {
     fm_str = sprintf('%s ~ AGE + I(AGE^2) + Sex + %s', y_str, x_str) # make sure the interesting variable comes last!
     fit = try(lme(as.formula(fm_str), random=~1|NuclearFamID, data=mydata, na.action = na.omit))
-    last_row = nrow(summary(fit)$tTable)
-    res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
+    if (length(fit) > 1) {
+      last_row = nrow(summary(fit)$tTable)
+      res = c(summary(fit)$tTable[last_row,'t-value'], summary(fit)$tTable[last_row,'p-value'])
+    } else {
+      res = c(NA, NA)
+    }
     y_res = rbind(y_res, res)
   }
   pheno_res = cbind(pheno_res, y_res)
@@ -243,7 +247,7 @@ for (x_str in M1s) {
     }
     y_res = c(y_res, res)
   }
-  pheno_res = rbind(all_res, y_res)
+  pheno_res = rbind(pheno_res, y_res)
 }
 rownames(pheno_res) = M1s
 all_res = rbind(all_res, pheno_res)
