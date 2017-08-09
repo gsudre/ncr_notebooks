@@ -30,8 +30,8 @@ gf = read.csv('~/data/fmri/gf.csv')
 df = merge(gf, exp_scores, by.x='maskid', by.y='V1')
 df = df[df$used==1,]
 adhdOnly = df$group!='NV'
-pvals_inatt = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$inatt, method='spearman')$p.value)
-pvals_hi = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$hi, method='spearman')$p.value)
+pvals_inatt = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$inatt, method='spearman', exact=F)$p.value)
+pvals_hi = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$hi, method='spearman', exact=F)$p.value)
 ```
 
 Now we make the fMRI plot:
@@ -65,8 +65,8 @@ gf = read.csv('~/data/meg/gf.csv')
 df = merge(gf, exp_scores, by.x='maskid', by.y='V1')
 df = df[df$used==1,]
 adhdOnly = df$group!='NV'
-pvals_inatt = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$inatt, method='spearman')$p.value)
-pvals_hi = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$hi, method='spearman')$p.value)
+pvals_inatt = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$inatt, method='spearman', exact=F)$p.value)
+pvals_hi = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$hi, method='spearman', exact=F)$p.value)
 ```
 
 Let's look at the MEG plots:
@@ -108,10 +108,10 @@ gf = read.csv('~/data/fmri/gf.csv')
 df = merge(gf, exp_scores, by.x='maskid', by.y='V1')
 df = df[df$used==1,]
 total = df$inatt + df$hi
-pvals = sapply(df[, 14:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
+pvals = sapply(df[, 14:ncol(df)], function(d) cor.test(d, total, method='spearman', exact=F)$p.value)
 adhdOnly = df$group!='NV'
 total = df[adhdOnly,]$inatt + df[adhdOnly,]$hi
-pvals_adhdOnly = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
+pvals_adhdOnly = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, total, method='spearman', exact=F)$p.value)
 myorder = sort(fmri_iqs, index.return=T, decreasing = T)
 par(mfrow=(c(1, 2)))
 plot(fmri_iqs[myorder$ix], pvals[myorder$ix], xlab='Stability', ylab='P-value', main='Everyone')
@@ -141,10 +141,10 @@ gf = read.csv('~/data/meg/gf.csv')
 df = merge(gf, exp_scores, by.x='maskid', by.y='V1')
 df = df[df$used==1,]
 total = df$inatt + df$hi
-pvals = sapply(df[, 17:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
+pvals = sapply(df[, 17:ncol(df)], function(d) cor.test(d, total, method='spearman', exact=F)$p.value)
 adhdOnly = df$group!='NV'
 total = df[adhdOnly,]$inatt + df[adhdOnly,]$hi
-pvals_adhdOnly = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
+pvals_adhdOnly = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, total, method='spearman', exact=F)$p.value)
 myorder = sort(meg_iqs, index.return=T, decreasing = T)
 par(mfrow=(c(1, 2)))
 plot(meg_iqs[myorder$ix], pvals[myorder$ix], xlab='Stability', ylab='P-value', main='All')
@@ -153,11 +153,11 @@ abline(v=.85, lty=3)
 plot(meg_iqs[myorder$ix], pvals_adhdOnly[myorder$ix], xlab='Stability', ylab='P-value', main='ADHD only')
 abline(h=.05, lty=3)
 abline(v=.85, lty=3)
-cor.test(1-pvals, meg_iqs, method='spearman', alternative='greater')
-cor.test(1-pvals_adhdOnly, meg_iqs, method='spearman', alternative='greater')
+cor.test(1-pvals, meg_iqs, method='spearman', alternative='greater', exact=F)
+cor.test(1-pvals_adhdOnly, meg_iqs, method='spearman', alternative='greater', exact=F)
 ```
 
-# Association with total symptoms
+# Number of ICs associated with symptoms
 
 ```{r}
 fmri_iqs = read.csv('~/data/fmri/fmri_iqs.csv', header = F)[,1]
@@ -168,12 +168,17 @@ exp_scores = cbind(subjs, fmat)
 gf = read.csv('~/data/fmri/gf.csv')
 df = merge(gf, exp_scores, by.x='maskid', by.y='V1')
 df = df[df$used==1,]
-total = df$inatt + df$hi
-pvals = sapply(df[, 14:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
 adhdOnly = df$group!='NV'
+pvals_adhdOnly = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$inatt, method='spearman', exact=F)$p.value)
+print(sprintf('fMRI inatt: %d', sum(pvals_adhdOnly[fmri_iqs >= .85] < .05/6)))
+
+pvals_adhdOnly = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$hi, method='spearman', exact=F)$p.value)
+print(sprintf('fMRI hi: %d', sum(pvals_adhdOnly[fmri_iqs >= .85] < .05/6)))
+
 total = df[adhdOnly,]$inatt + df[adhdOnly,]$hi
-pvals_adhdOnly = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
-sum(pvals_adhdOnly[fmri_iqs > .85] < .05/6)
+pvals_adhdOnly = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, total, method='spearman', exact=F)$p.value)
+print(sprintf('fMRI total: %d', sum(pvals_adhdOnly[fmri_iqs > .85] < .05/6)))
+
 
 bands = c('1-4', '4-8', '8-13', '13-30', '30-55', '65-100')
 meg_iqs = c()
@@ -187,12 +192,153 @@ exp_scores = cbind(subjs, fmat)
 gf = read.csv('~/data/meg/gf.csv')
 df = merge(gf, exp_scores, by.x='maskid', by.y='V1')
 df = df[df$used==1,]
+
+pvals_adhdOnly = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$inatt, method='spearman', exact=F)$p.value)
+print(sprintf('MEG inatt: %d', sum(pvals_adhdOnly[meg_iqs > .85] < .05/56)))
+
+pvals_adhdOnly = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$hi, method='spearman', exact=F)$p.value)
+print(sprintf('MEG hi: %d', sum(pvals_adhdOnly[meg_iqs > .85] < .05/56)))
+
+total = df[adhdOnly,]$inatt + df[adhdOnly,]$hi
+pvals_adhdOnly = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, total, method='spearman', exact=F)$p.value)
+print(sprintf('MEG total: %d', sum(pvals_adhdOnly[meg_iqs > .85] < .05/56)))
+```
+
+# 2 group association
+We can also check whether there is a difference between stable and non-stable ICs in how they're associated to different symptoms:
+```{r}
+fmri_iqs = read.csv('~/data/fmri/fmri_iqs.csv', header = F)[,1]
+library(RcppCNPy)
+fmat <- npyLoad('/Users/sudregp/data/sripada/fmri/exp_scores_enrichedNoDummies1K.npy')
+subjs = read.table('~/data/fmri/joel_all_147.txt')
+exp_scores = cbind(subjs, fmat)
+gf = read.csv('~/data/fmri/gf.csv')
+df = merge(gf, exp_scores, by.x='maskid', by.y='V1')
+df = df[df$used==1,]
+
+pvals = sapply(df[, 14:ncol(df)], function(d) cor.test(d, df$inatt, method='spearman', exact=F)$p.value)
+adhdOnly = df$group!='NV'
+pvals_adhdOnly = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$inatt, method='spearman', exact=F)$p.value)
+print('==== inatt ====')
+wilcox.test(pvals[fmri_iqs<.85], pvals[fmri_iqs>=.85], alternative='greater')
+print(sprintf('Medians: %.2f, %.2f', median(pvals[fmri_iqs<.85]), median(pvals[fmri_iqs>=.85])))
+wilcox.test(pvals_adhdOnly[fmri_iqs<.85], pvals_adhdOnly[fmri_iqs>=.85], alternative='greater')
+print(sprintf('Medians: %.2f, %.2f', median(pvals_adhdOnly[fmri_iqs<.85]), median(pvals_adhdOnly[fmri_iqs>=.85])))
+
+pvals = sapply(df[, 14:ncol(df)], function(d) cor.test(d, df$hi, method='spearman', exact=F)$p.value)
+adhdOnly = df$group!='NV'
+pvals_adhdOnly = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$hi, method='spearman', exact=F)$p.value)
+print('==== hi ====')
+wilcox.test(pvals[fmri_iqs<.85], pvals[fmri_iqs>=.85], alternative='greater')
+print(sprintf('Medians: %.2f, %.2f', median(pvals[fmri_iqs<.85]), median(pvals[fmri_iqs>=.85])))
+wilcox.test(pvals_adhdOnly[fmri_iqs<.85], pvals_adhdOnly[fmri_iqs>=.85], alternative='greater')
+print(sprintf('Medians: %.2f, %.2f', median(pvals_adhdOnly[fmri_iqs<.85]), median(pvals_adhdOnly[fmri_iqs>=.85])))
+
 total = df$inatt + df$hi
-pvals = sapply(df[, 17:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
+pvals = sapply(df[, 14:ncol(df)], function(d) cor.test(d, total, method='spearman', exact=F)$p.value)
 adhdOnly = df$group!='NV'
 total = df[adhdOnly,]$inatt + df[adhdOnly,]$hi
-pvals_adhdOnly = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, total, method='spearman')$p.value)
-sum(pvals_adhdOnly[meg_iqs > .85] < .05/56)
+pvals_adhdOnly = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, total, method='spearman', exact=F)$p.value)
+print('==== total ====')
+wilcox.test(pvals[fmri_iqs<.85], pvals[fmri_iqs>=.85], alternative='greater')
+print(sprintf('Medians: %.2f, %.2f', median(pvals[fmri_iqs<.85]), median(pvals[fmri_iqs>=.85])))
+wilcox.test(pvals_adhdOnly[fmri_iqs<.85], pvals_adhdOnly[fmri_iqs>=.85], alternative='greater')
+print(sprintf('Medians: %.2f, %.2f', median(pvals_adhdOnly[fmri_iqs<.85]), median(pvals_adhdOnly[fmri_iqs>=.85])))
 ```
+
+And now for MEG:
+
+```{r}
+bands = c('1-4', '4-8', '8-13', '13-30', '30-55', '65-100')
+meg_iqs = c()
+fmat = c()
+for (b in bands) {
+  meg_iqs = c(meg_iqs, read.csv(sprintf('~/data/meg/iqs_%s.csv', b), header = F)[,1])
+  fmat = cbind(fmat, npyLoad(sprintf('/Users/sudregp/data/sripada/meg/exp_scores_%s_imcoh_enriched_1000perms_15ics.npy', b)))
+}
+subjs = read.table('~/data/meg/usable_subjects_5segs13p654_SAM.txt')
+exp_scores = cbind(subjs, fmat)
+gf = read.csv('~/data/meg/gf.csv')
+df = merge(gf, exp_scores, by.x='maskid', by.y='V1')
+df = df[df$used==1,]
+
+print('==== inatt ====')
+pvals = sapply(df[, 17:ncol(df)], function(d) cor.test(d, df$inatt, method='spearman', exact=F)$p.value)
+adhdOnly = df$group!='NV'
+total = df[adhdOnly,]$inatt + df[adhdOnly,]$hi
+pvals_adhdOnly = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$inatt, method='spearman', exact=F)$p.value)
+wilcox.test(pvals[meg_iqs<.85], pvals[meg_iqs>=.85], alternative='greater')
+print(sprintf('Medians: %.2f, %.2f', median(pvals[meg_iqs<.85]), median(pvals[meg_iqs>=.85])))
+wilcox.test(pvals_adhdOnly[meg_iqs<.85], pvals_adhdOnly[meg_iqs>=.85], alternative='greater')
+print(sprintf('Medians: %.2f, %.2f', median(pvals_adhdOnly[meg_iqs<.85]), median(pvals_adhdOnly[meg_iqs>=.85])))
+
+print('==== hi ====')
+pvals = sapply(df[, 17:ncol(df)], function(d) cor.test(d, df$hi, method='spearman', exact=F)$p.value)
+adhdOnly = df$group!='NV'
+total = df[adhdOnly,]$inatt + df[adhdOnly,]$hi
+pvals_adhdOnly = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$hi, method='spearman', exact=F)$p.value)
+wilcox.test(pvals[meg_iqs<.85], pvals[meg_iqs>=.85], alternative='greater')
+print(sprintf('Medians: %.2f, %.2f', median(pvals[meg_iqs<.85]), median(pvals[meg_iqs>=.85])))
+wilcox.test(pvals_adhdOnly[meg_iqs<.85], pvals_adhdOnly[meg_iqs>=.85], alternative='greater')
+print(sprintf('Medians: %.2f, %.2f', median(pvals_adhdOnly[meg_iqs<.85]), median(pvals_adhdOnly[meg_iqs>=.85])))
+
+print('==== total ====')
+total = df$inatt + df$hi
+pvals = sapply(df[, 17:ncol(df)], function(d) cor.test(d, total, method='spearman', exact=F)$p.value)
+adhdOnly = df$group!='NV'
+total = df[adhdOnly,]$inatt + df[adhdOnly,]$hi
+pvals_adhdOnly = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, total, method='spearman', exact=F)$p.value)
+wilcox.test(pvals[meg_iqs<.85], pvals[meg_iqs>=.85], alternative='greater')
+print(sprintf('Medians: %.2f, %.2f', median(pvals[meg_iqs<.85]), median(pvals[meg_iqs>=.85])))
+wilcox.test(pvals_adhdOnly[meg_iqs<.85], pvals_adhdOnly[meg_iqs>=.85], alternative='greater')
+print(sprintf('Medians: %.2f, %.2f', median(pvals_adhdOnly[meg_iqs<.85]), median(pvals_adhdOnly[meg_iqs>=.85])))
+```
+
+# Group based on association with total symptoms
+
+```{r}
+fmri_iqs = read.csv('~/data/fmri/fmri_iqs.csv', header = F)[,1]
+library(RcppCNPy)
+fmat <- npyLoad('/Users/sudregp/data/sripada/fmri/exp_scores_enrichedNoDummies1K.npy')
+subjs = read.table('~/data/fmri/joel_all_147.txt')
+exp_scores = cbind(subjs, fmat)
+gf = read.csv('~/data/fmri/gf.csv')
+df = merge(gf, exp_scores, by.x='maskid', by.y='V1')
+df = df[df$used==1,]
+
+# we need to combine MEG and fMRI, because we don't have enough components just in fMRI
+adhdOnly = df$group!='NV'
+total = df[adhdOnly,]$inatt + df[adhdOnly,]$hi
+pvals_adhdOnly = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, total, method='spearman', exact=F)$p.value)
+
+bands = c('1-4', '4-8', '8-13', '13-30', '30-55', '65-100')
+meg_iqs = c()
+fmat = c()
+for (b in bands) {
+  meg_iqs = c(meg_iqs, read.csv(sprintf('~/data/meg/iqs_%s.csv', b), header = F)[,1])
+  fmat = cbind(fmat, npyLoad(sprintf('/Users/sudregp/data/sripada/meg/exp_scores_%s_imcoh_enriched_1000perms_15ics.npy', b)))
+}
+subjs = read.table('~/data/meg/usable_subjects_5segs13p654_SAM.txt')
+exp_scores = cbind(subjs, fmat)
+gf = read.csv('~/data/meg/gf.csv')
+df = merge(gf, exp_scores, by.x='maskid', by.y='V1')
+df = df[df$used==1,]
+
+adhdOnly = df$group!='NV'
+total = df[adhdOnly,]$inatt + df[adhdOnly,]$hi
+pvalsMEG_adhdOnly = sapply(df[adhdOnly, 17:ncol(df)], function(d) cor.test(d, total, method='spearman', exact=F)$p.value)
+
+# I'm not going to correct here because we correct based on stable components, which doesn't make sense here.
+# pvals_idx = c(pvals_adhdOnly < .05/6, pvalsMEG_adhdOnly < .05/56)
+pvals_idx = c(pvals_adhdOnly < .05, pvalsMEG_adhdOnly < .05)
+pvals_idx = c(pvals_adhdOnly < .01, pvalsMEG_adhdOnly < .01)
+sig = c(fmri_iqs, meg_iqs)[pvals_idx]
+nonsig = c(fmri_iqs, meg_iqs)[!pvals_idx]
+
+wilcox.test(sig, nonsig, alternative='greater')
+print(sprintf('Medians: %.2f, %.2f', median(sig), median(nonsig)))
+```
+
+
 
 
