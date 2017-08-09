@@ -170,10 +170,10 @@ df = merge(gf, exp_scores, by.x='maskid', by.y='V1')
 df = df[df$used==1,]
 adhdOnly = df$group!='NV'
 pvals_adhdOnly = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$inatt, method='spearman', exact=F)$p.value)
-print(sprintf('fMRI inatt: %d', sum(pvals_adhdOnly[fmri_iqs >= .85] < .05/6)))
+print(sprintf('fMRI inatt: %d', sum(pvals_adhdOnly[fmri_iqs > .85] < .05/6)))
 
 pvals_adhdOnly = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, df[adhdOnly,]$hi, method='spearman', exact=F)$p.value)
-print(sprintf('fMRI hi: %d', sum(pvals_adhdOnly[fmri_iqs >= .85] < .05/6)))
+print(sprintf('fMRI hi: %d', sum(pvals_adhdOnly[fmri_iqs > .85] < .05/6)))
 
 total = df[adhdOnly,]$inatt + df[adhdOnly,]$hi
 pvals_adhdOnly = sapply(df[adhdOnly, 14:ncol(df)], function(d) cor.test(d, total, method='spearman', exact=F)$p.value)
