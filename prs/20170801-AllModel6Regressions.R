@@ -66,6 +66,7 @@ rownames(pheno_res) = dep_var_names
 all_res = rbind(all_res, pheno_res)
 
 pheno = read.csv('~/data/prs/struct_08042017.csv')
+pheno = pheno[pheno$scanner != '1p5t',]
 mydata = merge(df, pheno, by='MRN')
 keep_me = which(mydata$avg_freesurfer_score <= 2 & mydata$MPRAGE_QC <= 2)
 # in the end, all data needs to be in a matrix called mydata!
@@ -186,7 +187,7 @@ rownames(clin_res) = c('DX', 'inatt', 'HI', 'inattADHDonly',
 colnames(clin_res) = cnames
 all_res = rbind(all_res, pheno_res)
 
-write.csv(all_res, file='~/data/prs/results/all_model6_fromX.csv')
+write.csv(all_res, file='~/data/prs/results/all_model6_fromX_no1p5t.csv')
 
 
 #####################
@@ -223,6 +224,7 @@ rownames(all_res) = M1s
 
 
 pheno = read.csv('~/data/prs/struct_08042017.csv')
+pheno = pheno[pheno$scanner != '1p5t',]
 mydata = merge(df, pheno, by='MRN')
 keep_me = which(mydata$avg_freesurfer_score <= 2 & mydata$MPRAGE_QC <= 2)
 mydata = mydata[keep_me, ]
@@ -253,7 +255,7 @@ for (i in M2s) {
 }
 colnames(all_res) = cnames
 
-write.csv(all_res, file='~/data/prs/results/all_model6_M1toM2.csv')
+write.csv(all_res, file='~/data/prs/results/all_model6_M1toM2_no1p5t.csv')
 
 ################
 # Finally, let's run everything going to Y
@@ -352,6 +354,7 @@ for (i in cols) {
 colnames(all_res) = cnames
 
 pheno = read.csv('~/data/prs/struct_08042017.csv')
+pheno = pheno[pheno$scanner != '1p5t',]
 mydata = merge(df, pheno, by='MRN')
 keep_me = which(mydata$avg_freesurfer_score <= 2 & mydata$MPRAGE_QC <= 2)
 mydata = mydata[keep_me, ]
@@ -445,5 +448,5 @@ colnames(all_res2) = cnames
 
 all_res = rbind(all_res, all_res2)
 
-write.csv(all_res, file='~/data/prs/results/all_model6_toY.csv')
+write.csv(all_res, file='~/data/prs/results/all_model6_toY_no1p5t.csv')
 
