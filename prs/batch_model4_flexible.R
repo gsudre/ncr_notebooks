@@ -10,22 +10,24 @@ df = merge(gf, pgc)
 df = df[!duplicated(df$MRN),]
 
 # loading mediator data
-pheno = read.csv('~/data/prs/struct_08042017.csv')
-
-merged = merge(df, pheno, by='MRN')
-# filtering on QC
-keep_me = which(merged$avg_freesurfer_score <= 2 & merged$MPRAGE_QC <= 2)
+# pheno = read.csv('~/data/prs/struct_08042017.csv')
+load('~/data/prs/dti_fa_voxelwise_08162017.RData')
+pheno = m
+brain = read.csv('~/data/prs/dti_07062017.csv')
+rois = merge(pheno, brain, by='MRN')
+rm_me = (rois$numVolumes < 60 | rois$norm.rot > .003 | rois$norm.trans > .3 |
+           rois$mean_fa < .3 | rois$mean_ad < .97 | rois$mean_rd < .5)
 # in the end, all data needs to be in a matrix called mydata!
-mydata = merged[keep_me, ]
+mydata = merge(df, rois[!rm_me,], by='MRN')
 
 # choosing mediators
-Ms = c(43:50)
+Ms = which(grepl("^v[0-9]*", colnames(mydata)))
 
 X = mydata$PROFILES.0.3.profile
 Y = mydata$SX_inatt
-out_fname = '~/data/prs/results/test_results_lme_cpu4_100d.csv'
-nboot = 100
-ncpus = 4
+out_fname = '~/data/prs/results/model4_dti_faVoxelsClean_lme_500perms.csv'
+nboot = 500
+ncpus = 7
 mixed = T
 
 # no need to change anything below here. The functions remove NAs and zscore variables on their own
@@ -76,10 +78,10 @@ run_model4 = function(X, M, Y, nboot=1000, NuclearFamID=NA, short=T) {
   }
 }
 
-run_wrapper = function(m, run_model, mydata, nboot, X, Y, NuclearFamID=NA) {
-  cat('\t', sprintf('M=%s', colnames(mydata)[m]), '\n')
-  tmp = run_model(X, mydata[, m], Y, nboot=nboot, NuclearFamID=NuclearFamID)
-  tmp$M = colnames(mydata)[m]
+run_wrapper = function(midx, run_model, mydata, nboot, X, Y, NuclearFamID=NA) {
+  cat('\t', sprintf('M=%s', colnames(mydata)[midx]), '\n')
+  tmp = run_model(X, mydata[, midx], Y, nboot=nboot, NuclearFamID=NuclearFamID)
+  tmp$M = colnames(mydata)[midx]
   return(tmp)
 }
 
