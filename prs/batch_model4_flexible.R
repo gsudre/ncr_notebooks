@@ -1,10 +1,10 @@
 # loading clinical data
-gf = read.csv('~/data/prs/clinical_06192017.csv')
+gf = read.csv('~/data/prs/clinical_08102017.csv')
 gf = gf[gf$ADHD_current_yes_no!='exclude',]
 gf$ADHD_current_yes_no = factor(gf$ADHD_current_yes_no)
 
 # loading PRS data
-pgc = read.csv('~/data/prs/PRS2017_original_clump_default.csv')
+pgc = read.csv('~/data/prs/PRS2017_noInversion_all.csv')
 df = merge(gf, pgc)
 # remove duplicated MRNs
 df = df[!duplicated(df$MRN),]
