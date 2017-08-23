@@ -1,37 +1,38 @@
 # loading clinical data
-gf = read.csv('~/data/prs/clinical_08102017.csv')
-gf = gf[gf$ADHD_current_yes_no!='exclude',]
-gf$ADHD_current_yes_no = factor(gf$ADHD_current_yes_no)
+gf = read.csv('~/data/prs/clinical_08232017.csv')
+
+idx = gf$Race=='[White]' & gf$Ethnicity=='Not Hispanic or Latino'
+gf = gf[idx, ]
 
 # loading PRS data
-pgc = read.csv('~/data/prs/PRS2017_noInversion_all.csv')
+pgc = read.csv('~/data/prs/PRS2017_noInversion_eur_all.csv')
 df = merge(gf, pgc)
 # remove duplicated MRNs
 df = df[!duplicated(df$MRN),]
 
 # loading mediator data
-# pheno = read.csv('~/data/prs/struct_08042017.csv')
-load('~/data/prs/dti_fa_voxelwise_08162017.RData')
-pheno = m
-brain = read.csv('~/data/prs/dti_07062017.csv')
-rois = merge(pheno, brain, by='MRN')
-rm_me = (rois$numVolumes < 60 | rois$norm.rot > .003 | rois$norm.trans > .3 |
-           rois$mean_fa < .3 | rois$mean_ad < .97 | rois$mean_rd < .5)
+pheno = read.csv('~/data/prs/dti_fa4vars_08232017.csv')
+
+merged = merge(df, pheno, by='MRN')
+# filtering on QC
+#rm_me = which(merged$avg_freesurfer_score > 2 & merged$MPRAGE_QC > 2)
+rm_me = (merged$numVolumes < 60 | merged$norm.rot > .003 | merged$norm.trans > .3 |
+         merged$mean_fa < .3 | merged$mean_ad < .97 | merged$mean_rd < .5)
 # in the end, all data needs to be in a matrix called mydata!
-mydata = merge(df, rois[!rm_me,], by='MRN')
+mydata = merged[!rm_me, ]
 
 # choosing mediators
-Ms = which(grepl("^v[0-9]*", colnames(mydata)))
+Ms = c(57:60)
 
 X = mydata$PROFILES.0.3.profile
 Y = mydata$SX_inatt
-out_fname = '~/data/prs/results/model4_dti_faVoxelsClean_lme_500perms.csv'
-nboot = 500
-ncpus = 7
+out_fname = '~/data/prs/results/test_results.csv'
+nboot = 10
+ncpus = 1
 mixed = T
 
 # no need to change anything below here. The functions remove NAs and zscore variables on their own
-run_model4 = function(X, M, Y, nboot=1000, NuclearFamID=NA, short=T) {
+run_model4 = function(X, M, Y, nboot=1000, short=T, data2) {
   library(mediation)
   idx = is.na(X) | is.na(Y) | is.na(M)
   Y = Y[!idx]
@@ -43,9 +44,12 @@ run_model4 = function(X, M, Y, nboot=1000, NuclearFamID=NA, short=T) {
   run_data = data.frame(X = scale(X[!idx]),
                         Y = Y,
                         M = scale(M[!idx]),
-                        FAMID = NuclearFamID[!idx])
+                        FAMID = data2[!idx,]$NuclearFamID,
+                        age= data2[!idx,]$AGE,
+                        sex = data2[!idx,]$Sex)
+  write.csv(run_data, file='~/tmp/rd.csv')
   
-  if (!is.na(NuclearFamID)) {
+  if (!is.na(run_data[1,]$FAMID)) {
     library(lme4)
     fm = as.formula('M ~ X + (1|FAMID)')
     fy = as.formula('Y ~ X + M + (1|FAMID)')
@@ -78,27 +82,25 @@ run_model4 = function(X, M, Y, nboot=1000, NuclearFamID=NA, short=T) {
   }
 }
 
-run_wrapper = function(midx, run_model, mydata, nboot, X, Y, NuclearFamID=NA) {
-  cat('\t', sprintf('M=%s', colnames(mydata)[midx]), '\n')
-  tmp = run_model(X, mydata[, midx], Y, nboot=nboot, NuclearFamID=NuclearFamID)
-  tmp$M = colnames(mydata)[midx]
+run_wrapper = function(m, run_model, mydata, nboot, X, Y) {
+  cat('\t', sprintf('M=%s', colnames(mydata)[m]), '\n')
+  tmp = run_model(X, mydata[, m], Y, nboot=nboot, data2=mydata)
+  tmp$M = colnames(mydata)[m]
   return(tmp)
 }
 
-if (mixed) {
-  FAMID = mydata$NuclearFamID
-} else {
-  FAMID = NA
+if (!mixed) {
+  mydata$NuclearFamID = NA
 }
 
 if (ncpus > 1) {
   library(parallel)
   cl <- makeCluster(ncpus)
-  m1_res = parLapply(cl, Ms, run_wrapper, run_model4, mydata, nboot, X, Y, NuclearFamID=FAMID)
+  m1_res = parLapply(cl, Ms, run_wrapper, run_model4, mydata, nboot, X, Y)
   stopCluster(cl)
 } else {
-  m1_res = lapply(Ms, run_wrapper, run_model4, mydata, nboot, X, Y, NuclearFamID=FAMID)
+  m1_res = lapply(Ms, run_wrapper, run_model4, mydata, nboot, X, Y)
 }
 all_res = do.call(rbind, m1_res)
-  
+
 write.csv(all_res, file=out_fname, row.names=F)
