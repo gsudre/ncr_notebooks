@@ -11,27 +11,28 @@ df = merge(gf, pgc)
 df = df[!duplicated(df$MRN),]
 
 # loading mediator data
-pheno = read.csv('~/data/prs/dti_fa4vars_08232017.csv')
+pheno = read.csv('~/data/prs/struct_5vars_08232017.csv')
 
 merged = merge(df, pheno, by='MRN')
 # filtering on QC
-#rm_me = which(merged$avg_freesurfer_score > 2 & merged$MPRAGE_QC > 2)
-rm_me = (merged$numVolumes < 60 | merged$norm.rot > .003 | merged$norm.trans > .3 |
-         merged$mean_fa < .3 | merged$mean_ad < .97 | merged$mean_rd < .5)
+rm_me = (merged$avg_freesurfer_score > 2 & merged$MPRAGE_QC > 2)
+# rm_me = (merged$numVolumes < 60 | merged$norm.rot > .003 | merged$norm.trans > .3 |
+#          merged$mean_fa < .3 | merged$mean_ad < .97 | merged$mean_rd < .5)
 # in the end, all data needs to be in a matrix called mydata!
 mydata = merged[!rm_me, ]
 
 # choosing mediators
 Ms = c(57:60)
+# Ms = c(47:50, 56)
 Xs = c('PROFILES.0.05.profile', 'PROFILES.0.1.profile', 'PROFILES.0.2.profile',
-       'PROFILES.0.3.profile', 'PROFILES.0.3.profile', 'PROFILES.0.5.profile')
+       'PROFILES.0.3.profile', 'PROFILES.0.4.profile', 'PROFILES.0.5.profile')
 Ys = c('SX_inatt', 'SX_HI', 'SX_total')
 mydata$SX_total = mydata$SX_inatt + mydata$SX_HI
 
-nboot = 1000
+nboot = 5000
 ncpus = 16
 mixed = T
-fname_root = '~/data/prs/results/struct_%s_lme_nocov_%s_eur_1K.csv'
+fname_root = '~/data/prs/results/struct_%s_lme_nocov_%s_eur_5K.csv'
 
 # no need to change anything below here. The functions remove NAs and zscore variables on their own
 run_model4 = function(X, M, Y, nboot=1000, short=T, data2) {
