@@ -23,13 +23,15 @@ mydata = merged[!rm_me, ]
 
 # choosing mediators
 Ms = c(57:60)
+Xs = c('PROFILES.0.05.profile', 'PROFILES.0.1.profile', 'PROFILES.0.2.profile',
+       'PROFILES.0.3.profile', 'PROFILES.0.3.profile', 'PROFILES.0.5.profile')
+Ys = c('SX_inatt', 'SX_HI', 'SX_total')
+mydata$SX_total = mydata$SX_inatt + mydata$SX_HI
 
-X = mydata$PROFILES.0.3.profile
-Y = mydata$SX_inatt
-out_fname = '~/data/prs/results/test_results.csv'
-nboot = 10
-ncpus = 1
+nboot = 1000
+ncpus = 16
 mixed = T
+fname_root = '~/data/prs/results/struct_%s_lme_nocov_%s_eur_1K.csv'
 
 # no need to change anything below here. The functions remove NAs and zscore variables on their own
 run_model4 = function(X, M, Y, nboot=1000, short=T, data2) {
@@ -47,7 +49,6 @@ run_model4 = function(X, M, Y, nboot=1000, short=T, data2) {
                         FAMID = data2[!idx,]$NuclearFamID,
                         age= data2[!idx,]$AGE,
                         sex = data2[!idx,]$Sex)
-  write.csv(run_data, file='~/tmp/rd.csv')
   
   if (!is.na(run_data[1,]$FAMID)) {
     library(lme4)
@@ -93,14 +94,26 @@ if (!mixed) {
   mydata$NuclearFamID = NA
 }
 
-if (ncpus > 1) {
-  library(parallel)
-  cl <- makeCluster(ncpus)
-  m1_res = parLapply(cl, Ms, run_wrapper, run_model4, mydata, nboot, X, Y)
-  stopCluster(cl)
-} else {
-  m1_res = lapply(Ms, run_wrapper, run_model4, mydata, nboot, X, Y)
+for (x_str in Xs) {
+  for (y_str in Ys) {
+    X = mydata[, x_str]
+    Y = mydata[, y_str]
+    out_fname = sprintf(fname_root,
+                        y_str, x_str)
+    print(out_fname)
+    
+    if (ncpus > 1) {
+      library(parallel)
+      cl <- makeCluster(ncpus)
+      m1_res = parLapply(cl, Ms, run_wrapper, run_model4, mydata, nboot, X, Y)
+      stopCluster(cl)
+    } else {
+      m1_res = lapply(Ms, run_wrapper, run_model4, mydata, nboot, X, Y)
+    }
+    all_res = do.call(rbind, m1_res)
+    
+    write.csv(all_res, file=out_fname, row.names=F)
+  }
 }
-all_res = do.call(rbind, m1_res)
 
-write.csv(all_res, file=out_fname, row.names=F)
+
