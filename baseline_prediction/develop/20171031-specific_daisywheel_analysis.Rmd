@@ -227,7 +227,7 @@ merged = merged[keep_me, ]
 print(sprintf('Freesurfer ROIs: %d datapoints, %d phenotypes', nrow(X), ncol(X)))
 
 regional = read.csv('~/data/baseline_prediction/REGIONAL_ANALYSES_FREESURFER.csv')
-lobar_regions = unique(regional$lobar)
+lobar_regions = unique(regional$lobar)[1:8]
 # for each region, add or average the columns corresponding to the ROIs
 areaLobar_data = c()
 hdr = c()
