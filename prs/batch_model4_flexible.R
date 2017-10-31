@@ -22,17 +22,17 @@ rm_me = (merged$avg_freesurfer_score > 2 & merged$MPRAGE_QC > 2)
 mydata = merged[!rm_me, ]
 
 # choosing mediators
-Ms = c(57:60)
+Ms = c(57)#:60)
 # Ms = c(47:50, 56)
-Xs = c('PROFILES.0.05.profile', 'PROFILES.0.1.profile', 'PROFILES.0.2.profile',
-       'PROFILES.0.3.profile', 'PROFILES.0.4.profile', 'PROFILES.0.5.profile')
-Ys = c('SX_inatt', 'SX_HI', 'SX_total')
+Xs = c('PROFILES.0.05.profile')#, 'PROFILES.0.1.profile', 'PROFILES.0.2.profile',
+       # 'PROFILES.0.3.profile', 'PROFILES.0.4.profile', 'PROFILES.0.5.profile')
+Ys = c('SX_inatt')#, 'SX_HI', 'SX_total')
 mydata$SX_total = mydata$SX_inatt + mydata$SX_HI
 
-nboot = 5000
-ncpus = 16
+nboot = 1000
+ncpus = 1
 mixed = T
-fname_root = '~/data/prs/results/struct_%s_lme_nocov_%s_eur_5K.csv'
+fname_root = '~/data/prs/results/TEST_struct_%s_lme_sex_%s_eur_5K.csv'
 
 # no need to change anything below here. The functions remove NAs and zscore variables on their own
 run_model4 = function(X, M, Y, nboot=1000, short=T, data2) {
@@ -53,8 +53,8 @@ run_model4 = function(X, M, Y, nboot=1000, short=T, data2) {
   
   if (!is.na(run_data[1,]$FAMID)) {
     library(lme4)
-    fm = as.formula('M ~ X + (1|FAMID)')
-    fy = as.formula('Y ~ X + M + (1|FAMID)')
+    fm = as.formula('M ~ X + sex + (1|FAMID)')
+    fy = as.formula('Y ~ X + M + sex + (1|FAMID)')
     model.M <- lmer(fm, data=run_data)
     if (imdiscrete) {
       model.Y <- glmer(fy, data=run_data, family=binomial(link='logit'))
@@ -62,6 +62,7 @@ run_model4 = function(X, M, Y, nboot=1000, short=T, data2) {
       model.Y <- lmer(fy, data=run_data)
     }
     results <- mediate(model.M, model.Y, treat='X', mediator='M', boot=F, sims=nboot)
+    print(summary(results))
   } else {
     fm = as.formula('M ~ X')
     fy = as.formula('Y ~ X + M')
