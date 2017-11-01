@@ -226,56 +226,31 @@ X = X[keep_me, ]
 merged = merged[keep_me, ]
 print(sprintf('Freesurfer ROIs: %d datapoints, %d phenotypes', nrow(X), ncol(X)))
 
-regional = read.csv('~/data/baseline_prediction/REGIONAL_ANALYSES_FREESURFER.csv')
-lobar_regions = unique(regional$lobar)[1:8]
-# for each region, add or average the columns corresponding to the ROIs
-areaLobar_data = c()
-hdr = c()
-volumeLobar_data = c()
-thicknessLobar_data = c()
-aparcLobar_data = c()
-aparc_hdr = c()
-for (s in lobar_regions) {
-  if (s != "") {
-    idx = which(regional$lobar == s)
-    area = 0
-    volume = 0
-    thickness = 0
-    aparc = 0
-    for (i in idx) {
-      cnt = 0
-      roi_name = sub('_thickness', '', regional[i, 1])
-      if (length(grep('rh_|lh_', roi_name)) > 0) {
-        var_name = quote(sprintf('%s_area', roi_name))
-        area = area + X[, eval(var_name)]
-        var_name = quote(sprintf('%s_volume', roi_name))
-        volume = volume + X[, eval(var_name)]
-        var_name = quote(sprintf('%s_thickness', roi_name))
-        thickness = thickness + X[, eval(var_name)]
-        cnt = cnt + 1
-      }
-      else {
-        var_name = quote(roi_name)
-        aparc = aparc + X[, eval(var_name)]
-      }
-    }
-    if (sum(area) > 0) {
-      hdr = c(hdr, s)
-      areaLobar_data = cbind(areaLobar_data, area)
-      volumeLobar_data = cbind(volumeLobar_data, volume)
-      thicknessLobar_data = cbind(thicknessLobar_data, thickness / cnt)
-    }
-    else {
-      aparc_hdr = c(aparc_hdr, s)
-      aparcLobar_data = cbind(aparcLobar_data, aparc)
-    }
-  }
-}
-colnames(areaLobar_data) = hdr
-colnames(volumeLobar_data) = hdr
-colnames(thicknessLobar_data) = hdr
-colnames(aparcLobar_data) = aparc_hdr
+vars = c('lh_caudalmiddlefrontal_volume', 'lh_parsopercularis_volume',
+         'lh_parsorbitalis_volume', 'lh_parstriangularis_volume',
+         'lh_rostralmiddlefrontal_volume', 'lh_superiorfrontal_volume',
+         'lh_frontalpole_volume', 'rh_caudalmiddlefrontal_volume',
+         'rh_parsopercularis_volume', 'rh_parsorbitalis_volume',
+         'rh_parstriangularis_volume', 'rh_rostralmiddlefrontal_volume',
+         'rh_superiorfrontal_volume', 'rh_frontalpole_volume')
+keep_me = sapply(vars, function(d) which(colnames(X) == d))
+X2 = rowSums(X[, keep_me])
+vars = c('lh_inferiorparietal_volume', 'lh_superiorparietal_volume',
+         'lh_supramarginal_volume', 'rh_inferiorparietal_volume',
+         'rh_superiorparietal_volume', 'rh_supramarginal_volume')
+keep_me = sapply(vars, function(d) which(colnames(X) == d))
+X2 = cbind(X2, rowSums(X[, keep_me]))
+vars = c('Left.Caudate', 'Left.Putamen', 'Left.Pallidum',
+         'Right.Caudate', 'Right.Putamen', 'Right.Pallidum' ,'X5th.Ventricle')
+keep_me = sapply(vars, function(d) which(colnames(X) == d))
+X2 = cbind(X2, rowSums(X[, keep_me]))
+vars = c('Left.Cerebellum.White.Matter', 'Left.Cerebellum.Cortex',
+         'Right.Cerebellum.White.Matter', 'Right.Cerebellum.Cortex')
+keep_me = sapply(vars, function(d) which(colnames(X) == d))
+X2 = cbind(X2, rowSums(X[, keep_me]))
+colnames(X2) = c('Lateral frontal lobe', 'lateral parietal lobe',
+                 'Basal ganglia', 'Cerebellum')
 
-res = sapply(as.data.frame(volumeLobar_data), outcomePairwise_test, merged)
-write.csv(t(res), file='~/data/baseline_prediction/descriptives/dw_lobar_volume.csv')
+res = sapply(as.data.frame(X2), outcomePairwise_test, merged)
+write.csv(t(res), file='~/data/baseline_prediction/descriptives/dw_volumes.csv')
 ```

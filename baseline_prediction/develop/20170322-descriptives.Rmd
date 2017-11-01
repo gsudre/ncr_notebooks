@@ -168,6 +168,24 @@ dti_descriptive = cbind(nvVSadhd_test(X, merged, 'DTI'),
 write.csv(dti_descriptive, file='~/tmp/oi.csv')
 ```
 
+#PRS
+```{r}
+prs_data = read.csv('~/data/prs/PRS2017_noInversion_all.csv')
+merged = merge(gf, prs_data, by='MRN')
+phen_vars = which(grepl("^PROFILES", colnames(merged)))
+keep_me = c()
+for (v in phen_vars) {
+  keep_me = c(keep_me, which(colnames(merged) == v))
+}
+X = merged[, keep_me]
+prs_descriptive = cbind(nvVSadhd_test(X, merged, 'PRS'),
+                        nvVSadhd_lowVSadhd_high_test(X, merged),
+                        outcome_test(X, merged),
+                        symptom_test(X, merged, 0),
+                        symptom_test(X, merged, 1),
+                        symptom_test(X, merged, 2))
+```
+
 # Demographics
 This is still part of the clinical spreadsheet, so let's just do it without any extra import:
 
