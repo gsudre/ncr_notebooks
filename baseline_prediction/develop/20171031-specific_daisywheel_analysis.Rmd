@@ -8,6 +8,7 @@ Philip asked me to condense the daisywheel results to make them easier to see in
 ```{r}
 outcomePairwise_test = function(pheno, df, get_resid=T) {
   library(lsr)
+  library(compute.es)
   if (sum(pheno, na.rm = T) == 0) {
     fstat = NA
     pval = NA
